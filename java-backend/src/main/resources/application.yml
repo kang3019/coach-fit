@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: coachfit-backend
+
+  # 로컬 개발 및 빠른 테스트를 위해 기본으로 H2 In-Memory DB 활성화
+  # MySQL / AWS RDS 사용 시 아래 MySQL 설정을 활성화하고 H2를 비활성화하세요.
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:coachfitdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+
+    # [MySQL / RDS 연동 시 예시]
+    # driver-class-name: com.mysql.cj.jdbc.Driver
+    # url: jdbc:mysql://localhost:3306/coachfit?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    # username: root
+    # password: your_password
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# 외부 Python AI 서버 (FastAPI) 연동 정보
+ai-service:
+  url: http://localhost:8000

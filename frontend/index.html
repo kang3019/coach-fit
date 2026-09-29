@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoachFit - 피트니스 트래킹 & AI 맞춤 코칭</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-area">
+        <div class="logo-badge">FLIK</div>
+        <div class="logo-title">
+          <h1>CoachFit Studio</h1>
+          <p>피트니스 트래킹 및 맞춤형 AI 코칭 서비스</p>
+        </div>
+      </div>
+      <div class="server-status-group">
+        <div class="status-pill" id="status-java">
+          <span class="dot" id="dot-java"></span>
+          <span>Java 서버 (8080)</span>
+        </div>
+        <div class="status-pill" id="status-python">
+          <span class="dot" id="dot-python"></span>
+          <span>Python AI 서버 (8000)</span>
+        </div>
+        <button class="btn btn-sm" onclick="checkServerHealth()">서버 상태 점검</button>
+      </div>
+    </header>
+
+    <!-- 대시보드 그리드: 입력 폼 & 주간 운동량 차트 -->
+    <div class="dashboard-grid">
+      <!-- 1. 운동 기록 등록 -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">🏋️ 운동 기록 추가</h2>
+          <span class="badge">Java REST API</span>
+        </div>
+        <form id="workout-form">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="exercise-name">운동 종목</label>
+              <input type="text" id="exercise-name" placeholder="예: 벤치프레스, 스쿼트, 랫 풀 다운" required value="인클라인 벤치프레스">
+            </div>
+            <div class="form-group">
+              <label for="sets">세트 수 (Sets)</label>
+              <input type="number" id="sets" min="1" max="50" value="4" required>
+            </div>
+            <div class="form-group">
+              <label for="reps">세트당 횟수 (Reps)</label>
+              <input type="number" id="reps" min="1" max="100" value="10" required>
+            </div>
+            <div class="form-group">
+              <label for="weight">중량 (kg)</label>
+              <input type="number" id="weight" step="0.5" min="0" value="65.0" required>
+            </div>
+            <div class="form-group">
+              <label for="workout-date">운동 날짜</label>
+              <input type="date" id="workout-date" required>
+            </div>
+            <div class="form-group full">
+              <label for="memo">운동 메모 / 특이사항</label>
+              <input type="text" id="memo" placeholder="예: 3세트째 자세 흔들림, 자극 만족" value="가슴 상부 타겟팅 성공">
+            </div>
+          </div>
+          <div style="margin-top: 16px;">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              <span>운동 기록 저장하기 (Java DB)</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 2. 주간 운동량 시각화 차트 -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">📊 주간 운동량 볼륨</h2>
+          <button class="btn btn-sm" onclick="fetchWeeklyStats()">새로고침</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="weeklyChart"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. 최근 운동 기록 목록 -->
+    <section class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">📋 최근 운동 기록</h2>
+        <span id="record-count" class="badge">0개 기록</span>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>운동 종목</th>
+              <th>세트</th>
+              <th>횟수</th>
+              <th>중량</th>
+              <th>총 볼륨</th>
+              <th>메모</th>
+            </tr>
+          </thead>
+          <tbody id="workout-table-body">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted);">
+                운동 기록을 불러오는 중이거나 데이터가 없습니다.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. 맞춤형 AI 코칭 섹션 -->
+    <section class="card ai-section">
+      <div class="card-header">
+        <h2 class="card-title">🤖 AI 퍼스널 코칭 & 추천 루틴</h2>
+        <span class="badge" style="background-color: #4338ca; color: #a5b4fc;">FastAPI + LLM Engine</span>
+      </div>
+
+      <div class="ai-controls">
+        <div class="form-group" style="flex: 1; min-width: 200px;">
+          <label for="user-goal">현재 운동 목표</label>
+          <input type="text" id="user-goal" value="상체 근비대 및 체지방 감량" placeholder="예: 3대 500 달성, 벌크업, 다이어트 등">
+        </div>
+        <div class="form-group" style="min-width: 220px;">
+          <label for="api-route">호출 아키텍처 경로</label>
+          <select id="api-route">
+            <option value="java-proxy" selected>표준: Java 서버 경유 (화면 ➔ Java ➔ Python)</option>
+            <option value="python-direct">직접: Python 서버 직접 호출 (화면 ➔ Python)</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="btn-request-ai" class="btn btn-ai" onclick="requestAiCoaching()">
+        <span id="ai-btn-text">⚡ AI 코칭 분석 및 오늘의 맞춤 루틴 생성하기</span>
+      </button>
+
+      <!-- AI 분석 결과 카드 -->
+      <div id="ai-result-box" class="ai-result-box">
+        <div class="ai-header">
+          <div class="ai-title">✨ CoachFit AI 종합 진단 리포트</div>
+          <div id="ai-generated-at" class="ai-time"></div>
+        </div>
+
+        <div class="ai-card-block">
+          <h4>📌 최근 운동 수행 요약 분석</h4>
+          <p id="ai-summary"></p>
+        </div>
+
+        <div class="ai-card-block">
+          <h4>💬 전문 코치의 트레이닝 피드백</h4>
+          <p id="ai-advice"></p>
+        </div>
+
+        <div class="ai-card-block">
+          <h4>🎯 오늘 수행할 맞춤 추천 루틴</h4>
+          <div id="routine-cards" class="routine-cards"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
