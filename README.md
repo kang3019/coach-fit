@@ -7,7 +7,7 @@
 ## 🏗️ 1. 전체 아키텍처 및 데이터 흐름
 
 ```
-[사용자 대시보드 화면] (Frontend: HTML, CSS, Vanilla JS, Chart.js)
+[모바일 앱 (iOS/Android)] (Flutter)  OR  [웹 대시보드] (Chart.js)
         │
         ▼ 1. 운동 기록 등록 / 통계 조회 / AI 코칭 요청
 [Java 백엔드 서버] (Spring Boot 3.2.x, JPA, MySQL/H2, JWT 뼈대)
@@ -20,10 +20,10 @@
    - 역할: 운동 데이터 분석, 볼륨/부위별 피로도 분석, LLM 코칭 및 맞춤 루틴 추천
         │
         ▼ 3. 코칭 결과(JSON) 반환
-[Java 백엔드 서버] ➔ [프론트엔드 대시보드 화면에 피드백 & 추천 루틴 표시]
+[Java 백엔드 서버] ➔ [모바일 앱 / 웹 화면에 피드백 & 추천 루틴 표시]
 ```
 
-> **참고**: 프론트엔드에서 개발/테스트 편의를 위해 `Java 경유(표준)` 방식과 `Python 직접 호출` 방식을 자유롭게 선택하여 테스트할 수 있도록 지원합니다.
+> **참고**: 프론트엔드 및 모바일 앱에서 개발/테스트 편의를 위해 `Java 경유(표준)` 방식과 `Python 직접 호출` 방식을 자유롭게 선택하여 테스트할 수 있도록 지원합니다.
 
 ---
 
@@ -31,6 +31,22 @@
 
 ```text
 coach fit/
+├── mobile-app/                        # Flutter 스마트폰 앱 (iOS/Android)
+│   ├── pubspec.yaml                   # Flutter 의존성 (http, intl 등)
+│   └── lib/
+│       ├── main.dart                  # 플러터 앱 진입점 (다크 테마)
+│       ├── config/
+│       │   └── api_constants.dart     # 에뮬레이터(10.0.2.2)/실기기/iOS URL 자동 분기
+│       ├── models/
+│       │   ├── workout.dart           # 운동 기록 데이터 모델
+│       │   └── coaching_result.dart   # AI 코칭 결과 데이터 모델
+│       ├── services/
+│       │   ├── workout_service.dart   # Java 서버 연동 서비스
+│       │   └── coaching_service.dart  # AI 코칭 연동 서비스
+│       └── screens/
+│           ├── home_screen.dart       # 운동 기록 조회/추가 대시보드 화면
+│           └── coaching_screen.dart   # AI 분석 진단 및 추천 루틴 화면
+│
 ├── java-backend/                      # Java Spring Boot 서버 (담당자 A)
 │   ├── build.gradle                   # Gradle 빌드 스크립트 (Web, JPA, MySQL, JWT, Lombok)
 │   ├── settings.gradle
@@ -125,7 +141,24 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-### (3) 프론트엔드 화면 열기
+### (3) Flutter 모바일 앱 실행 (iOS / Android / Chrome)
+
+```bash
+cd mobile-app
+
+# 1. 의존성 패키지 설치
+flutter pub get
+
+# 2. 앱 실행 (에뮬레이터, 연결된 스마트폰, 또는 크롬 브라우저)
+flutter run
+# 또는: flutter run -d chrome (웹 모드로 즉시 실행)
+```
+- Android 에뮬레이터 구동 시 `http://10.0.2.2:8080`(Java)로 자동 연결됩니다.
+- 모바일 화면에서 운동 기록 등록 및 "분석" 버튼을 눌러 AI 코칭을 받아볼 수 있습니다.
+
+---
+
+### (4) 웹 프론트엔드 대시보드 열기 (선택 사항)
 
 `frontend/index.html` 파일을 크롬 등 웹 브라우저에서 직접 더블 클릭하여 열거나, VS Code의 `Live Server` 확장 등을 이용해 실행할 수 있습니다.
 - 상단 서버 상태 배지에 `Java 서버 (8080)` 및 `Python AI 서버 (8000)`가 녹색으로 켜지는지 확인합니다.

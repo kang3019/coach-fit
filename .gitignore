@@ -70,3 +70,12 @@ Thumbs.db
 # --- Logs ---
 *.log
 logs/
+
+# --- Flutter & Dart ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.pub
+**/doc/api/
+
