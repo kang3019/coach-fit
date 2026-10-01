@@ -52,6 +52,16 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
   }
 
   Future<void> _openAddWorkoutSheet() async {
+    // 최근 운동 기록 상위 5건을 바텀시트에 전달해 "원터치 복사" 칩으로 쓰게 한다.
+    List<Workout> recent = const [];
+    try {
+      final loaded = await _workoutsFuture;
+      recent = loaded.take(5).toList();
+    } catch (_) {
+      // 데이터 로드 실패 시 그냥 빈 리스트 — 복사 칩만 안 보이게 됨
+    }
+
+    if (!mounted) return;
     final created = await showModalBottomSheet<Workout>(
       context: context,
       isScrollControlled: true,
@@ -59,7 +69,11 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _AddWorkoutModal(service: _workoutService, initialDate: _selectedDate),
+      builder: (_) => _AddWorkoutModal(
+        service: _workoutService,
+        initialDate: _selectedDate,
+        recentWorkouts: recent,
+      ),
     );
 
     if (created != null && mounted) {
@@ -619,8 +633,13 @@ class _Badge extends StatelessWidget {
 class _AddWorkoutModal extends StatefulWidget {
   final WorkoutService service;
   final DateTime initialDate;
+  final List<Workout> recentWorkouts;
 
-  const _AddWorkoutModal({required this.service, required this.initialDate});
+  const _AddWorkoutModal({
+    required this.service,
+    required this.initialDate,
+    this.recentWorkouts = const [],
+  });
 
   @override
   State<_AddWorkoutModal> createState() => _AddWorkoutModalState();
@@ -644,6 +663,21 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
     _weightCtrl.dispose();
     _memoCtrl.dispose();
     super.dispose();
+  }
+
+  /// 선택한 과거 세트의 종목/세트/횟수/무게를 폼에 자동 입력.
+  /// 메모는 복사하지 않음 (각 세션 상황이 다르므로).
+  void _copyFromPast(Workout w) {
+    setState(() {
+      _nameCtrl.text = w.exerciseName;
+      _setsCtrl.text = w.sets.toString();
+      _repsCtrl.text = w.reps.toString();
+      _weightCtrl.text = w.weight % 1 == 0
+          ? w.weight.toInt().toString()
+          : w.weight.toStringAsFixed(1);
+      // 종목 사전 카드는 리셋 (이름이 사전 종목과 일치하지 않을 수 있으므로)
+      _selectedMaster = null;
+    });
   }
 
   Future<void> _pickExercise() async {
@@ -750,6 +784,34 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // 1.5. 최근 세트 원터치 복사 칩 (A 담당: 간편 입력 UX)
+              if (widget.recentWorkouts.isNotEmpty) ...[
+                Row(
+                  children: const [
+                    Icon(Icons.content_copy, size: 14, color: Colors.white54),
+                    SizedBox(width: 6),
+                    Text(
+                      '최근 세트 원터치 복사',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 54,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: widget.recentWorkouts.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) => _CopyChip(
+                      workout: widget.recentWorkouts[i],
+                      onTap: () => _copyFromPast(widget.recentWorkouts[i]),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // 2. 운동 종목 선택기 (사전 연동 카드)
               if (_selectedMaster != null) ...[
@@ -1065,6 +1127,57 @@ class _QuickBtn extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+
+/// 과거 운동 기록을 원터치로 복사할 수 있는 작은 카드형 칩.
+/// 종목명 + 세트×횟수 + 무게를 압축해서 보여준다.
+/// AGENTS.md 의 포인트 악센트 민트(`#00E5A0`) 와 카드 배경(`#151922`) 톤 준수.
+class _CopyChip extends StatelessWidget {
+  final Workout workout;
+  final VoidCallback onTap;
+  const _CopyChip({required this.workout, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF00E5A0);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF151922),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: accent.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              workout.exerciseName,
+              style: const TextStyle(
+                color: accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${workout.sets}×${workout.reps} · ${workout.weight.toStringAsFixed(workout.weight % 1 == 0 ? 0 : 1)}kg',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+              ),
+            ),
+          ],
         ),
       ),
     );
