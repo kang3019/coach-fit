@@ -44,31 +44,31 @@ extension MuscleGroupExtension on MuscleGroup {
     final lower = text.toLowerCase();
     final result = <MuscleGroup>{};
 
-    if (lower.contains('가슴') || lower.contains('대흉근') || lower.contains('chest') || lower.contains('벤치')) {
+    if (lower.contains('가슴') || lower.contains('대흉근') || lower.contains('체스트') || lower.contains('chest') || lower.contains('벤치') || lower.contains('푸시업')) {
       result.add(MuscleGroup.chest);
     }
-    if (lower.contains('등') || lower.contains('광배') || lower.contains('승모') || lower.contains('풀다운') || lower.contains('풀업') || lower.contains('로우') || lower.contains('back')) {
+    if (lower.contains('등') || lower.contains('광배') || lower.contains('승모') || lower.contains('풀다운') || lower.contains('풀업') || lower.contains('로우') || lower.contains('턱걸이') || lower.contains('랫') || lower.contains('back')) {
       result.add(MuscleGroup.back);
     }
-    if (lower.contains('어깨') || lower.contains('삼각근') || lower.contains('숄더') || lower.contains('밀리터리') || lower.contains('shoulder')) {
+    if (lower.contains('어깨') || lower.contains('삼각근') || lower.contains('숄더') || lower.contains('밀리터리') || lower.contains('사레레') || lower.contains('shoulder')) {
       result.add(MuscleGroup.shoulders);
     }
-    if (lower.contains('이두') || lower.contains('바이셉') || lower.contains('biceps')) {
+    if (lower.contains('이두') || lower.contains('바이셉') || lower.contains('biceps') || (lower.contains('컬') && !lower.contains('레그'))) {
       result.add(MuscleGroup.biceps);
     }
-    if (lower.contains('삼두') || lower.contains('트라이셉') || lower.contains('triceps') || lower.contains('딥스')) {
+    if (lower.contains('삼두') || lower.contains('트라이셉') || lower.contains('triceps') || lower.contains('딥스') || (lower.contains('익스텐션') && !lower.contains('레그'))) {
       result.add(MuscleGroup.triceps);
     }
-    if (lower.contains('복근') || lower.contains('코어') || lower.contains('abs') || lower.contains('플랭크') || lower.contains('크런치')) {
+    if (lower.contains('복근') || lower.contains('코어') || lower.contains('abs') || lower.contains('플랭크') || lower.contains('크런치') || lower.contains('레그레이즈')) {
       result.add(MuscleGroup.abs);
     }
-    if (lower.contains('하체') || lower.contains('대퇴사두') || lower.contains('스쿼트') || lower.contains('레그') || lower.contains('quads') || lower.contains('런지')) {
+    if (lower.contains('대퇴사두') || lower.contains('스쿼트') || lower.contains('런지') || (lower.contains('익스텐션') && lower.contains('레그')) || (lower.contains('하체') && !lower.contains('뒤'))) {
       result.add(MuscleGroup.quads);
     }
     if (lower.contains('둔근') || lower.contains('엉덩이') || lower.contains('힙') || lower.contains('glute') || lower.contains('데드리프트')) {
       result.add(MuscleGroup.glutes);
     }
-    if (lower.contains('햄스트링') || lower.contains('대퇴이두') || lower.contains('hamstring')) {
+    if (lower.contains('햄스트링') || lower.contains('대퇴이두') || lower.contains('hamstring') || (lower.contains('레그') && lower.contains('컬'))) {
       result.add(MuscleGroup.hamstrings);
     }
     if (lower.contains('종아리') || lower.contains('카프') || lower.contains('calf') || lower.contains('calves')) {
@@ -79,8 +79,8 @@ extension MuscleGroupExtension on MuscleGroup {
   }
 }
 
-/// 플릭(Fleek) 정품 3D 인체 해부도 위젯
-/// - 인공적인 원형 조명 번짐 효과 없이, 실제 사람 3D 근육 라인(대흉근, 삼각근, 대퇴사두 등)이 칼같이 빨갛게 들어간 원본 3D 렌더를 큼직하게 표시
+/// 플릭(Fleek) 정품 3D 다중 레이어 인체 해부도 위젯
+/// - 중립 3D 인체 베이스 위에, 루틴의 타겟 근육(가슴, 등, 어깨, 하체 등)만 실시간으로 빨갛게 동적 점등!
 class MuscleMapWidget extends StatelessWidget {
   final Set<MuscleGroup> activeMuscles;
   final double height;
@@ -96,6 +96,31 @@ class MuscleMapWidget extends StatelessWidget {
     this.onSelectMuscle,
     this.selectedMuscle,
   });
+
+  static String _getOverlayAsset(MuscleGroup group) {
+    switch (group) {
+      case MuscleGroup.chest:
+        return 'assets/images/overlay_chest.png';
+      case MuscleGroup.back:
+        return 'assets/images/overlay_back.png';
+      case MuscleGroup.shoulders:
+        return 'assets/images/overlay_shoulders.png';
+      case MuscleGroup.biceps:
+        return 'assets/images/overlay_biceps.png';
+      case MuscleGroup.triceps:
+        return 'assets/images/overlay_triceps.png';
+      case MuscleGroup.abs:
+        return 'assets/images/overlay_abs.png';
+      case MuscleGroup.quads:
+        return 'assets/images/overlay_quads.png';
+      case MuscleGroup.hamstrings:
+        return 'assets/images/overlay_hamstrings.png';
+      case MuscleGroup.glutes:
+        return 'assets/images/overlay_glutes.png';
+      case MuscleGroup.calves:
+        return 'assets/images/overlay_calves.png';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +176,7 @@ class MuscleMapWidget extends StatelessWidget {
               ),
             ),
 
-          // 1. 유저 요청 고화질 3D 실사 인체 렌더 (칼같은 근육 라인 렌더링)
+          // 1. 유저 요청 고화질 3D 실사 인체 렌더 (다중 레이어 동적 점등 시스템)
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
@@ -159,15 +184,45 @@ class MuscleMapWidget extends StatelessWidget {
                 fit: StackFit.expand,
                 alignment: Alignment.center,
                 children: [
+                  // (1) 중립 3D 인체 베이스 (불이 꺼진 정밀 해부도)
                   Image.asset(
-                    'assets/images/routine_muscle_target_full.png',
+                    'assets/images/body_base_neutral.png',
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => Image.asset(
-                      'assets/images/fleek_anatomy_hd.jpg',
+                      'assets/images/routine_muscle_target_full.png',
                       fit: BoxFit.contain,
                     ),
                   ),
-                  // 은은한 가장자리 페이드로 AMOLED 다크모드 완벽 일체화
+
+                  // (2) 10대 근육 부위별 동적 점등 오버레이 (루틴 타겟에 따라 실시간 반응)
+                  ...MuscleGroup.values.map((muscle) {
+                    final isActive = activeMuscles.contains(muscle);
+                    final isSelected = selectedMuscle == muscle;
+                    final overlayPath = _getOverlayAsset(muscle);
+
+                    double opacity = 0.0;
+                    if (selectedMuscle != null) {
+                      if (isSelected) {
+                        opacity = 1.0;
+                      } else if (isActive) {
+                        opacity = 0.35;
+                      }
+                    } else if (isActive) {
+                      opacity = 1.0;
+                    }
+
+                    return AnimatedOpacity(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      opacity: opacity,
+                      child: Image.asset(
+                        overlayPath,
+                        fit: BoxFit.contain,
+                      ),
+                    );
+                  }),
+
+                  // (3) 은은한 가장자리 페이드로 AMOLED 다크모드 완벽 일체화
                   IgnorePointer(
                     child: Container(
                       decoration: BoxDecoration(
