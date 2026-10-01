@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/exercise_master.dart';
@@ -800,13 +801,26 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 54,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: widget.recentWorkouts.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => _CopyChip(
-                      workout: widget.recentWorkouts[i],
-                      onTap: () => _copyFromPast(widget.recentWorkouts[i]),
+                  // 웹(마우스) 에서도 가로 드래그 스크롤이 가능하도록 ScrollBehavior 를
+                  // 확장한다. 기본값은 모바일 터치만 허용하므로 데스크탑 Chrome 에서
+                  // 칩이 화면을 넘어도 스크롤이 안 되는 UX 문제가 발생한다.
+                  child: ScrollConfiguration(
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.stylus,
+                      },
+                    ),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.recentWorkouts.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) => _CopyChip(
+                        workout: widget.recentWorkouts[i],
+                        onTap: () => _copyFromPast(widget.recentWorkouts[i]),
+                      ),
                     ),
                   ),
                 ),
