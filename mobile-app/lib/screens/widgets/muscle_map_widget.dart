@@ -153,13 +153,13 @@ class MuscleMapWidget extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 1. 실감형 3D 인체 모델 베이스 이미지
+                // 1. 실감형 3D 인체 모델 베이스 이미지 (실제 사람 얼굴 & 근육결)
                 AspectRatio(
-                  aspectRatio: 3 / 4,
+                  aspectRatio: 1.0,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.asset(
-                      'assets/images/anatomical_body_3d.jpg',
+                      'assets/images/fleek_anatomy_hd.jpg',
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => _FallbackVectorAnatomy(activeMuscles: activeMuscles),
                     ),
@@ -170,7 +170,7 @@ class MuscleMapWidget extends StatelessWidget {
                 Positioned.fill(
                   child: Center(
                     child: AspectRatio(
-                      aspectRatio: 3 / 4,
+                      aspectRatio: 1.0,
                       child: CustomPaint(
                         painter: _AnatomyGlowOverlayPainter(activeMuscles: activeMuscles),
                       ),
@@ -240,10 +240,10 @@ class _AnatomyGlowOverlayPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // 좌측: 전면 인체 중심 (Front Center)
-    final fcx = w * 0.285;
-    // 우측: 후면 인체 중심 (Back Center)
-    final bcx = w * 0.715;
+    // 좌측: 전면 인체 중심 (Front Center ~0.165)
+    final fcx = w * 0.165;
+    // 우측: 후면 인체 중심 (Back Center ~0.745)
+    final bcx = w * 0.745;
 
     void drawGlowSpot({
       required Offset center,
@@ -274,72 +274,71 @@ class _AnatomyGlowOverlayPainter extends CustomPainter {
 
     // 1. 가슴 (Chest - Front)
     if (activeMuscles.contains(MuscleGroup.chest)) {
-      drawGlowSpot(center: Offset(fcx - w * 0.045, h * 0.245), radiusX: w * 0.050, radiusY: h * 0.038, rotation: -0.15);
-      drawGlowSpot(center: Offset(fcx + w * 0.045, h * 0.245), radiusX: w * 0.050, radiusY: h * 0.038, rotation: 0.15);
+      drawGlowSpot(center: Offset(fcx, h * 0.250), radiusX: w * 0.065, radiusY: h * 0.045);
     }
 
     // 2. 어깨 (Shoulders - Front & Back)
     if (activeMuscles.contains(MuscleGroup.shoulders)) {
       // 전면 어깨 (Front Delts)
-      drawGlowSpot(center: Offset(fcx - w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
-      drawGlowSpot(center: Offset(fcx + w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: 0.2);
+      drawGlowSpot(center: Offset(w * 0.065, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
+      drawGlowSpot(center: Offset(w * 0.230, h * 0.245), radiusX: w * 0.038, radiusY: h * 0.045, rotation: 0.2);
       // 후면 어깨 (Rear Delts)
-      drawGlowSpot(center: Offset(bcx - w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: 0.2);
-      drawGlowSpot(center: Offset(bcx + w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
+      drawGlowSpot(center: Offset(w * 0.640, h * 0.240), radiusX: w * 0.038, radiusY: h * 0.045, rotation: 0.2);
+      drawGlowSpot(center: Offset(w * 0.825, h * 0.240), radiusX: w * 0.038, radiusY: h * 0.045, rotation: -0.2);
     }
 
     // 3. 복근 (Abs - Front)
     if (activeMuscles.contains(MuscleGroup.abs)) {
-      drawGlowSpot(center: Offset(fcx, h * 0.355), radiusX: w * 0.055, radiusY: h * 0.080);
+      drawGlowSpot(center: Offset(w * 0.160, h * 0.355), radiusX: w * 0.045, radiusY: h * 0.075);
     }
 
     // 4. 이두근 (Biceps - Front)
     if (activeMuscles.contains(MuscleGroup.biceps)) {
-      drawGlowSpot(center: Offset(fcx - w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.050, rotation: -0.1);
-      drawGlowSpot(center: Offset(fcx + w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.050, rotation: 0.1);
+      drawGlowSpot(center: Offset(w * 0.030, h * 0.320), radiusX: w * 0.028, radiusY: h * 0.050);
+      drawGlowSpot(center: Offset(w * 0.260, h * 0.350), radiusX: w * 0.028, radiusY: h * 0.050);
     }
 
     // 5. 삼두근 (Triceps - Back)
     if (activeMuscles.contains(MuscleGroup.triceps)) {
-      drawGlowSpot(center: Offset(bcx - w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.055, rotation: 0.1);
-      drawGlowSpot(center: Offset(bcx + w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.055, rotation: -0.1);
+      drawGlowSpot(center: Offset(w * 0.620, h * 0.330), radiusX: w * 0.028, radiusY: h * 0.055);
+      drawGlowSpot(center: Offset(w * 0.850, h * 0.330), radiusX: w * 0.028, radiusY: h * 0.055);
     }
 
     // 6. 등 (Back / Lats & Traps - Back)
     if (activeMuscles.contains(MuscleGroup.back)) {
       // 승모근 (상부 등)
-      drawGlowSpot(center: Offset(bcx, h * 0.210), radiusX: w * 0.065, radiusY: h * 0.045);
+      drawGlowSpot(center: Offset(bcx, h * 0.220), radiusX: w * 0.060, radiusY: h * 0.050);
       // 광배근 (등 양쪽 날개)
-      drawGlowSpot(center: Offset(bcx - w * 0.058, h * 0.305), radiusX: w * 0.048, radiusY: h * 0.065, rotation: 0.2);
-      drawGlowSpot(center: Offset(bcx + w * 0.058, h * 0.305), radiusX: w * 0.048, radiusY: h * 0.065, rotation: -0.2);
+      drawGlowSpot(center: Offset(w * 0.685, h * 0.320), radiusX: w * 0.045, radiusY: h * 0.065, rotation: 0.15);
+      drawGlowSpot(center: Offset(w * 0.785, h * 0.320), radiusX: w * 0.045, radiusY: h * 0.065, rotation: -0.15);
     }
 
     // 7. 둔근 (Glutes / 엉덩이 - Back)
     if (activeMuscles.contains(MuscleGroup.glutes)) {
-      drawGlowSpot(center: Offset(bcx - w * 0.045, h * 0.485), radiusX: w * 0.055, radiusY: h * 0.050, rotation: -0.1);
-      drawGlowSpot(center: Offset(bcx + w * 0.045, h * 0.485), radiusX: w * 0.055, radiusY: h * 0.050, rotation: 0.1);
+      drawGlowSpot(center: Offset(w * 0.700, h * 0.495), radiusX: w * 0.048, radiusY: h * 0.050);
+      drawGlowSpot(center: Offset(w * 0.765, h * 0.495), radiusX: w * 0.048, radiusY: h * 0.050);
     }
 
     // 8. 대퇴사두 (Quads / 허벅지 앞 - Front)
     if (activeMuscles.contains(MuscleGroup.quads)) {
-      drawGlowSpot(center: Offset(fcx - w * 0.055, h * 0.580), radiusX: w * 0.050, radiusY: h * 0.095, rotation: 0.05);
-      drawGlowSpot(center: Offset(fcx + w * 0.055, h * 0.580), radiusX: w * 0.050, radiusY: h * 0.095, rotation: -0.05);
+      drawGlowSpot(center: Offset(w * 0.095, h * 0.600), radiusX: w * 0.045, radiusY: h * 0.100, rotation: 0.08);
+      drawGlowSpot(center: Offset(w * 0.205, h * 0.600), radiusX: w * 0.045, radiusY: h * 0.100, rotation: -0.08);
     }
 
     // 9. 햄스트링 (Hamstrings / 허벅지 뒤 - Back)
     if (activeMuscles.contains(MuscleGroup.hamstrings)) {
-      drawGlowSpot(center: Offset(bcx - w * 0.052, h * 0.610), radiusX: w * 0.045, radiusY: h * 0.080, rotation: 0.05);
-      drawGlowSpot(center: Offset(bcx + w * 0.052, h * 0.610), radiusX: w * 0.045, radiusY: h * 0.080, rotation: -0.05);
+      drawGlowSpot(center: Offset(w * 0.700, h * 0.620), radiusX: w * 0.040, radiusY: h * 0.080);
+      drawGlowSpot(center: Offset(w * 0.790, h * 0.620), radiusX: w * 0.040, radiusY: h * 0.080);
     }
 
     // 10. 종아리 (Calves - Front & Back)
     if (activeMuscles.contains(MuscleGroup.calves)) {
       // Front
-      drawGlowSpot(center: Offset(fcx - w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
-      drawGlowSpot(center: Offset(fcx + w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(w * 0.065, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(w * 0.190, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
       // Back
-      drawGlowSpot(center: Offset(bcx - w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
-      drawGlowSpot(center: Offset(bcx + w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(w * 0.675, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(w * 0.810, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
     }
   }
 
