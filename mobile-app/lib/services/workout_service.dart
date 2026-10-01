@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_constants.dart';
 import '../models/workout.dart';
 
-/// Java 백엔드(8080) 운동 기록 CRUD REST 호출.
+/// FastAPI 백엔드(8000) 운동 기록 CRUD REST 호출.
 class WorkoutService {
   final http.Client _client;
   WorkoutService({http.Client? client}) : _client = client ?? http.Client();
@@ -59,5 +59,15 @@ class WorkoutService {
     );
   }
 
+  /// DELETE /api/workouts/{id}
+  Future<void> deleteWorkout(int id, {String userId = ApiConstants.defaultUserId}) async {
+    final uri = Uri.parse('${ApiConstants.workouts}/$id?userId=$userId');
+    final res = await _client.delete(uri).timeout(const Duration(seconds: 8));
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception('운동 기록 삭제 실패 (status=${res.statusCode})');
+    }
+  }
+
   void dispose() => _client.close();
 }
+

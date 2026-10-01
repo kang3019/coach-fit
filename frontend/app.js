@@ -1,6 +1,7 @@
-// API 엔드포인트 설정
-const JAVA_API_BASE = 'http://localhost:8080/api';
+// API 엔드포인트 설정 (FastAPI 단일 백엔드 포트 8000으로 통합)
+const JAVA_API_BASE = 'http://localhost:8000/api';
 const PYTHON_API_BASE = 'http://localhost:8000/api';
+
 
 let weeklyChart = null;
 

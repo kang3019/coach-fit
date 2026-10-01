@@ -4,26 +4,24 @@
 
 ---
 
-## 🏗️ 1. 전체 아키텍처 및 데이터 흐름
+## 🏗️ 1. 전체 아키텍처 및 데이터 흐름 (FastAPI + PostgreSQL 단일 백엔드)
+
+> **교수님 피드백 반영**: 2인 프로젝트의 오버엔지니어링(Java + Python 이원화)을 해소하고, 지도 교수님의 권고 스택인 **FastAPI + PostgreSQL**로 백엔드를 단일 통합하였습니다. ([ADR-0004](./planning/decisions/ADR-0004-unify-fastapi-postgresql-backend.md))
 
 ```
 [모바일 앱 (iOS/Android)] (Flutter)  OR  [웹 대시보드] (Chart.js)
         │
-        ▼ 1. 운동 기록 등록 / 통계 조회 / AI 코칭 요청
-[Java 백엔드 서버] (Spring Boot 3.2.x, JPA, MySQL/H2, JWT 뼈대)
-   - 포트: 8080
-   - 역할: 운동 기록 CRUD, 주간 볼륨 집계, 회원 관리 및 데이터 영속화
+        ▼ REST API (포트 8000 단일 통합)
+[FastAPI 통합 백엔드] (FastAPI, SQLAlchemy, Pydantic, OpenAI)
+    ├── 1. 운동 기록 CRUD & 주간 볼륨 집계 (/api/workouts)
+    ├── 2. DB 기반 AI 맞춤 코칭 생성 (/api/coaching/generate)
+    └── 3. 자동 완성 인터랙티브 API 명세 (/docs)
         │
-        ▼ 2. 최근 운동 기록 전달 및 코칭 요청 (POST /api/coaching)
-[Python AI 서버] (FastAPI, Pydantic, OpenAI/Claude Stub)
-   - 포트: 8000
-   - 역할: 운동 데이터 분석, 볼륨/부위별 피로도 분석, LLM 코칭 및 맞춤 루틴 추천
-        │
-        ▼ 3. 코칭 결과(JSON) 반환
-[Java 백엔드 서버] ➔ [모바일 앱 / 웹 화면에 피드백 & 추천 루틴 표시]
+        ├──▶ [PostgreSQL 데이터베이스] (운동 기록 영구 보관)
+        └──▶ [OpenAI LLM API] (맞춤 루틴 및 코칭 피드백 생성)
 ```
 
-> **참고**: 프론트엔드 및 모바일 앱에서 개발/테스트 편의를 위해 `Java 경유(표준)` 방식과 `Python 직접 호출` 방식을 자유롭게 선택하여 테스트할 수 있도록 지원합니다.
+> **참고**: 기존 `java-backend/`는 학습 및 아키텍처 비교용 레퍼런스로 보존되며, 실제 서비스 운영 및 모바일 연동은 `python-ai-backend(포트 8000)` 단일 서버로 실행됩니다.
 
 ---
 

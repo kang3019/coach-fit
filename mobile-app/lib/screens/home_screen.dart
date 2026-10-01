@@ -83,6 +83,49 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _confirmDelete(Workout workout) async {
+    if (workout.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        title: const Text('운동 기록 삭제', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '\'${workout.exerciseName}\' 기록을 삭제하시겠습니까?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _service.deleteWorkout(workout.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('운동 기록이 삭제되었습니다.')),
+          );
+          _refresh();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('삭제 실패: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,7 +182,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: WeeklyVolumeChart(volumeByDay: data.weekly),
                   );
                 }
-                return _WorkoutCard(workout: items[i - 2]);
+                final item = items[i - 2];
+                return _WorkoutCard(
+                  workout: item,
+                  onDelete: () => _confirmDelete(item),
+                );
               },
             );
           },
@@ -244,7 +291,8 @@ class _StatTile extends StatelessWidget {
 
 class _WorkoutCard extends StatelessWidget {
   final Workout workout;
-  const _WorkoutCard({required this.workout});
+  final VoidCallback? onDelete;
+  const _WorkoutCard({required this.workout, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -273,8 +321,24 @@ class _WorkoutCard extends StatelessWidget {
                   dateStr,
                   style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: onDelete,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: Colors.white38,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
+
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,

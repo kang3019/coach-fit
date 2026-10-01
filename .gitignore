@@ -62,6 +62,11 @@ share/python-wheels/
 .project
 .settings/
 
+# --- Databases ---
+*.db
+*.sqlite
+*.sqlite3
+
 # --- OS System Files ---
 .DS_Store
 .DS_Store?
