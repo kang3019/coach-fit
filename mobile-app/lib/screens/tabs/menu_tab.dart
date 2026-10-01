@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../models/user_profile.dart';
 import '../../services/goal_service.dart';
+import '../../services/profile_service.dart';
+import '../profile_edit_screen.dart';
 import '../widgets/rest_timer.dart';
 
 /// 5. 메뉴/마이 탭 (Menu & Settings Tab)
@@ -16,8 +19,6 @@ class MenuTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -28,79 +29,12 @@ class MenuTab extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
         children: [
-          // 1. 사용자 프로필 카드
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: scheme.primary.withValues(alpha: 0.2),
-                    child: Text('💪', style: const TextStyle(fontSize: 28)),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Text(
-                              '김운동 회원님',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'LV.3',
-                              style: TextStyle(
-                                color: Color(0xFF00E5A0),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          '운동 목표: 근비대 & 체력 증진 (주 4회)',
-                          style: TextStyle(color: Colors.white60, fontSize: 13),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          '식별 ID: user_01',
-                          style: TextStyle(color: Colors.white38, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // 1. 사용자 프로필 카드 (A 담당: WBS 1.1.2 — 동적 바인딩 + 편집)
+          const _ProfileCard(),
           const SizedBox(height: 14),
 
-          // 2. 신체 스펙 그리드
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF171B22),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _SpecColumn(label: '키', value: '178 cm'),
-                _SpecColumn(label: '체중', value: '74.2 kg'),
-                _SpecColumn(label: '목표 체중', value: '78.0 kg'),
-                _SpecColumn(label: '경력', value: '8개월'),
-              ],
-            ),
-          ),
+          // 2. 신체 스펙 그리드 (A 담당: WBS 1.1.2 — 저장된 신체 정보 표시)
+          const _ProfileSpecGrid(),
           const SizedBox(height: 20),
 
           // 3. 운동 설정 섹션
@@ -307,6 +241,175 @@ class _SpecColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 저장된 사용자 프로필을 메뉴 상단에 표시하고,
+/// 탭하면 ProfileEditScreen 으로 이동한다. ProfileService 리스너로
+/// 다른 화면에서 저장돼도 자동 갱신된다.
+class _ProfileCard extends StatefulWidget {
+  const _ProfileCard();
+
+  @override
+  State<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<_ProfileCard> {
+  final ProfileService _service = ProfileService();
+  UserProfile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.addListener(_onProfileChanged);
+    _loadInitial();
+  }
+
+  @override
+  void dispose() {
+    _service.removeListener(_onProfileChanged);
+    super.dispose();
+  }
+
+  Future<void> _loadInitial() async {
+    final p = await _service.load();
+    if (mounted) setState(() => _profile = p);
+  }
+
+  void _onProfileChanged() => _loadInitial();
+
+  Future<void> _openEdit() async {
+    final current = _profile ?? await _service.load();
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProfileEditScreen(initial: current),
+      ),
+    );
+    // save() 가 ProfileService.notifyListeners() 를 호출하므로 자동 갱신됨
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final profile = _profile ?? UserProfile.defaultProfile();
+    return Card(
+      child: InkWell(
+        onTap: _openEdit,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: scheme.primary.withValues(alpha: 0.2),
+                child: const Text('💪', style: TextStyle(fontSize: 28)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${profile.nickname} 회원님',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          profile.experience.label.toUpperCase(),
+                          style: TextStyle(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${profile.gender.label} · ${profile.experience.description}',
+                      style: const TextStyle(color: Colors.white60, fontSize: 13),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      '프로필 편집하려면 탭',
+                      style: TextStyle(color: Colors.white38, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 저장된 신장/체중/목표 체중/경력을 보여주는 그리드.
+/// 값이 비어있으면 `-` 로 fallback.
+class _ProfileSpecGrid extends StatefulWidget {
+  const _ProfileSpecGrid();
+
+  @override
+  State<_ProfileSpecGrid> createState() => _ProfileSpecGridState();
+}
+
+class _ProfileSpecGridState extends State<_ProfileSpecGrid> {
+  final ProfileService _service = ProfileService();
+  UserProfile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.addListener(_reload);
+    _reload();
+  }
+
+  @override
+  void dispose() {
+    _service.removeListener(_reload);
+    super.dispose();
+  }
+
+  Future<void> _reload() async {
+    final p = await _service.load();
+    if (mounted) setState(() => _profile = p);
+  }
+
+  String _fmt(double? v, String unit) =>
+      v == null ? '-' : (v % 1 == 0 ? '${v.toInt()} $unit' : '${v.toStringAsFixed(1)} $unit');
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = _profile ?? UserProfile.defaultProfile();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171B22),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _SpecColumn(label: '키', value: _fmt(profile.heightCm, 'cm')),
+          _SpecColumn(label: '체중', value: _fmt(profile.weightKg, 'kg')),
+          _SpecColumn(label: '목표', value: _fmt(profile.targetWeightKg, 'kg')),
+          _SpecColumn(label: '경력', value: profile.experience.label),
+        ],
+      ),
     );
   }
 }
