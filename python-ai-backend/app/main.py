@@ -28,19 +28,26 @@ from app.services.workout_service import (
     get_weekly_volume_stats,
 )
 
+from contextlib import asynccontextmanager
+
 # .env 환경 변수 로드
 load_dotenv()
+
+# 데이터베이스 테이블 초기화 (앱 로드 시 즉시 생성)
+init_db()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
 
 app = FastAPI(
     title="CoachFit Unified Backend API",
     description="FastAPI + PostgreSQL 기반 단일 백엔드 (운동 기록 CRUD, 주간 볼륨 통계, AI 맞춤형 코칭)",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
-# 서버 시작 시 데이터베이스 테이블 자동 생성
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 # CORS 설정: Flutter 모바일 및 프론트엔드 연동
 app.add_middleware(

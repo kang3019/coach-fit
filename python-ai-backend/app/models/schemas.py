@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date as dt_date, datetime as dt_datetime
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 
@@ -13,7 +13,7 @@ class WorkoutCreate(BaseModel):
     sets: int = Field(..., ge=1)
     reps: int = Field(..., ge=1)
     weight: float = Field(..., ge=0.0)
-    workout_date: Optional[date] = Field(default=None, validation_alias="workoutDate", serialization_alias="workoutDate")
+    workout_date: Optional[dt_date] = Field(default=None, validation_alias="workoutDate", serialization_alias="workoutDate")
     memo: Optional[str] = None
 
     model_config = {
@@ -29,9 +29,9 @@ class WorkoutResponse(BaseModel):
     sets: int
     reps: int
     weight: float
-    workout_date: date = Field(..., validation_alias="workoutDate", serialization_alias="workoutDate")
+    workout_date: dt_date = Field(..., validation_alias="workoutDate", serialization_alias="workoutDate")
     memo: Optional[str] = None
-    created_at: Optional[datetime] = Field(default=None, validation_alias="createdAt", serialization_alias="createdAt")
+    created_at: Optional[dt_datetime] = Field(default=None, validation_alias="createdAt", serialization_alias="createdAt")
 
     model_config = {
         "populate_by_name": True,
@@ -58,7 +58,7 @@ class WorkoutItem(BaseModel):
     sets: int = Field(..., ge=1, description="수행 세트 수")
     reps: int = Field(..., ge=1, description="세트당 반복 횟수")
     weight: float = Field(..., ge=0.0, description="중량 (kg)")
-    date: Optional[date] = Field(default=None, description="운동 수행 일자")
+    date: Optional[dt_date] = Field(default=None, description="운동 수행 일자")
 
 
 class CoachingGenerateRequest(BaseModel):
@@ -88,4 +88,4 @@ class CoachingResponse(BaseModel):
     summary: str = Field(..., description="최근 운동 기록 분석 및 상태 요약")
     coaching_advice: str = Field(..., description="AI 코치의 개인 맞춤 피드백 및 조언")
     recommended_routine: List[RecommendedRoutineItem] = Field(..., description="오늘 수행할 추천 운동 루틴 목록")
-    generated_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="응답 생성 시각")
+    generated_at: str = Field(default_factory=lambda: dt_datetime.now().isoformat(), description="응답 생성 시각")
