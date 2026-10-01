@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_constants.dart';
 import '../models/workout.dart';
 
-/// Java 백엔드(8080) 운동 기록 CRUD REST 호출.
+/// FastAPI 백엔드(8000) 운동 기록 CRUD REST 호출.
 class WorkoutService {
   final http.Client _client;
   WorkoutService({http.Client? client}) : _client = client ?? http.Client();

@@ -25,8 +25,10 @@
 기술 스택 선정 및 아키텍처 설계 배경을 기록하여 향후 포트폴리오 정리 및 기술 면접 시 설득력 있는 근거 자료로 활용합니다.
 
 - [ADR-0001: 모바일 클라이언트 프레임워크로 Flutter(Dart) 선정](./decisions/ADR-0001-flutter-mobile-framework.md)
-- [ADR-0002: Java Spring Boot + Python FastAPI 폴리글랏 백엔드 아키텍처 채택](./decisions/ADR-0002-polyglot-backend-architecture.md)
+- [ADR-0002: Java Spring Boot + Python FastAPI 폴리글랏 백엔드 아키텍처 채택 (ADR-0004로 대체됨)](./decisions/ADR-0002-polyglot-backend-architecture.md)
 - [ADR-0003: LLM과 로컬 룰베이스를 결합한 하이브리드 AI 코칭 엔진 설계](./decisions/ADR-0003-hybrid-ai-coaching-engine.md)
+- [ADR-0004: Python FastAPI + PostgreSQL 단일 백엔드 아키텍처로의 통합 (교수님 피드백 반영)](./decisions/ADR-0004-unify-fastapi-postgresql-backend.md)
+
 
 ---
 

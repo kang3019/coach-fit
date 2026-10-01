@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_constants.dart';
 import '../models/coaching_result.dart';
 
-/// Java 백엔드가 Python AI 서버로 중계해주는 코칭 API를 호출한다.
-/// 앱은 Python(8000)을 직접 호출하지 않고 Java(8080)만 바라본다.
+/// FastAPI 통합 백엔드(8000)의 DB 기반 AI 코칭 생성 API를 호출한다.
 class CoachingService {
   final http.Client _client;
   CoachingService({http.Client? client}) : _client = client ?? http.Client();
