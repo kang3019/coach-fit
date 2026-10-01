@@ -79,7 +79,9 @@ extension MuscleGroupExtension on MuscleGroup {
   }
 }
 
-/// 인체 전면 / 후면 근육 해부도 위젯 (타겟 근육 핫오렌지 하이라이트)
+/// 포토리얼리스틱 3D 인체 전면 / 후면 근육 해부도 위젯
+/// - 고화질 3D 메디컬 렌더 인체 모델 베이스
+/// - 타겟 근육 실시간 핫오렌지/레드 글로우 오버레이
 class MuscleMapWidget extends StatelessWidget {
   final Set<MuscleGroup> activeMuscles;
   final double height;
@@ -88,7 +90,7 @@ class MuscleMapWidget extends StatelessWidget {
   const MuscleMapWidget({
     super.key,
     required this.activeMuscles,
-    this.height = 260,
+    this.height = 320,
     this.showLabels = true,
   });
 
@@ -96,77 +98,89 @@ class MuscleMapWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF0F1218),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                // 1. 전면 (Front View)
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (showLabels)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            'FRONT',
-                            style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-                      Expanded(
-                        child: CustomPaint(
-                          size: Size.infinite,
-                          painter: _FrontAnatomyPainter(activeMuscles: activeMuscles),
+          if (showLabels)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'FRONT',
+                        style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'BACK',
+                        style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // 3D 인체 모델 및 타겟 근육 글로우 스택
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. 실감형 3D 인체 모델 베이스 이미지
+                AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/anatomical_body_3d.jpg',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => _FallbackVectorAnatomy(activeMuscles: activeMuscles),
+                    ),
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: height * 0.7,
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
-                // 2. 후면 (Back View)
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (showLabels)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            'BACK',
-                            style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-                      Expanded(
-                        child: CustomPaint(
-                          size: Size.infinite,
-                          painter: _BackAnatomyPainter(activeMuscles: activeMuscles),
-                        ),
+
+                // 2. 근육별 3D 입체 글로우 오버레이 (BlendMode.screen)
+                Positioned.fill(
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: 3 / 4,
+                      child: CustomPaint(
+                        painter: _AnatomyGlowOverlayPainter(activeMuscles: activeMuscles),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           if (activeMuscles.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -213,414 +227,210 @@ class MuscleMapWidget extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------------------
-// 전면 (Front View) Custom Painter
-// -------------------------------------------------------------
-class _FrontAnatomyPainter extends CustomPainter {
+/// 3D 인체 모델 위에 정확하게 겹쳐지는 사실적 타겟 근육 발광 셰이더 페인터
+class _AnatomyGlowOverlayPainter extends CustomPainter {
   final Set<MuscleGroup> activeMuscles;
 
-  _FrontAnatomyPainter({required this.activeMuscles});
+  _AnatomyGlowOverlayPainter({required this.activeMuscles});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final scale = size.height / 250.0;
+    if (activeMuscles.isEmpty) return;
 
-    final inactivePaint = Paint()
-      ..color = const Color(0xFF262D3B)
-      ..style = PaintingStyle.fill;
+    final w = size.width;
+    final h = size.height;
 
-    final inactiveStroke = Paint()
-      ..color = const Color(0xFF384357)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+    // 좌측: 전면 인체 중심 (Front Center)
+    final fcx = w * 0.285;
+    // 우측: 후면 인체 중심 (Back Center)
+    final bcx = w * 0.715;
 
-    final activePaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFFF6A3D), Color(0xFFE53935)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
+    void drawGlowSpot({
+      required Offset center,
+      required double radiusX,
+      required double radiusY,
+      double rotation = 0,
+      double intensity = 0.85,
+    }) {
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      if (rotation != 0) canvas.rotate(rotation);
 
-    final activeGlow = Paint()
-      ..color = const Color(0xFFFF4820).withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+      final rect = Rect.fromCenter(center: Offset.zero, width: radiusX * 2, height: radiusY * 2);
+      final paint = Paint()
+        ..blendMode = BlendMode.screen
+        ..shader = RadialGradient(
+          colors: [
+            Color(0xFFFF3D00).withValues(alpha: intensity),
+            Color(0xFFFF6A3D).withValues(alpha: intensity * 0.7),
+            Color(0xFFFF4820).withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(rect);
 
-    void drawPart(Path path, bool isActive) {
-      if (isActive) {
-        canvas.drawPath(path, activePaint);
-        canvas.drawPath(path, activeGlow);
-      } else {
-        canvas.drawPath(path, inactivePaint);
-        canvas.drawPath(path, inactiveStroke);
-      }
+      canvas.drawOval(rect, paint);
+      canvas.restore();
     }
 
-    // 1. 머리 및 목
-    final headPath = Path()
-      ..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
-    final neckPath = Path()
-      ..moveTo(cx - 6 * scale, 26 * scale)
-      ..lineTo(cx + 6 * scale, 26 * scale)
-      ..lineTo(cx + 8 * scale, 34 * scale)
-      ..lineTo(cx - 8 * scale, 34 * scale)
-      ..close();
-    canvas.drawPath(headPath, inactivePaint);
-    canvas.drawPath(headPath, inactiveStroke);
-    canvas.drawPath(neckPath, inactivePaint);
-    canvas.drawPath(neckPath, inactiveStroke);
+    // 1. 가슴 (Chest - Front)
+    if (activeMuscles.contains(MuscleGroup.chest)) {
+      drawGlowSpot(center: Offset(fcx - w * 0.045, h * 0.245), radiusX: w * 0.050, radiusY: h * 0.038, rotation: -0.15);
+      drawGlowSpot(center: Offset(fcx + w * 0.045, h * 0.245), radiusX: w * 0.050, radiusY: h * 0.038, rotation: 0.15);
+    }
 
-    // 2. 가슴 (Chest)
-    final isChest = activeMuscles.contains(MuscleGroup.chest);
-    final leftPec = Path()
-      ..moveTo(cx - 2 * scale, 37 * scale)
-      ..lineTo(cx - 20 * scale, 37 * scale)
-      ..quadraticBezierTo(cx - 24 * scale, 48 * scale, cx - 18 * scale, 56 * scale)
-      ..quadraticBezierTo(cx - 8 * scale, 59 * scale, cx - 2 * scale, 55 * scale)
-      ..close();
-    final rightPec = Path()
-      ..moveTo(cx + 2 * scale, 37 * scale)
-      ..lineTo(cx + 20 * scale, 37 * scale)
-      ..quadraticBezierTo(cx + 24 * scale, 48 * scale, cx + 18 * scale, 56 * scale)
-      ..quadraticBezierTo(cx + 8 * scale, 59 * scale, cx + 2 * scale, 55 * scale)
-      ..close();
-    drawPart(leftPec, isChest);
-    drawPart(rightPec, isChest);
+    // 2. 어깨 (Shoulders - Front & Back)
+    if (activeMuscles.contains(MuscleGroup.shoulders)) {
+      // 전면 어깨 (Front Delts)
+      drawGlowSpot(center: Offset(fcx - w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
+      drawGlowSpot(center: Offset(fcx + w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: 0.2);
+      // 후면 어깨 (Rear Delts)
+      drawGlowSpot(center: Offset(bcx - w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: 0.2);
+      drawGlowSpot(center: Offset(bcx + w * 0.105, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
+    }
 
-    // 3. 어깨 (Front Deltoids)
-    final isShoulder = activeMuscles.contains(MuscleGroup.shoulders);
-    final leftDelt = Path()
-      ..moveTo(cx - 21 * scale, 36 * scale)
-      ..quadraticBezierTo(cx - 32 * scale, 39 * scale, cx - 30 * scale, 54 * scale)
-      ..quadraticBezierTo(cx - 24 * scale, 53 * scale, cx - 21 * scale, 47 * scale)
-      ..close();
-    final rightDelt = Path()
-      ..moveTo(cx + 21 * scale, 36 * scale)
-      ..quadraticBezierTo(cx + 32 * scale, 39 * scale, cx + 30 * scale, 54 * scale)
-      ..quadraticBezierTo(cx + 24 * scale, 53 * scale, cx + 21 * scale, 47 * scale)
-      ..close();
-    drawPart(leftDelt, isShoulder);
-    drawPart(rightDelt, isShoulder);
+    // 3. 복근 (Abs - Front)
+    if (activeMuscles.contains(MuscleGroup.abs)) {
+      drawGlowSpot(center: Offset(fcx, h * 0.355), radiusX: w * 0.055, radiusY: h * 0.080);
+    }
 
-    // 4. 이두근 (Biceps)
-    final isBiceps = activeMuscles.contains(MuscleGroup.biceps);
-    final leftBicep = Path()
-      ..moveTo(cx - 30 * scale, 55 * scale)
-      ..quadraticBezierTo(cx - 34 * scale, 68 * scale, cx - 28 * scale, 80 * scale)
-      ..lineTo(cx - 23 * scale, 77 * scale)
-      ..quadraticBezierTo(cx - 25 * scale, 65 * scale, cx - 26 * scale, 54 * scale)
-      ..close();
-    final rightBicep = Path()
-      ..moveTo(cx + 30 * scale, 55 * scale)
-      ..quadraticBezierTo(cx + 34 * scale, 68 * scale, cx + 28 * scale, 80 * scale)
-      ..lineTo(cx + 23 * scale, 77 * scale)
-      ..quadraticBezierTo(cx + 25 * scale, 65 * scale, cx + 26 * scale, 54 * scale)
-      ..close();
-    drawPart(leftBicep, isBiceps);
-    drawPart(rightBicep, isBiceps);
+    // 4. 이두근 (Biceps - Front)
+    if (activeMuscles.contains(MuscleGroup.biceps)) {
+      drawGlowSpot(center: Offset(fcx - w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.050, rotation: -0.1);
+      drawGlowSpot(center: Offset(fcx + w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.050, rotation: 0.1);
+    }
 
-    // 5. 전완근 (Forearms)
-    final leftForearm = Path()
-      ..moveTo(cx - 28 * scale, 81 * scale)
-      ..lineTo(cx - 34 * scale, 110 * scale)
-      ..lineTo(cx - 28 * scale, 112 * scale)
-      ..lineTo(cx - 23 * scale, 82 * scale)
-      ..close();
-    final rightForearm = Path()
-      ..moveTo(cx + 28 * scale, 81 * scale)
-      ..lineTo(cx + 34 * scale, 110 * scale)
-      ..lineTo(cx + 28 * scale, 112 * scale)
-      ..lineTo(cx + 23 * scale, 82 * scale)
-      ..close();
-    drawPart(leftForearm, false);
-    drawPart(rightForearm, false);
+    // 5. 삼두근 (Triceps - Back)
+    if (activeMuscles.contains(MuscleGroup.triceps)) {
+      drawGlowSpot(center: Offset(bcx - w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.055, rotation: 0.1);
+      drawGlowSpot(center: Offset(bcx + w * 0.125, h * 0.320), radiusX: w * 0.032, radiusY: h * 0.055, rotation: -0.1);
+    }
 
-    // 6. 복근 (Abs / Six-pack)
-    final isAbs = activeMuscles.contains(MuscleGroup.abs);
-    final absPath = Path()
-      ..moveTo(cx - 10 * scale, 58 * scale)
-      ..lineTo(cx + 10 * scale, 58 * scale)
-      ..lineTo(cx + 8 * scale, 98 * scale)
-      ..lineTo(cx - 8 * scale, 98 * scale)
-      ..close();
-    drawPart(absPath, isAbs);
+    // 6. 등 (Back / Lats & Traps - Back)
+    if (activeMuscles.contains(MuscleGroup.back)) {
+      // 승모근 (상부 등)
+      drawGlowSpot(center: Offset(bcx, h * 0.210), radiusX: w * 0.065, radiusY: h * 0.045);
+      // 광배근 (등 양쪽 날개)
+      drawGlowSpot(center: Offset(bcx - w * 0.058, h * 0.305), radiusX: w * 0.048, radiusY: h * 0.065, rotation: 0.2);
+      drawGlowSpot(center: Offset(bcx + w * 0.058, h * 0.305), radiusX: w * 0.048, radiusY: h * 0.065, rotation: -0.2);
+    }
 
-    // 7. 대퇴사두 (Quads / 허벅지 앞)
-    final isQuads = activeMuscles.contains(MuscleGroup.quads);
-    final leftQuad = Path()
-      ..moveTo(cx - 2 * scale, 102 * scale)
-      ..lineTo(cx - 18 * scale, 102 * scale)
-      ..quadraticBezierTo(cx - 24 * scale, 130 * scale, cx - 18 * scale, 162 * scale)
-      ..lineTo(cx - 6 * scale, 162 * scale)
-      ..quadraticBezierTo(cx - 2 * scale, 130 * scale, cx - 2 * scale, 102 * scale)
-      ..close();
-    final rightQuad = Path()
-      ..moveTo(cx + 2 * scale, 102 * scale)
-      ..lineTo(cx + 18 * scale, 102 * scale)
-      ..quadraticBezierTo(cx + 24 * scale, 130 * scale, cx + 18 * scale, 162 * scale)
-      ..lineTo(cx + 6 * scale, 162 * scale)
-      ..quadraticBezierTo(cx + 2 * scale, 130 * scale, cx + 2 * scale, 102 * scale)
-      ..close();
-    drawPart(leftQuad, isQuads);
-    drawPart(rightQuad, isQuads);
+    // 7. 둔근 (Glutes / 엉덩이 - Back)
+    if (activeMuscles.contains(MuscleGroup.glutes)) {
+      drawGlowSpot(center: Offset(bcx - w * 0.045, h * 0.485), radiusX: w * 0.055, radiusY: h * 0.050, rotation: -0.1);
+      drawGlowSpot(center: Offset(bcx + w * 0.045, h * 0.485), radiusX: w * 0.055, radiusY: h * 0.050, rotation: 0.1);
+    }
 
-    // 8. 무릎
-    final leftKnee = Path()
-      ..addOval(Rect.fromCenter(center: Offset(cx - 12 * scale, 167 * scale), width: 10 * scale, height: 8 * scale));
-    final rightKnee = Path()
-      ..addOval(Rect.fromCenter(center: Offset(cx + 12 * scale, 167 * scale), width: 10 * scale, height: 8 * scale));
-    drawPart(leftKnee, false);
-    drawPart(rightKnee, false);
+    // 8. 대퇴사두 (Quads / 허벅지 앞 - Front)
+    if (activeMuscles.contains(MuscleGroup.quads)) {
+      drawGlowSpot(center: Offset(fcx - w * 0.055, h * 0.580), radiusX: w * 0.050, radiusY: h * 0.095, rotation: 0.05);
+      drawGlowSpot(center: Offset(fcx + w * 0.055, h * 0.580), radiusX: w * 0.050, radiusY: h * 0.095, rotation: -0.05);
+    }
 
-    // 9. 종아리 / 정강이 (Calves Front)
-    final isCalves = activeMuscles.contains(MuscleGroup.calves);
-    final leftShin = Path()
-      ..moveTo(cx - 16 * scale, 172 * scale)
-      ..quadraticBezierTo(cx - 19 * scale, 195 * scale, cx - 14 * scale, 225 * scale)
-      ..lineTo(cx - 9 * scale, 225 * scale)
-      ..quadraticBezierTo(cx - 8 * scale, 195 * scale, cx - 8 * scale, 172 * scale)
-      ..close();
-    final rightShin = Path()
-      ..moveTo(cx + 16 * scale, 172 * scale)
-      ..quadraticBezierTo(cx + 19 * scale, 195 * scale, cx + 14 * scale, 225 * scale)
-      ..lineTo(cx + 9 * scale, 225 * scale)
-      ..quadraticBezierTo(cx + 8 * scale, 195 * scale, cx + 8 * scale, 172 * scale)
-      ..close();
-    drawPart(leftShin, isCalves);
-    drawPart(rightShin, isCalves);
+    // 9. 햄스트링 (Hamstrings / 허벅지 뒤 - Back)
+    if (activeMuscles.contains(MuscleGroup.hamstrings)) {
+      drawGlowSpot(center: Offset(bcx - w * 0.052, h * 0.610), radiusX: w * 0.045, radiusY: h * 0.080, rotation: 0.05);
+      drawGlowSpot(center: Offset(bcx + w * 0.052, h * 0.610), radiusX: w * 0.045, radiusY: h * 0.080, rotation: -0.05);
+    }
 
-    // 10. 발
-    final leftFoot = Path()
-      ..moveTo(cx - 14 * scale, 226 * scale)
-      ..lineTo(cx - 17 * scale, 240 * scale)
-      ..lineTo(cx - 7 * scale, 240 * scale)
-      ..lineTo(cx - 9 * scale, 226 * scale)
-      ..close();
-    final rightFoot = Path()
-      ..moveTo(cx + 14 * scale, 226 * scale)
-      ..lineTo(cx + 17 * scale, 240 * scale)
-      ..lineTo(cx + 7 * scale, 240 * scale)
-      ..lineTo(cx + 9 * scale, 226 * scale)
-      ..close();
-    drawPart(leftFoot, false);
-    drawPart(rightFoot, false);
+    // 10. 종아리 (Calves - Front & Back)
+    if (activeMuscles.contains(MuscleGroup.calves)) {
+      // Front
+      drawGlowSpot(center: Offset(fcx - w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(fcx + w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+      // Back
+      drawGlowSpot(center: Offset(bcx - w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+      drawGlowSpot(center: Offset(bcx + w * 0.048, h * 0.810), radiusX: w * 0.038, radiusY: h * 0.065);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _FrontAnatomyPainter oldDelegate) {
+  bool shouldRepaint(covariant _AnatomyGlowOverlayPainter oldDelegate) {
     return oldDelegate.activeMuscles != activeMuscles;
   }
 }
 
-// -------------------------------------------------------------
-// 후면 (Back View) Custom Painter
-// -------------------------------------------------------------
-class _BackAnatomyPainter extends CustomPainter {
+/// 이미지 로드 실패 시 동작하는 벡터 해부도 폴백 위젯
+class _FallbackVectorAnatomy extends StatelessWidget {
   final Set<MuscleGroup> activeMuscles;
 
-  _BackAnatomyPainter({required this.activeMuscles});
+  const _FallbackVectorAnatomy({required this.activeMuscles});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _FrontVectorPainter(activeMuscles: activeMuscles),
+          ),
+        ),
+        Container(width: 1, color: Colors.white12),
+        Expanded(
+          child: CustomPaint(
+            size: Size.infinite,
+            painter: _BackVectorPainter(activeMuscles: activeMuscles),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FrontVectorPainter extends CustomPainter {
+  final Set<MuscleGroup> activeMuscles;
+  _FrontVectorPainter({required this.activeMuscles});
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final scale = size.height / 250.0;
+    final inactivePaint = Paint()..color = const Color(0xFF262D3B)..style = PaintingStyle.fill;
+    final activePaint = Paint()..color = const Color(0xFFFF4820)..style = PaintingStyle.fill;
 
-    final inactivePaint = Paint()
-      ..color = const Color(0xFF262D3B)
-      ..style = PaintingStyle.fill;
+    final head = Path()..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
+    canvas.drawPath(head, inactivePaint);
 
-    final inactiveStroke = Paint()
-      ..color = const Color(0xFF384357)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+    final isChest = activeMuscles.contains(MuscleGroup.chest);
+    final pecs = Path()
+      ..addRect(Rect.fromCenter(center: Offset(cx, 48 * scale), width: 36 * scale, height: 18 * scale));
+    canvas.drawPath(pecs, isChest ? activePaint : inactivePaint);
 
-    final activePaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFFF6A3D), Color(0xFFE53935)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
-    final activeGlow = Paint()
-      ..color = const Color(0xFFFF4820).withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
-    void drawPart(Path path, bool isActive) {
-      if (isActive) {
-        canvas.drawPath(path, activePaint);
-        canvas.drawPath(path, activeGlow);
-      } else {
-        canvas.drawPath(path, inactivePaint);
-        canvas.drawPath(path, inactiveStroke);
-      }
-    }
-
-    // 1. 머리 및 목 뒤편
-    final headPath = Path()
-      ..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
-    final neckPath = Path()
-      ..moveTo(cx - 7 * scale, 26 * scale)
-      ..lineTo(cx + 7 * scale, 26 * scale)
-      ..lineTo(cx + 9 * scale, 34 * scale)
-      ..lineTo(cx - 9 * scale, 34 * scale)
-      ..close();
-    canvas.drawPath(headPath, inactivePaint);
-    canvas.drawPath(headPath, inactiveStroke);
-    canvas.drawPath(neckPath, inactivePaint);
-    canvas.drawPath(neckPath, inactiveStroke);
-
-    // 2. 승모근 및 상부 등 (Traps & Upper Back)
-    final isBack = activeMuscles.contains(MuscleGroup.back);
-    final traps = Path()
-      ..moveTo(cx, 32 * scale)
-      ..lineTo(cx + 20 * scale, 38 * scale)
-      ..lineTo(cx + 12 * scale, 58 * scale)
-      ..lineTo(cx, 68 * scale)
-      ..lineTo(cx - 12 * scale, 58 * scale)
-      ..lineTo(cx - 20 * scale, 38 * scale)
-      ..close();
-    drawPart(traps, isBack);
-
-    // 3. 후면 삼각근 (Rear Delts)
-    final isShoulders = activeMuscles.contains(MuscleGroup.shoulders);
-    final leftRearDelt = Path()
-      ..moveTo(cx - 21 * scale, 38 * scale)
-      ..quadraticBezierTo(cx - 31 * scale, 41 * scale, cx - 29 * scale, 55 * scale)
-      ..lineTo(cx - 21 * scale, 50 * scale)
-      ..close();
-    final rightRearDelt = Path()
-      ..moveTo(cx + 21 * scale, 38 * scale)
-      ..quadraticBezierTo(cx + 31 * scale, 41 * scale, cx + 29 * scale, 55 * scale)
-      ..lineTo(cx + 21 * scale, 50 * scale)
-      ..close();
-    drawPart(leftRearDelt, isShoulders);
-    drawPart(rightRearDelt, isShoulders);
-
-    // 4. 광배근 (Lats / 등 양쪽)
-    final leftLat = Path()
-      ..moveTo(cx - 12 * scale, 58 * scale)
-      ..quadraticBezierTo(cx - 26 * scale, 64 * scale, cx - 22 * scale, 84 * scale)
-      ..lineTo(cx - 8 * scale, 94 * scale)
-      ..lineTo(cx - 2 * scale, 70 * scale)
-      ..close();
-    final rightLat = Path()
-      ..moveTo(cx + 12 * scale, 58 * scale)
-      ..quadraticBezierTo(cx + 26 * scale, 64 * scale, cx + 22 * scale, 84 * scale)
-      ..lineTo(cx + 8 * scale, 94 * scale)
-      ..lineTo(cx + 2 * scale, 70 * scale)
-      ..close();
-    drawPart(leftLat, isBack);
-    drawPart(rightLat, isBack);
-
-    // 5. 삼두근 (Triceps)
-    final isTriceps = activeMuscles.contains(MuscleGroup.triceps);
-    final leftTricep = Path()
-      ..moveTo(cx - 29 * scale, 56 * scale)
-      ..quadraticBezierTo(cx - 34 * scale, 70 * scale, cx - 27 * scale, 82 * scale)
-      ..lineTo(cx - 23 * scale, 79 * scale)
-      ..quadraticBezierTo(cx - 25 * scale, 66 * scale, cx - 24 * scale, 54 * scale)
-      ..close();
-    final rightTricep = Path()
-      ..moveTo(cx + 29 * scale, 56 * scale)
-      ..quadraticBezierTo(cx + 34 * scale, 70 * scale, cx + 27 * scale, 82 * scale)
-      ..lineTo(cx + 23 * scale, 79 * scale)
-      ..quadraticBezierTo(cx + 25 * scale, 66 * scale, cx + 24 * scale, 54 * scale)
-      ..close();
-    drawPart(leftTricep, isTriceps);
-    drawPart(rightTricep, isTriceps);
-
-    // 6. 전완근 뒤편
-    final leftForearmBack = Path()
-      ..moveTo(cx - 27 * scale, 83 * scale)
-      ..lineTo(cx - 33 * scale, 110 * scale)
-      ..lineTo(cx - 27 * scale, 112 * scale)
-      ..lineTo(cx - 22 * scale, 84 * scale)
-      ..close();
-    final rightForearmBack = Path()
-      ..moveTo(cx + 27 * scale, 83 * scale)
-      ..lineTo(cx + 33 * scale, 110 * scale)
-      ..lineTo(cx + 27 * scale, 112 * scale)
-      ..lineTo(cx + 22 * scale, 84 * scale)
-      ..close();
-    drawPart(leftForearmBack, false);
-    drawPart(rightForearmBack, false);
-
-    // 7. 둔근 (Glutes / 엉덩이)
-    final isGlutes = activeMuscles.contains(MuscleGroup.glutes);
-    final leftGlute = Path()
-      ..moveTo(cx - 2 * scale, 98 * scale)
-      ..quadraticBezierTo(cx - 24 * scale, 102 * scale, cx - 20 * scale, 126 * scale)
-      ..quadraticBezierTo(cx - 12 * scale, 132 * scale, cx - 2 * scale, 128 * scale)
-      ..close();
-    final rightGlute = Path()
-      ..moveTo(cx + 2 * scale, 98 * scale)
-      ..quadraticBezierTo(cx + 24 * scale, 102 * scale, cx + 20 * scale, 126 * scale)
-      ..quadraticBezierTo(cx + 12 * scale, 132 * scale, cx + 2 * scale, 128 * scale)
-      ..close();
-    drawPart(leftGlute, isGlutes);
-    drawPart(rightGlute, isGlutes);
-
-    // 8. 햄스트링 (Hamstrings / 허벅지 뒤)
-    final isHamstrings = activeMuscles.contains(MuscleGroup.hamstrings);
-    final leftHam = Path()
-      ..moveTo(cx - 3 * scale, 130 * scale)
-      ..lineTo(cx - 19 * scale, 129 * scale)
-      ..quadraticBezierTo(cx - 22 * scale, 146 * scale, cx - 17 * scale, 162 * scale)
-      ..lineTo(cx - 6 * scale, 162 * scale)
-      ..close();
-    final rightHam = Path()
-      ..moveTo(cx + 3 * scale, 130 * scale)
-      ..lineTo(cx + 19 * scale, 129 * scale)
-      ..quadraticBezierTo(cx + 22 * scale, 146 * scale, cx + 17 * scale, 162 * scale)
-      ..lineTo(cx + 6 * scale, 162 * scale)
-      ..close();
-    drawPart(leftHam, isHamstrings);
-    drawPart(rightHam, isHamstrings);
-
-    // 9. 종아리 뒤 (Calves / 비복근)
-    final isCalves = activeMuscles.contains(MuscleGroup.calves);
-    final leftCalf = Path()
-      ..moveTo(cx - 7 * scale, 168 * scale)
-      ..quadraticBezierTo(cx - 20 * scale, 185 * scale, cx - 16 * scale, 206 * scale)
-      ..lineTo(cx - 12 * scale, 225 * scale)
-      ..lineTo(cx - 8 * scale, 225 * scale)
-      ..quadraticBezierTo(cx - 7 * scale, 195 * scale, cx - 7 * scale, 168 * scale)
-      ..close();
-    final rightCalf = Path()
-      ..moveTo(cx + 7 * scale, 168 * scale)
-      ..quadraticBezierTo(cx + 20 * scale, 185 * scale, cx + 16 * scale, 206 * scale)
-      ..lineTo(cx + 12 * scale, 225 * scale)
-      ..lineTo(cx + 8 * scale, 225 * scale)
-      ..quadraticBezierTo(cx + 7 * scale, 195 * scale, cx + 7 * scale, 168 * scale)
-      ..close();
-    drawPart(leftCalf, isCalves);
-    drawPart(rightCalf, isCalves);
-
-    // 10. 발 뒤꿈치
-    final leftHeel = Path()
-      ..moveTo(cx - 12 * scale, 226 * scale)
-      ..lineTo(cx - 15 * scale, 240 * scale)
-      ..lineTo(cx - 8 * scale, 240 * scale)
-      ..lineTo(cx - 8 * scale, 226 * scale)
-      ..close();
-    final rightHeel = Path()
-      ..moveTo(cx + 12 * scale, 226 * scale)
-      ..lineTo(cx + 15 * scale, 240 * scale)
-      ..lineTo(cx + 8 * scale, 240 * scale)
-      ..lineTo(cx + 8 * scale, 226 * scale)
-      ..close();
-    drawPart(leftHeel, false);
-    drawPart(rightHeel, false);
+    final isQuads = activeMuscles.contains(MuscleGroup.quads);
+    final quads = Path()
+      ..addRect(Rect.fromCenter(center: Offset(cx, 130 * scale), width: 32 * scale, height: 50 * scale));
+    canvas.drawPath(quads, isQuads ? activePaint : inactivePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _BackAnatomyPainter oldDelegate) {
-    return oldDelegate.activeMuscles != activeMuscles;
+  bool shouldRepaint(covariant _FrontVectorPainter oldDelegate) => oldDelegate.activeMuscles != activeMuscles;
+}
+
+class _BackVectorPainter extends CustomPainter {
+  final Set<MuscleGroup> activeMuscles;
+  _BackVectorPainter({required this.activeMuscles});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final scale = size.height / 250.0;
+    final inactivePaint = Paint()..color = const Color(0xFF262D3B)..style = PaintingStyle.fill;
+    final activePaint = Paint()..color = const Color(0xFFFF4820)..style = PaintingStyle.fill;
+
+    final head = Path()..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
+    canvas.drawPath(head, inactivePaint);
+
+    final isBack = activeMuscles.contains(MuscleGroup.back);
+    final back = Path()
+      ..addRect(Rect.fromCenter(center: Offset(cx, 55 * scale), width: 38 * scale, height: 35 * scale));
+    canvas.drawPath(back, isBack ? activePaint : inactivePaint);
+
+    final isGlutes = activeMuscles.contains(MuscleGroup.glutes);
+    final glutes = Path()
+      ..addRect(Rect.fromCenter(center: Offset(cx, 115 * scale), width: 36 * scale, height: 25 * scale));
+    canvas.drawPath(glutes, isGlutes ? activePaint : inactivePaint);
   }
+
+  @override
+  bool shouldRepaint(covariant _BackVectorPainter oldDelegate) => oldDelegate.activeMuscles != activeMuscles;
 }

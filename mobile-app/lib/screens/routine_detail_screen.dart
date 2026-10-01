@@ -222,7 +222,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
               // 1. 인체 근육 지도 (Front & Back Muscle Map)
               MuscleMapWidget(
                 activeMuscles: activeMuscles,
-                height: 270,
+                height: 310,
               ),
 
               const SizedBox(height: 24),
