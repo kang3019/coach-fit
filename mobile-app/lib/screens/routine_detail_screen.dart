@@ -70,6 +70,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   final WorkoutService _workoutService = WorkoutService();
   bool _starting = false;
   Map<String, ExerciseMaster> _masterCache = {};
+  MuscleGroup? _selectedMuscle;
 
   @override
   void initState() {
@@ -222,7 +223,13 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
               // 1. 인체 근육 지도 (Front & Back Muscle Map)
               MuscleMapWidget(
                 activeMuscles: activeMuscles,
-                height: 310,
+                height: 350,
+                selectedMuscle: _selectedMuscle,
+                onSelectMuscle: (muscle) {
+                  setState(() {
+                    _selectedMuscle = (_selectedMuscle == muscle ? null : muscle);
+                  });
+                },
               ),
 
               const SizedBox(height: 24),
@@ -266,8 +273,12 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                 ..._exercises.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final item = entry.value;
+                  final isTargeted = _selectedMuscle != null &&
+                      MuscleGroupExtension.parseFromText('${item.name} ${item.targetMuscle}')
+                          .contains(_selectedMuscle);
                   return _RoutineExerciseTile(
                     item: item,
+                    isHighlighted: isTargeted,
                     onDelete: () {
                       setState(() => _exercises.removeAt(idx));
                     },
@@ -352,21 +363,38 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
 class _RoutineExerciseTile extends StatelessWidget {
   final RoutineExerciseItem item;
   final VoidCallback onDelete;
+  final bool isHighlighted;
 
   const _RoutineExerciseTile({
     required this.item,
     required this.onDelete,
+    this.isHighlighted = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF151922),
+        color: isHighlighted ? const Color(0xFF221719) : const Color(0xFF151922),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: isHighlighted ? const Color(0xFFFF4820) : Colors.white.withValues(alpha: 0.05),
+          width: isHighlighted ? 1.5 : 1.0,
+        ),
+        boxShadow: isHighlighted
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFF4820).withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -375,8 +403,11 @@ class _RoutineExerciseTile extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E2430),
+              color: isHighlighted ? const Color(0xFF2E1C20) : const Color(0xFF1E2430),
               borderRadius: BorderRadius.circular(12),
+              border: isHighlighted
+                  ? Border.all(color: const Color(0xFFFF4820).withValues(alpha: 0.4))
+                  : null,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -404,16 +435,41 @@ class _RoutineExerciseTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isHighlighted) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4820),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'TARGET',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

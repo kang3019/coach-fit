@@ -79,35 +79,38 @@ extension MuscleGroupExtension on MuscleGroup {
   }
 }
 
-/// 포토리얼리스틱 3D 인체 전면 / 후면 근육 해부도 위젯
-/// - 고화질 3D 메디컬 렌더 인체 모델 베이스
-/// - 타겟 근육 실시간 핫오렌지/레드 글로우 오버레이
+/// 플릭(Fleek) 정품 3D 인체 해부도 위젯
+/// - 인공적인 원형 조명 번짐 효과 없이, 실제 사람 3D 근육 라인(대흉근, 삼각근, 대퇴사두 등)이 칼같이 빨갛게 들어간 원본 3D 렌더를 큼직하게 표시
 class MuscleMapWidget extends StatelessWidget {
   final Set<MuscleGroup> activeMuscles;
   final double height;
   final bool showLabels;
+  final void Function(MuscleGroup muscle)? onSelectMuscle;
+  final MuscleGroup? selectedMuscle;
 
   const MuscleMapWidget({
     super.key,
     required this.activeMuscles,
-    this.height = 320,
+    this.height = 340,
     this.showLabels = true,
+    this.onSelectMuscle,
+    this.selectedMuscle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
         color: const Color(0xFF0F1218),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -115,7 +118,7 @@ class MuscleMapWidget extends StatelessWidget {
         children: [
           if (showLabels)
             const Padding(
-              padding: EdgeInsets.only(bottom: 6),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               child: Row(
                 children: [
                   Expanded(
@@ -148,288 +151,100 @@ class MuscleMapWidget extends StatelessWidget {
               ),
             ),
 
-          // 3D 인체 모델 및 타겟 근육 글로우 스택
+          // 1. 유저 요청 고화질 3D 실사 인체 렌더 (칼같은 근육 라인 렌더링)
           Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // 1. 실감형 3D 인체 모델 베이스 이미지 (실제 사람 얼굴 & 근육결)
-                AspectRatio(
-                  aspectRatio: 1.0,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(
+                fit: StackFit.expand,
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/routine_muscle_target_full.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Image.asset(
                       'assets/images/fleek_anatomy_hd.jpg',
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => _FallbackVectorAnatomy(activeMuscles: activeMuscles),
                     ),
                   ),
-                ),
-
-                // 2. 근육별 3D 입체 글로우 오버레이 (BlendMode.screen)
-                Positioned.fill(
-                  child: Center(
-                    child: AspectRatio(
-                      aspectRatio: 1.0,
-                      child: CustomPaint(
-                        painter: _AnatomyGlowOverlayPainter(activeMuscles: activeMuscles),
+                  // 은은한 가장자리 페이드로 AMOLED 다크모드 완벽 일체화
+                  IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFF0F1218).withValues(alpha: 0.15),
+                            Colors.transparent,
+                            Colors.transparent,
+                            const Color(0xFF0F1218).withValues(alpha: 0.25),
+                          ],
+                          stops: const [0.0, 0.1, 0.9, 1.0],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
-          if (activeMuscles.isNotEmpty) ...[
-            const SizedBox(height: 8),
+          const SizedBox(height: 10),
+
+          // 2. 정확하게 타겟된 주요 근육 뱃지
+          if (activeMuscles.isNotEmpty)
             Wrap(
               spacing: 6,
-              runSpacing: 4,
+              runSpacing: 5,
               alignment: WrapAlignment.center,
               children: activeMuscles.map((m) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF4820).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFFF4820).withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF4820),
-                          shape: BoxShape.circle,
-                        ),
+                final isSelected = selectedMuscle == m;
+                return InkWell(
+                  onTap: onSelectMuscle != null ? () => onSelectMuscle!(m) : null,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFFF4820)
+                          : const Color(0xFFFF4820).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFFFF4820).withValues(alpha: 0.5),
+                        width: isSelected ? 1.5 : 1.0,
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        m.koreanName,
-                        style: const TextStyle(
-                          color: Color(0xFFFF6A48),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : const Color(0xFFFF4820),
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 5),
+                        Text(
+                          m.koreanName,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : const Color(0xFFFF6A48),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
             ),
-          ],
         ],
       ),
     );
   }
-}
-
-/// 3D 인체 모델 위에 정확하게 겹쳐지는 사실적 타겟 근육 발광 셰이더 페인터
-class _AnatomyGlowOverlayPainter extends CustomPainter {
-  final Set<MuscleGroup> activeMuscles;
-
-  _AnatomyGlowOverlayPainter({required this.activeMuscles});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (activeMuscles.isEmpty) return;
-
-    final w = size.width;
-    final h = size.height;
-
-    // 좌측: 전면 인체 중심 (Front Center ~0.165)
-    final fcx = w * 0.165;
-    // 우측: 후면 인체 중심 (Back Center ~0.745)
-    final bcx = w * 0.745;
-
-    void drawGlowSpot({
-      required Offset center,
-      required double radiusX,
-      required double radiusY,
-      double rotation = 0,
-      double intensity = 0.85,
-    }) {
-      canvas.save();
-      canvas.translate(center.dx, center.dy);
-      if (rotation != 0) canvas.rotate(rotation);
-
-      final rect = Rect.fromCenter(center: Offset.zero, width: radiusX * 2, height: radiusY * 2);
-      final paint = Paint()
-        ..blendMode = BlendMode.screen
-        ..shader = RadialGradient(
-          colors: [
-            Color(0xFFFF3D00).withValues(alpha: intensity),
-            Color(0xFFFF6A3D).withValues(alpha: intensity * 0.7),
-            Color(0xFFFF4820).withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ).createShader(rect);
-
-      canvas.drawOval(rect, paint);
-      canvas.restore();
-    }
-
-    // 1. 가슴 (Chest - Front)
-    if (activeMuscles.contains(MuscleGroup.chest)) {
-      drawGlowSpot(center: Offset(fcx, h * 0.250), radiusX: w * 0.065, radiusY: h * 0.045);
-    }
-
-    // 2. 어깨 (Shoulders - Front & Back)
-    if (activeMuscles.contains(MuscleGroup.shoulders)) {
-      // 전면 어깨 (Front Delts)
-      drawGlowSpot(center: Offset(w * 0.065, h * 0.225), radiusX: w * 0.040, radiusY: h * 0.045, rotation: -0.2);
-      drawGlowSpot(center: Offset(w * 0.230, h * 0.245), radiusX: w * 0.038, radiusY: h * 0.045, rotation: 0.2);
-      // 후면 어깨 (Rear Delts)
-      drawGlowSpot(center: Offset(w * 0.640, h * 0.240), radiusX: w * 0.038, radiusY: h * 0.045, rotation: 0.2);
-      drawGlowSpot(center: Offset(w * 0.825, h * 0.240), radiusX: w * 0.038, radiusY: h * 0.045, rotation: -0.2);
-    }
-
-    // 3. 복근 (Abs - Front)
-    if (activeMuscles.contains(MuscleGroup.abs)) {
-      drawGlowSpot(center: Offset(w * 0.160, h * 0.355), radiusX: w * 0.045, radiusY: h * 0.075);
-    }
-
-    // 4. 이두근 (Biceps - Front)
-    if (activeMuscles.contains(MuscleGroup.biceps)) {
-      drawGlowSpot(center: Offset(w * 0.030, h * 0.320), radiusX: w * 0.028, radiusY: h * 0.050);
-      drawGlowSpot(center: Offset(w * 0.260, h * 0.350), radiusX: w * 0.028, radiusY: h * 0.050);
-    }
-
-    // 5. 삼두근 (Triceps - Back)
-    if (activeMuscles.contains(MuscleGroup.triceps)) {
-      drawGlowSpot(center: Offset(w * 0.620, h * 0.330), radiusX: w * 0.028, radiusY: h * 0.055);
-      drawGlowSpot(center: Offset(w * 0.850, h * 0.330), radiusX: w * 0.028, radiusY: h * 0.055);
-    }
-
-    // 6. 등 (Back / Lats & Traps - Back)
-    if (activeMuscles.contains(MuscleGroup.back)) {
-      // 승모근 (상부 등)
-      drawGlowSpot(center: Offset(bcx, h * 0.220), radiusX: w * 0.060, radiusY: h * 0.050);
-      // 광배근 (등 양쪽 날개)
-      drawGlowSpot(center: Offset(w * 0.685, h * 0.320), radiusX: w * 0.045, radiusY: h * 0.065, rotation: 0.15);
-      drawGlowSpot(center: Offset(w * 0.785, h * 0.320), radiusX: w * 0.045, radiusY: h * 0.065, rotation: -0.15);
-    }
-
-    // 7. 둔근 (Glutes / 엉덩이 - Back)
-    if (activeMuscles.contains(MuscleGroup.glutes)) {
-      drawGlowSpot(center: Offset(w * 0.700, h * 0.495), radiusX: w * 0.048, radiusY: h * 0.050);
-      drawGlowSpot(center: Offset(w * 0.765, h * 0.495), radiusX: w * 0.048, radiusY: h * 0.050);
-    }
-
-    // 8. 대퇴사두 (Quads / 허벅지 앞 - Front)
-    if (activeMuscles.contains(MuscleGroup.quads)) {
-      drawGlowSpot(center: Offset(w * 0.095, h * 0.600), radiusX: w * 0.045, radiusY: h * 0.100, rotation: 0.08);
-      drawGlowSpot(center: Offset(w * 0.205, h * 0.600), radiusX: w * 0.045, radiusY: h * 0.100, rotation: -0.08);
-    }
-
-    // 9. 햄스트링 (Hamstrings / 허벅지 뒤 - Back)
-    if (activeMuscles.contains(MuscleGroup.hamstrings)) {
-      drawGlowSpot(center: Offset(w * 0.700, h * 0.620), radiusX: w * 0.040, radiusY: h * 0.080);
-      drawGlowSpot(center: Offset(w * 0.790, h * 0.620), radiusX: w * 0.040, radiusY: h * 0.080);
-    }
-
-    // 10. 종아리 (Calves - Front & Back)
-    if (activeMuscles.contains(MuscleGroup.calves)) {
-      // Front
-      drawGlowSpot(center: Offset(w * 0.065, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
-      drawGlowSpot(center: Offset(w * 0.190, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
-      // Back
-      drawGlowSpot(center: Offset(w * 0.675, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
-      drawGlowSpot(center: Offset(w * 0.810, h * 0.810), radiusX: w * 0.035, radiusY: h * 0.065);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _AnatomyGlowOverlayPainter oldDelegate) {
-    return oldDelegate.activeMuscles != activeMuscles;
-  }
-}
-
-/// 이미지 로드 실패 시 동작하는 벡터 해부도 폴백 위젯
-class _FallbackVectorAnatomy extends StatelessWidget {
-  final Set<MuscleGroup> activeMuscles;
-
-  const _FallbackVectorAnatomy({required this.activeMuscles});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: CustomPaint(
-            size: Size.infinite,
-            painter: _FrontVectorPainter(activeMuscles: activeMuscles),
-          ),
-        ),
-        Container(width: 1, color: Colors.white12),
-        Expanded(
-          child: CustomPaint(
-            size: Size.infinite,
-            painter: _BackVectorPainter(activeMuscles: activeMuscles),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FrontVectorPainter extends CustomPainter {
-  final Set<MuscleGroup> activeMuscles;
-  _FrontVectorPainter({required this.activeMuscles});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final scale = size.height / 250.0;
-    final inactivePaint = Paint()..color = const Color(0xFF262D3B)..style = PaintingStyle.fill;
-    final activePaint = Paint()..color = const Color(0xFFFF4820)..style = PaintingStyle.fill;
-
-    final head = Path()..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
-    canvas.drawPath(head, inactivePaint);
-
-    final isChest = activeMuscles.contains(MuscleGroup.chest);
-    final pecs = Path()
-      ..addRect(Rect.fromCenter(center: Offset(cx, 48 * scale), width: 36 * scale, height: 18 * scale));
-    canvas.drawPath(pecs, isChest ? activePaint : inactivePaint);
-
-    final isQuads = activeMuscles.contains(MuscleGroup.quads);
-    final quads = Path()
-      ..addRect(Rect.fromCenter(center: Offset(cx, 130 * scale), width: 32 * scale, height: 50 * scale));
-    canvas.drawPath(quads, isQuads ? activePaint : inactivePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _FrontVectorPainter oldDelegate) => oldDelegate.activeMuscles != activeMuscles;
-}
-
-class _BackVectorPainter extends CustomPainter {
-  final Set<MuscleGroup> activeMuscles;
-  _BackVectorPainter({required this.activeMuscles});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final scale = size.height / 250.0;
-    final inactivePaint = Paint()..color = const Color(0xFF262D3B)..style = PaintingStyle.fill;
-    final activePaint = Paint()..color = const Color(0xFFFF4820)..style = PaintingStyle.fill;
-
-    final head = Path()..addOval(Rect.fromCenter(center: Offset(cx, 16 * scale), width: 18 * scale, height: 22 * scale));
-    canvas.drawPath(head, inactivePaint);
-
-    final isBack = activeMuscles.contains(MuscleGroup.back);
-    final back = Path()
-      ..addRect(Rect.fromCenter(center: Offset(cx, 55 * scale), width: 38 * scale, height: 35 * scale));
-    canvas.drawPath(back, isBack ? activePaint : inactivePaint);
-
-    final isGlutes = activeMuscles.contains(MuscleGroup.glutes);
-    final glutes = Path()
-      ..addRect(Rect.fromCenter(center: Offset(cx, 115 * scale), width: 36 * scale, height: 25 * scale));
-    canvas.drawPath(glutes, isGlutes ? activePaint : inactivePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BackVectorPainter oldDelegate) => oldDelegate.activeMuscles != activeMuscles;
 }
