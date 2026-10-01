@@ -10,7 +10,7 @@ try:
 except ImportError:
     Mangum = None
 
-from app.database import get_db, init_db
+from app.database import get_db, init_db, SessionLocal
 from app.models.schemas import (
     WorkoutCreate,
     WorkoutResponse,
@@ -26,6 +26,8 @@ from app.services.workout_service import (
     get_workouts_by_user,
     get_recent_workouts,
     get_weekly_volume_stats,
+    delete_workout,
+    seed_initial_workouts,
 )
 
 from contextlib import asynccontextmanager
@@ -33,13 +35,24 @@ from contextlib import asynccontextmanager
 # .env 환경 변수 로드
 load_dotenv()
 
-# 데이터베이스 테이블 초기화 (앱 로드 시 즉시 생성)
+# 데이터베이스 테이블 초기화 및 시드 데이터 적재
 init_db()
+_db = SessionLocal()
+try:
+    seed_initial_workouts(_db)
+finally:
+    _db.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    db = SessionLocal()
+    try:
+        seed_initial_workouts(db)
+    finally:
+        db.close()
     yield
+
 
 app = FastAPI(
     title="CoachFit Unified Backend API",
@@ -126,6 +139,25 @@ def api_get_workouts(
     사용자의 전체 운동 기록 목록 조회 API (최신 일자 순 정렬)
     """
     return get_workouts_by_user(db, user_id=userId)
+
+
+@app.delete(
+    "/api/workouts/{workout_id}",
+    summary="운동 기록 삭제"
+)
+def api_delete_workout(
+    workout_id: int,
+    userId: str = Query(default="user_01", alias="userId"),
+    db: Session = Depends(get_db)
+):
+    """
+    운동 기록 단건 삭제 API
+    """
+    success = delete_workout(db, workout_id=workout_id, user_id=userId)
+    if not success:
+        raise HTTPException(status_code=404, detail="해당 운동 기록을 찾을 수 없습니다.")
+    return {"message": "운동 기록이 성공적으로 삭제되었습니다.", "deletedId": workout_id}
+
 
 
 @app.get(

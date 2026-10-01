@@ -59,5 +59,15 @@ class WorkoutService {
     );
   }
 
+  /// DELETE /api/workouts/{id}
+  Future<void> deleteWorkout(int id, {String userId = ApiConstants.defaultUserId}) async {
+    final uri = Uri.parse('${ApiConstants.workouts}/$id?userId=$userId');
+    final res = await _client.delete(uri).timeout(const Duration(seconds: 8));
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception('운동 기록 삭제 실패 (status=${res.statusCode})');
+    }
+  }
+
   void dispose() => _client.close();
 }
+
