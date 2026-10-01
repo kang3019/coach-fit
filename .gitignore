@@ -40,6 +40,10 @@ share/python-wheels/
 *.egg
 .pytest_cache/
 
+# Flutter mobile-app/lib/ 는 위 Python lib/ 규칙에서 예외 처리
+!mobile-app/lib/
+!mobile-app/lib/**
+
 # --- Environment & Secret Keys (중요: API 키 유출 방지) ---
 .env
 .env.local
