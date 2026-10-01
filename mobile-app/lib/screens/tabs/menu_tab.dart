@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/goal_service.dart';
 import '../widgets/rest_timer.dart';
 
 /// 5. 메뉴/마이 탭 (Menu & Settings Tab)
@@ -137,6 +138,15 @@ class MenuTab extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
+          // 3.5. 운동 목표 (A 담당: WBS 1.1.3 — AI 코칭 프롬프트 분기)
+          const Text(
+            '운동 목표',
+            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          const _GoalSelector(),
+          const SizedBox(height: 20),
+
           // 4. 시스템 및 백엔드 연동 정보
           const Text(
             '시스템 및 서버 상태',
@@ -178,6 +188,102 @@ class MenuTab extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// 운동 목표(근비대 / 체지방 감량 / 근력 증가) 선택 섹션.
+/// 선택값은 shared_preferences 에 저장되고, AI 코칭 호출 시
+/// CoachingService 가 자동으로 불러와 백엔드 `goal` 파라미터에 반영한다.
+class _GoalSelector extends StatefulWidget {
+  const _GoalSelector();
+
+  @override
+  State<_GoalSelector> createState() => _GoalSelectorState();
+}
+
+class _GoalSelectorState extends State<_GoalSelector> {
+  final GoalService _service = GoalService();
+  WorkoutGoal? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitial();
+  }
+
+  Future<void> _loadInitial() async {
+    final current = await _service.load();
+    if (mounted) {
+      setState(() => _selected = current);
+    }
+  }
+
+  Future<void> _select(WorkoutGoal goal) async {
+    setState(() => _selected = goal);
+    await _service.save(goal);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("목표를 '${goal.label}' (으)로 설정했어요"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF00E5A0);
+    return Card(
+      child: Column(
+        children: WorkoutGoal.values.map((goal) {
+          final isSelected = _selected == goal;
+          final isLast = goal == WorkoutGoal.values.last;
+          return Column(
+            children: [
+              ListTile(
+                leading: Icon(
+                  _iconFor(goal),
+                  color: isSelected ? accent : Colors.white70,
+                ),
+                title: Text(
+                  goal.label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white70,
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  goal.aiPromptPhrase,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                trailing: Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: isSelected ? accent : Colors.white24,
+                  size: 20,
+                ),
+                onTap: () => _select(goal),
+              ),
+              if (!isLast) const Divider(height: 1, color: Colors.white10),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  IconData _iconFor(WorkoutGoal goal) {
+    switch (goal) {
+      case WorkoutGoal.hypertrophy:
+        return Icons.fitness_center;
+      case WorkoutGoal.fatLoss:
+        return Icons.local_fire_department;
+      case WorkoutGoal.strength:
+        return Icons.bolt;
+    }
   }
 }
 

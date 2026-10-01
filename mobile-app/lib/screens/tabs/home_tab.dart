@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/coaching_result.dart';
 import '../../services/coaching_service.dart';
+import '../../services/goal_service.dart';
 import '../../services/workout_service.dart';
 import '../coaching_screen.dart';
 import '../routine_detail_screen.dart';
@@ -27,6 +28,7 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   final CoachingService _coachingService = CoachingService();
   final WorkoutService _workoutService = WorkoutService();
+  final GoalService _goalService = GoalService();
   late Future<CoachingResult> _coachingFuture;
   String _selectedCondition = '좋음 🔥';
 
@@ -34,13 +36,25 @@ class _HomeTabState extends State<HomeTab> {
   void initState() {
     super.initState();
     _coachingFuture = _coachingService.requestCoaching();
+    // 메뉴 탭에서 운동 목표를 바꾸면 자동으로 AI 코칭 재호출
+    _goalService.addListener(_onGoalChanged);
   }
 
   @override
   void dispose() {
+    _goalService.removeListener(_onGoalChanged);
     _coachingService.dispose();
     _workoutService.dispose();
     super.dispose();
+  }
+
+  /// GoalService 가 변경되면 호출됨 (메뉴 탭에서 사용자가 목표 변경 시).
+  /// 캐시된 AI 코칭을 폐기하고 최신 목표로 다시 요청한다.
+  void _onGoalChanged() {
+    if (!mounted) return;
+    setState(() {
+      _coachingFuture = _coachingService.requestCoaching();
+    });
   }
 
   Future<void> _handleImportRoutine(List<RecommendedRoutineItem> items) async {
