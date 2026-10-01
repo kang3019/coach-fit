@@ -19,6 +19,7 @@ from app.models.schemas import (
     CoachingRequest,
     CoachingResponse,
     WorkoutItem,
+    ExerciseResponse,
 )
 from app.services.ai_coach import generate_coaching_advice
 from app.services.workout_service import (
@@ -28,6 +29,10 @@ from app.services.workout_service import (
     get_weekly_volume_stats,
     delete_workout,
     seed_initial_workouts,
+)
+from app.services.exercise_service import (
+    get_exercise_masters,
+    seed_exercise_masters,
 )
 
 from contextlib import asynccontextmanager
@@ -40,6 +45,7 @@ init_db()
 _db = SessionLocal()
 try:
     seed_initial_workouts(_db)
+    seed_exercise_masters(_db)
 finally:
     _db.close()
 
@@ -49,9 +55,11 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_initial_workouts(db)
+        seed_exercise_masters(db)
     finally:
         db.close()
     yield
+
 
 
 app = FastAPI(
@@ -101,8 +109,29 @@ def health_check():
 
 
 # ==========================================
-# 1. 운동 기록(Workout) CRUD API
+# 1. 운동 종목 마스터 사전 API (사진 & 부위 정보)
 # ==========================================
+
+@app.get(
+    "/api/exercises",
+    response_model=List[ExerciseResponse],
+    summary="운동 종목 마스터 사전 목록 조회 (부위별 필터 및 검색)"
+)
+def api_get_exercises(
+    category: Optional[str] = Query(default=None, description="가슴, 등, 하체, 어깨, 팔, 복근 등 부위 필터"),
+    search: Optional[str] = Query(default=None, description="운동명 검색어"),
+    db: Session = Depends(get_db)
+):
+    """
+    한국 헬스장 대표 운동 25선 마스터 데이터 반환 (사진 URL, 장비, 타겟 근육, 자세 가이드 포함)
+    """
+    return get_exercise_masters(db, category=category, search=search)
+
+
+# ==========================================
+# 2. 운동 기록(Workout) CRUD API
+# ==========================================
+
 
 @app.post(
     "/api/workouts",

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/coaching_result.dart';
 import '../../services/coaching_service.dart';
+import '../../services/workout_service.dart';
 import '../coaching_screen.dart';
 import '../widgets/rest_timer.dart';
 
@@ -24,6 +25,7 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   final CoachingService _coachingService = CoachingService();
+  final WorkoutService _workoutService = WorkoutService();
   late Future<CoachingResult> _coachingFuture;
   String _selectedCondition = '좋음 🔥';
 
@@ -36,7 +38,29 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void dispose() {
     _coachingService.dispose();
+    _workoutService.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleImportRoutine(List<RecommendedRoutineItem> items) async {
+    try {
+      final created = await _workoutService.importRoutine(items);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('AI 추천 루틴 ${created.length}개 종목이 오늘 기록에 추가되었습니다!'),
+            backgroundColor: const Color(0xFF00E5A0),
+          ),
+        );
+        widget.onNavigateToLog();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('루틴 담기 실패: $e')),
+        );
+      }
+    }
   }
 
   void _openTimer() {
@@ -135,6 +159,7 @@ class _HomeTabState extends State<HomeTab> {
                 final result = snap.data!;
                 return _AiRoutineCard(
                   result: result,
+                  onImportRoutine: _handleImportRoutine,
                   onStartRoutine: widget.onNavigateToLog,
                   onViewFullReport: () {
                     Navigator.of(context).push(
@@ -314,16 +339,34 @@ class _ConditionCheckCard extends StatelessWidget {
   }
 }
 
-class _AiRoutineCard extends StatelessWidget {
+class _AiRoutineCard extends StatefulWidget {
   final CoachingResult result;
+  final Future<void> Function(List<RecommendedRoutineItem> items) onImportRoutine;
   final VoidCallback onStartRoutine;
   final VoidCallback onViewFullReport;
 
   const _AiRoutineCard({
     required this.result,
+    required this.onImportRoutine,
     required this.onStartRoutine,
     required this.onViewFullReport,
   });
+
+  @override
+  State<_AiRoutineCard> createState() => _AiRoutineCardState();
+}
+
+class _AiRoutineCardState extends State<_AiRoutineCard> {
+  bool _importing = false;
+
+  Future<void> _handleImport() async {
+    setState(() => _importing = true);
+    try {
+      await widget.onImportRoutine(widget.result.recommendedRoutine);
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -370,7 +413,7 @@ class _AiRoutineCard extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: onViewFullReport,
+                onPressed: widget.onViewFullReport,
                 child: Text('상세 진단', style: TextStyle(color: scheme.primary, fontSize: 12)),
               ),
             ],
@@ -385,7 +428,7 @@ class _AiRoutineCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              result.summary,
+              widget.result.summary,
               style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
             ),
           ),
@@ -398,9 +441,8 @@ class _AiRoutineCard extends StatelessWidget {
           const SizedBox(height: 8),
 
           // 추천 운동 종목 목록
-          ...result.recommendedRoutine.take(3).map((item) => Padding(
+          ...widget.result.recommendedRoutine.take(3).map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-
                 child: Row(
                   children: [
                     Container(
@@ -413,13 +455,23 @@ class _AiRoutineCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        item.exerciseName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.exerciseName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (item.focus.isNotEmpty)
+                            Text(
+                              item.focus,
+                              style: const TextStyle(color: Colors.white38, fontSize: 11),
+                            ),
+                        ],
                       ),
                     ),
                     Text(
@@ -433,19 +485,43 @@ class _AiRoutineCard extends StatelessWidget {
                   ],
                 ),
               )),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // 운동 시작 버튼
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onStartRoutine,
-              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-              label: const Text(
-                '이 루틴으로 운동 기록하러 가기',
-                style: TextStyle(fontWeight: FontWeight.w700),
+          // 운동 시작 및 일괄 담기 버튼
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: ElevatedButton.icon(
+                  onPressed: _importing ? null : _handleImport,
+                  icon: _importing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0E1116)),
+                        )
+                      : const Icon(Icons.playlist_add_check_rounded, size: 20),
+                  label: Text(
+                    _importing ? '기록에 추가 중...' : '오늘 기록에 루틴 담기',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: OutlinedButton(
+                  onPressed: widget.onStartRoutine,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: Colors.white24),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('기록 탭 이동', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -89,3 +89,24 @@ class CoachingResponse(BaseModel):
     coaching_advice: str = Field(..., description="AI 코치의 개인 맞춤 피드백 및 조언")
     recommended_routine: List[RecommendedRoutineItem] = Field(..., description="오늘 수행할 추천 운동 루틴 목록")
     generated_at: str = Field(default_factory=lambda: dt_datetime.now().isoformat(), description="응답 생성 시각")
+
+
+# ==========================================
+# 3. 운동 종목 마스터(Exercise Master) 스키마
+# ==========================================
+
+class ExerciseResponse(BaseModel):
+    id: int
+    name: str
+    english_name: Optional[str] = Field(default=None, validation_alias="englishName", serialization_alias="englishName")
+    category: str
+    equipment: str
+    target_muscle: str = Field(..., validation_alias="targetMuscle", serialization_alias="targetMuscle")
+    image_url: Optional[str] = Field(default=None, validation_alias="imageUrl", serialization_alias="imageUrl")
+    instructions: Optional[str] = None
+
+    model_config = {
+        "populate_by_name": True,
+        "from_attributes": True,
+    }
+

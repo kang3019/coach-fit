@@ -35,6 +35,8 @@ class ApiConstants {
   static String get workouts => '$baseUrl/api/workouts';
   static String get weeklyStats => '$baseUrl/api/workouts/weekly-stats';
   static String get coachingGenerate => '$baseUrl/api/coaching/generate';
+  static String get exercises => '$baseUrl/api/exercises';
 
   static const String defaultUserId = 'user_01';
+
 }
