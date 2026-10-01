@@ -3,6 +3,7 @@ import '../../models/coaching_result.dart';
 import '../../services/coaching_service.dart';
 import '../../services/workout_service.dart';
 import '../coaching_screen.dart';
+import '../routine_detail_screen.dart';
 import '../widgets/rest_timer.dart';
 
 /// 1. 홈 탭 (Home Tab)
@@ -168,6 +169,43 @@ class _HomeTabState extends State<HomeTab> {
                       ),
                     );
                   },
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // 스크린샷 '헬스 초보 무분할 루틴' 프리셋 바로가기 배너 (플릭 뷰)
+            _ScreenshotPresetBanner(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoutineDetailScreen(
+                      title: '헬스 초보 무분할 루틴',
+                      initialExercises: [
+                        RoutineExerciseItem(
+                          name: '머신 체스트 프레스',
+                          targetMuscle: '가슴, 어깨',
+                          imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/0577.gif',
+                        ),
+                        RoutineExerciseItem(
+                          name: '바벨 스쿼트',
+                          targetMuscle: '대퇴사두, 둔근',
+                          imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/0043.gif',
+                        ),
+                        RoutineExerciseItem(
+                          name: '랫 풀 다운',
+                          targetMuscle: '등, 이두',
+                          imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/2330.gif',
+                        ),
+                        RoutineExerciseItem(
+                          name: '바벨 숄더 프레스(오버헤드 프레스, 밀리터리 프레스)',
+                          targetMuscle: '어깨, 삼두',
+                          imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/0086.gif',
+                        ),
+                      ],
+                      onStartWorkout: widget.onNavigateToLog,
+                    ),
+                  ),
                 );
               },
             ),
@@ -487,23 +525,58 @@ class _AiRoutineCardState extends State<_AiRoutineCard> {
               )),
           const SizedBox(height: 14),
 
-          // 운동 시작 및 일괄 담기 버튼
+          // 1. 3D 근육 지도 & 루틴 상세 화면 열기 버튼 (플릭 스타일)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoutineDetailScreen.fromCoachingResult(
+                      widget.result,
+                      onStartWorkout: widget.onStartRoutine,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF4820),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.accessibility_new_rounded, size: 20),
+              label: const Text(
+                '3D 근육 지도 & 루틴 시작 (플릭 뷰)',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 2. 오늘 기록 일괄 담기 / 기록 탭 이동 보조 버튼
           Row(
             children: [
               Expanded(
                 flex: 3,
-                child: ElevatedButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: _importing ? null : _handleImport,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF00E5A0),
+                    side: BorderSide(color: const Color(0xFF00E5A0).withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   icon: _importing
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0E1116)),
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5A0)),
                         )
-                      : const Icon(Icons.playlist_add_check_rounded, size: 20),
+                      : const Icon(Icons.playlist_add_check_rounded, size: 18),
                   label: Text(
-                    _importing ? '기록에 추가 중...' : '오늘 기록에 루틴 담기',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    _importing ? '담는 중...' : '오늘 기록 담기',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ),
               ),
@@ -515,7 +588,7 @@ class _AiRoutineCardState extends State<_AiRoutineCard> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white70,
                     side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('기록 탭 이동', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
@@ -526,6 +599,7 @@ class _AiRoutineCardState extends State<_AiRoutineCard> {
         ],
       ),
     );
+
   }
 }
 
@@ -631,3 +705,78 @@ class _QuickActionCard extends StatelessWidget {
     );
   }
 }
+
+class _ScreenshotPresetBanner extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ScreenshotPresetBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF26191B), Color(0xFF161922)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFF4820).withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF4820).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.accessibility_new_rounded, color: Color(0xFFFF6A3D), size: 24),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '헬스 초보 무분할 루틴',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'BEST',
+                        style: TextStyle(
+                          color: Color(0xFFFF4820),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    '3D 인체 근육 지도 & 4종 대표 루틴 (플릭 뷰)',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

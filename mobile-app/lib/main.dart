@@ -65,4 +65,3 @@ class CoachFitApp extends StatelessWidget {
     );
   }
 }
-
