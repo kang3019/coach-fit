@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/exercise_master.dart';
 import '../../models/workout.dart';
+import '../../services/pr_service.dart';
 import '../../services/workout_service.dart';
+import '../exercise_growth_screen.dart';
+import '../widgets/body_measurement_section.dart';
 import '../widgets/exercise_picker_modal.dart';
 import '../widgets/rest_timer.dart';
+import '../widgets/history_day_header.dart';
+import 'history_filter_and_edit.dart';
+import 'muscle_map_widget_shim.dart';
 
 /// 2. 기록 탭 (History & Body Measurement Tab)
 /// - 날짜별 운동 세트 기록 (조회/추가/삭제)
@@ -20,17 +26,15 @@ class HistoryTab extends StatefulWidget {
 class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final WorkoutService _workoutService = WorkoutService();
+  final PrService _prService = PrService();
   late Future<List<Workout>> _workoutsFuture;
 
-  // 신체 기록 더미 상태 (실제 앱에서는 로컬/DB 연동 가능)
-  final List<Map<String, dynamic>> _bodyRecords = [
-    {'date': '2026-10-01', 'weight': 74.2, 'muscle': 35.8, 'fat': 15.2},
-    {'date': '2026-09-24', 'weight': 74.8, 'muscle': 35.5, 'fat': 15.6},
-    {'date': '2026-09-17', 'weight': 75.5, 'muscle': 35.1, 'fat': 16.2},
-    {'date': '2026-09-10', 'weight': 75.9, 'muscle': 34.8, 'fat': 16.8},
-  ];
-
   DateTime _selectedDate = DateTime.now();
+
+  // A 담당 추가: 검색/필터/메모 전용 토글 상태
+  String _searchQuery = '';
+  MuscleGroup? _bodyFilter;
+  bool _memoOnly = false;
 
   @override
   void initState() {
@@ -129,64 +133,97 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
     }
   }
 
-  void _openAddBodyRecordDialog() {
-    final weightCtrl = TextEditingController(text: '74.0');
-    final muscleCtrl = TextEditingController(text: '35.9');
-    final fatCtrl = TextEditingController(text: '15.0');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF171B22),
-        title: const Text('신체 스펙 기록', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: weightCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: '체중 (kg)'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: muscleCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: '골격근량 (kg)'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: fatCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: '체지방률 (%)'),
-            ),
-          ],
+  /// A 담당 추가: 어제(또는 선택 날짜) 운동 세션을 오늘로 통째로 복사.
+  Future<void> _copySessionToToday(List<Workout> templates) async {
+    if (templates.isEmpty) return;
+    final today = DateTime.now();
+    try {
+      int ok = 0;
+      Workout? prWorkout;
+      PrResult prResult = PrResult.none;
+      for (final t in templates) {
+        final created = await _workoutService.createWorkout(Workout(
+          userId: t.userId,
+          exerciseName: t.exerciseName,
+          sets: t.sets,
+          reps: t.reps,
+          weight: t.weight,
+          workoutDate: today,
+          memo: t.memo,
+        ));
+        ok++;
+        final history = await _workoutsFuture;
+        final evaluated = _prService.evaluate(created, history);
+        if (evaluated.isRecord) {
+          prWorkout = created;
+          prResult = evaluated;
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(prWorkout != null && prResult.isRecord
+              ? "$ok개 복사 완료! ${prResult.title} (${prWorkout.exerciseName})"
+              : '$ok개 복사 완료!'),
+          duration: const Duration(seconds: 3),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
-          ElevatedButton(
-            onPressed: () {
-              final w = double.tryParse(weightCtrl.text) ?? 74.0;
-              final m = double.tryParse(muscleCtrl.text) ?? 35.0;
-              final f = double.tryParse(fatCtrl.text) ?? 15.0;
-              setState(() {
-                _bodyRecords.insert(0, {
-                  'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                  'weight': w,
-                  'muscle': m,
-                  'fat': f,
-                });
-              });
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('신체 변화가 성공적으로 기록되었습니다!')),
-              );
-            },
-            child: const Text('저장'),
-          ),
-        ],
+      );
+      setState(() {
+        _selectedDate = today;
+        _workoutsFuture = _workoutService.fetchWorkouts();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('복사 실패: $e')),
+      );
+    }
+  }
+
+  /// A 담당 추가: 기존 운동 기록을 수정 (DELETE + CREATE 패턴).
+  /// 백엔드 PUT API 를 신설하지 않고 클라이언트에서 처리.
+  Future<void> _openEditSheet(Workout original) async {
+    final updated = await showModalBottomSheet<Workout>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF171B22),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: EditWorkoutSheet(original: original),
+      ),
+    );
+    if (updated == null || original.id == null) return;
+    try {
+      await _workoutService.deleteWorkout(original.id!);
+      final saved = await _workoutService.createWorkout(updated);
+      final history = await _workoutsFuture;
+      final pr = _prService.evaluate(saved, history);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pr.isRecord
+              ? "'${saved.exerciseName}' 수정됨 · ${pr.title}"
+              : "'${saved.exerciseName}' 수정 완료"),
+        ),
+      );
+      setState(() => _workoutsFuture = _workoutService.fetchWorkouts());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('수정 실패: $e')),
+      );
+    }
+  }
+
+  void _openGrowthScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ExerciseGrowthScreen(),
       ),
     );
   }
@@ -201,6 +238,13 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
           '운동 & 신체 기록',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          IconButton(
+            tooltip: '종목별 성장 그래프',
+            onPressed: _openGrowthScreen,
+            icon: const Icon(Icons.show_chart_rounded),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: scheme.primary,
@@ -213,17 +257,13 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          if (_tabController.index == 0) {
-            _openAddWorkoutSheet();
-          } else {
-            _openAddBodyRecordDialog();
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: Text(_tabController.index == 0 ? '세트 기록' : '신체 기록'),
-      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton.extended(
+              onPressed: _openAddWorkoutSheet,
+              icon: const Icon(Icons.add),
+              label: const Text('세트 기록'),
+            )
+          : null,
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -269,53 +309,106 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
           }
 
           final allWorkouts = snap.data ?? [];
+          final selectedDay = DateTime(
+              _selectedDate.year, _selectedDate.month, _selectedDate.day);
+          final workoutsOfDay = allWorkouts.where((w) {
+            final d = DateTime(
+                w.workoutDate.year, w.workoutDate.month, w.workoutDate.day);
+            return d == selectedDay;
+          }).toList();
+
+          // 전체 목록에 대한 검색/필터/메모 적용 (A 담당 G·I 기능)
+          final filteredList = _applyFilters(allWorkouts);
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
-              // 1. 주간 캘린더 스트립
+              // 1. 주간 캘린더 스트립 + 네비게이션 (A 담당: 과거 주간 조회)
+              _WeekNavRow(
+                selectedDate: _selectedDate,
+                onPrevWeek: () => setState(() =>
+                    _selectedDate = _selectedDate.subtract(const Duration(days: 7))),
+                onNextWeek: () {
+                  final now = DateTime.now();
+                  final todayEnd = DateTime(now.year, now.month, now.day);
+                  final target =
+                      _selectedDate.add(const Duration(days: 7));
+                  if (!target.isAfter(todayEnd)) {
+                    setState(() => _selectedDate = target);
+                  }
+                },
+                onPickDate: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate: DateTime(2024, 1, 1),
+                    lastDate: DateTime.now(),
+                    builder: (ctx, child) => Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: Color(0xFF00E5A0),
+                          onPrimary: Colors.black,
+                          surface: Color(0xFF171B22),
+                          onSurface: Colors.white,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDate = picked);
+                  }
+                },
+                onJumpToToday: () =>
+                    setState(() => _selectedDate = DateTime.now()),
+              ),
+              const SizedBox(height: 8),
               _WeeklyCalendarStrip(
                 selectedDate: _selectedDate,
                 workouts: allWorkouts,
                 onSelectDate: (d) => setState(() => _selectedDate = d),
               ),
+              const SizedBox(height: 14),
+
+              // 2. 선택한 날짜 요약 카드 (A 담당: 세션 복사 / 빈 날짜 복원 포함)
+              HistoryDayHeader(
+                selectedDate: _selectedDate,
+                workoutsOfDay: workoutsOfDay,
+                allWorkouts: allWorkouts,
+                onCopyToToday: _copySessionToToday,
+              ),
               const SizedBox(height: 16),
 
-              // 2. 선택한 날짜 표시
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    DateFormat('yyyy년 MM월 dd일 (E)', 'ko_KR').format(_selectedDate),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    '총 ${allWorkouts.length}건 기록됨',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                ],
+              // 3. 검색 + 부위 필터 + 메모 토글 (A 담당 G·I)
+              HistoryFilterBar(
+                query: _searchQuery,
+                bodyFilter: _bodyFilter,
+                memoOnly: _memoOnly,
+                onQueryChanged: (v) => setState(() => _searchQuery = v),
+                onBodyFilterChanged: (v) =>
+                    setState(() => _bodyFilter = v),
+                onMemoOnlyToggle: () =>
+                    setState(() => _memoOnly = !_memoOnly),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              if (allWorkouts.isEmpty)
+              // 4. 필터 결과 또는 선택 날짜 운동 리스트
+              if (filteredList.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 60),
+                  padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(
                     child: Text(
-                      '아직 등록된 운동 기록이 없습니다.\n오른쪽 아래 + 버튼으로 기록해 보세요.',
+                      '조건에 맞는 운동 기록이 없습니다.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white54, height: 1.4),
                     ),
                   ),
                 )
               else
-                ...allWorkouts.map((w) => _WorkoutItemCard(
+                ...filteredList.map((w) => _WorkoutItemCard(
                       workout: w,
                       onDelete: () => _confirmDelete(w),
+                      onEdit: () => _openEditSheet(w),
                     )),
             ],
           );
@@ -324,132 +417,35 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildBodyTab(ColorScheme scheme) {
-    final latest = _bodyRecords.first;
-    final oldest = _bodyRecords.last;
-    final weightDiff = (latest['weight'] as double) - (oldest['weight'] as double);
+  /// 검색 쿼리 + 부위 필터 + 메모 전용 토글을 적용한 결과 반환.
+  List<Workout> _applyFilters(List<Workout> all) {
+    Iterable<Workout> list = all;
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list.where((w) => w.exerciseName.toLowerCase().contains(q));
+    }
+    if (_bodyFilter != null) {
+      list = list.where((w) {
+        final groups = MuscleGroupExtension.parseFromText(w.exerciseName);
+        return groups.contains(_bodyFilter);
+      });
+    }
+    if (_memoOnly) {
+      list = list.where((w) => (w.memo ?? '').trim().isNotEmpty);
+    }
+    return list.toList();
+  }
 
+  Widget _buildBodyTab(ColorScheme scheme) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      children: [
-        // 상단 요약 카드
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E2838), Color(0xFF131822)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '최근 신체 변화 요약',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Text(
-                    '${latest['weight']} kg',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: weightDiff <= 0
-                          ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                          : Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${weightDiff > 0 ? '+' : ''}${weightDiff.toStringAsFixed(1)} kg',
-                      style: TextStyle(
-                        color: weightDiff <= 0 ? const Color(0xFF10B981) : Colors.orange,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _BodyMiniStat(label: '골격근량', value: '${latest['muscle']} kg'),
-                  const SizedBox(width: 16),
-                  _BodyMiniStat(label: '체지방률', value: '${latest['fat']} %'),
-                  const SizedBox(width: 16),
-                  const _BodyMiniStat(label: 'BMI 지수', value: '23.4 (정상)'),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // 신체 기록 히스토리 목록
-        const Text(
-          '신체 측정 히스토리',
-          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 10),
-
-        ..._bodyRecords.map((r) => Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.monitor_weight_outlined, color: scheme.primary, size: 22),
-                ),
-                title: Text(
-                  '${r['weight']} kg',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '골격근량: ${r['muscle']}kg  |  체지방률: ${r['fat']}%',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                trailing: Text(
-                  r['date'] as String,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-              ),
-            )),
+      children: const [
+        // A 담당: dummy 데이터 교체 → 실제 로컬 저장 입력 섹션
+        BodyMeasurementSection(),
       ],
     );
   }
-}
 
-class _BodyMiniStat extends StatelessWidget {
-  final String label;
-  final String value;
-  const _BodyMiniStat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
 }
 
 class _WeeklyCalendarStrip extends StatelessWidget {
@@ -466,9 +462,12 @@ class _WeeklyCalendarStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
-    // 최근 7일 생성
-    final days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+    // selectedDate 가 포함된 주 (일요일 시작)를 보여준다.
+    // A 담당 수정: 과거 주간 조회를 위해 "최근 7일" 하드코딩 제거.
+    final weekStart =
+        selectedDate.subtract(Duration(days: selectedDate.weekday % 7));
+    final days =
+        List.generate(7, (i) => weekStart.add(Duration(days: i)));
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -545,8 +544,13 @@ class _WeeklyCalendarStrip extends StatelessWidget {
 class _WorkoutItemCard extends StatelessWidget {
   final Workout workout;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
 
-  const _WorkoutItemCard({required this.workout, required this.onDelete});
+  const _WorkoutItemCard({
+    required this.workout,
+    required this.onDelete,
+    this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -576,6 +580,16 @@ class _WorkoutItemCard extends StatelessWidget {
                   style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
                 const SizedBox(width: 6),
+                if (onEdit != null)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: onEdit,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.edit_outlined,
+                          size: 16, color: Colors.white38),
+                    ),
+                  ),
                 InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: onDelete,
@@ -1676,3 +1690,70 @@ class _CopyChip extends StatelessWidget {
   }
 }
 
+
+class _WeekNavRow extends StatelessWidget {
+  final DateTime selectedDate;
+  final VoidCallback onPrevWeek;
+  final VoidCallback onNextWeek;
+  final VoidCallback onPickDate;
+  final VoidCallback onJumpToToday;
+
+  const _WeekNavRow({
+    required this.selectedDate,
+    required this.onPrevWeek,
+    required this.onNextWeek,
+    required this.onPickDate,
+    required this.onJumpToToday,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final currentWeekStart = now.subtract(Duration(days: now.weekday % 7));
+    final selectedWeekStart = selectedDate.subtract(Duration(days: selectedDate.weekday % 7));
+    final canGoNext = selectedWeekStart.isBefore(DateTime(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day));
+    final isCurrentWeek = selectedWeekStart.year == currentWeekStart.year && selectedWeekStart.month == currentWeekStart.month && selectedWeekStart.day == currentWeekStart.day;
+    final weekEnd = selectedWeekStart.add(const Duration(days: 6));
+    final rangeLabel = selectedWeekStart.month == weekEnd.month
+        ? '${selectedWeekStart.year}년 ${selectedWeekStart.month}월 ${selectedWeekStart.day} ~ ${weekEnd.day}일'
+        : '${selectedWeekStart.year}년 ${selectedWeekStart.month}.${selectedWeekStart.day} ~ ${weekEnd.month}.${weekEnd.day}';
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white70),
+          onPressed: onPrevWeek,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          visualDensity: VisualDensity.compact,
+        ),
+        Expanded(
+          child: InkWell(
+            onTap: onPickDate,
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.event_rounded, color: Colors.white54, size: 14),
+                const SizedBox(width: 6),
+                Text(rangeLabel, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+        IconButton(
+          icon: Icon(Icons.chevron_right, color: canGoNext ? Colors.white70 : Colors.white24),
+          onPressed: canGoNext ? onNextWeek : null,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          visualDensity: VisualDensity.compact,
+        ),
+        if (!isCurrentWeek)
+          TextButton(
+            onPressed: onJumpToToday,
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF00E5A0), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), visualDensity: VisualDensity.compact),
+            child: const Text('오늘', style: TextStyle(fontSize: 11)),
+          ),
+      ],
+    );
+  }
+}
