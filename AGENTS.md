@@ -17,9 +17,11 @@
      - 리팩토링 및 개선: `refactor/<target-name>`
      - 문서 및 설정: `docs/<doc-name>` 또는 `chore/<task-name>`
 
-3. **검증 후 병합(Merge) 및 원격 푸시**:
-   - 작업 브랜치에서 코드 수정 및 린트/빌드 검증(`flutter analyze` 등)을 통과한 후 `main`에 병합(Merge)합니다.
-   - 병합 완료 후 `main` 브랜치를 원격 저장소(`origin/main`)에 푸시하고, 사용이 끝난 작업 브랜치는 깔끔하게 정리합니다.
+3. **작업 브랜치 원격 푸시 및 GitHub 병합 워크플로우 (병합은 사용자가 GitHub에서 직접 수행)**:
+   - 작업 브랜치에서 코드 수정 및 린트/빌드 검증(`flutter analyze` 등)을 통과한 후 `git add` 및 `git commit`을 수행합니다.
+   - 커밋 완료 후 작업 브랜치를 원격 저장소로 푸시합니다 (`git push -u origin <branch-name>`).
+   - AI 에이전트는 `main` 브랜치로의 직접 병합(Merge)이나 `main` 직접 푸시를 임의로 실행하지 않습니다.
+   - 작업 완료 후 사용자가 GitHub 웹에서 변경 사항을 검토하고 PR(Pull Request)을 병합할 수 있도록 원격 브랜치 및 PR 링크를 보고합니다.
 
 ---
 
