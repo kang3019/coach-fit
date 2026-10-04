@@ -8,6 +8,7 @@ import '../../services/workout_service.dart';
 import '../exercise_growth_screen.dart';
 import '../widgets/body_measurement_section.dart';
 import '../widgets/exercise_picker_modal.dart';
+import '../widgets/rest_timer.dart';
 import '../widgets/history_day_header.dart';
 import 'history_filter_and_edit.dart';
 import 'muscle_map_widget_shim.dart';
@@ -645,6 +646,30 @@ class _Badge extends StatelessWidget {
   }
 }
 
+/// 플릭 스타일 세트별 행 데이터 모델
+class _SetRowItem {
+  int setNumber;
+  final TextEditingController weightCtrl;
+  final TextEditingController repsCtrl;
+  bool isCompleted = false;
+  String? prevRecord;
+
+  _SetRowItem({
+    required this.setNumber,
+    required double weight,
+    required int reps,
+    this.prevRecord,
+  })  : weightCtrl = TextEditingController(
+          text: weight % 1 == 0 ? weight.toInt().toString() : weight.toStringAsFixed(1),
+        ),
+        repsCtrl = TextEditingController(text: reps.toString());
+
+  void dispose() {
+    weightCtrl.dispose();
+    repsCtrl.dispose();
+  }
+}
+
 class _AddWorkoutModal extends StatefulWidget {
   final WorkoutService service;
   final DateTime initialDate;
@@ -670,8 +695,26 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
   ExerciseMaster? _selectedMaster;
   bool _saving = false;
 
+  // 플릭 스타일 세트 테이블 상태
+  bool _isTableMode = true; // 기본값: 플릭 스타일 세트별 테이블
+  final List<_SetRowItem> _setRows = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // 초기 3세트 기본 추가 (예: 40kg, 10회)
+    _setRows.addAll([
+      _SetRowItem(setNumber: 1, weight: 40.0, reps: 10),
+      _SetRowItem(setNumber: 2, weight: 40.0, reps: 10),
+      _SetRowItem(setNumber: 3, weight: 40.0, reps: 10),
+    ]);
+  }
+
   @override
   void dispose() {
+    for (final row in _setRows) {
+      row.dispose();
+    }
     _nameCtrl.dispose();
     _setsCtrl.dispose();
     _repsCtrl.dispose();
@@ -681,7 +724,6 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
   }
 
   /// 선택한 과거 세트의 종목/세트/횟수/무게를 폼에 자동 입력.
-  /// 메모는 복사하지 않음 (각 세션 상황이 다르므로).
   void _copyFromPast(Workout w) {
     setState(() {
       _nameCtrl.text = w.exerciseName;
@@ -690,8 +732,23 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
       _weightCtrl.text = w.weight % 1 == 0
           ? w.weight.toInt().toString()
           : w.weight.toStringAsFixed(1);
-      // 종목 사전 카드는 리셋 (이름이 사전 종목과 일치하지 않을 수 있으므로)
       _selectedMaster = null;
+
+      // 테이블 모드 행도 해당 세트 수에 맞춰 재구성
+      for (final row in _setRows) {
+        row.dispose();
+      }
+      _setRows.clear();
+      final count = w.sets.clamp(1, 15);
+      final prevHint = '${w.weight % 1 == 0 ? w.weight.toInt() : w.weight}kg×${w.reps}회';
+      for (int i = 1; i <= count; i++) {
+        _setRows.add(_SetRowItem(
+          setNumber: i,
+          weight: w.weight,
+          reps: w.reps,
+          prevRecord: prevHint,
+        ));
+      }
     });
   }
 
@@ -703,6 +760,92 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
         _nameCtrl.text = picked.name;
       });
     }
+  }
+
+  void _addSetRow() {
+    setState(() {
+      final nextNum = _setRows.length + 1;
+      double lastWeight = 40.0;
+      int lastReps = 10;
+      String? lastPrev;
+      if (_setRows.isNotEmpty) {
+        lastWeight = double.tryParse(_setRows.last.weightCtrl.text) ?? 40.0;
+        lastReps = int.tryParse(_setRows.last.repsCtrl.text) ?? 10;
+        lastPrev = _setRows.last.prevRecord;
+      }
+      _setRows.add(_SetRowItem(
+        setNumber: nextNum,
+        weight: lastWeight,
+        reps: lastReps,
+        prevRecord: lastPrev,
+      ));
+      _setsCtrl.text = _setRows.length.toString();
+    });
+  }
+
+  void _removeSetRow(int index) {
+    if (_setRows.length <= 1) return;
+    setState(() {
+      final removed = _setRows.removeAt(index);
+      removed.dispose();
+      for (int i = 0; i < _setRows.length; i++) {
+        _setRows[i].setNumber = i + 1;
+      }
+      _setsCtrl.text = _setRows.length.toString();
+    });
+  }
+
+  void _toggleSetComplete(int index) {
+    setState(() {
+      final item = _setRows[index];
+      item.isCompleted = !item.isCompleted;
+
+      if (item.isCompleted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            backgroundColor: const Color(0xFF151922),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: Color(0xFF00E5A0), width: 1),
+            ),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF00E5A0), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  '${item.setNumber}세트 완료! ⏱️ 60초 휴식 권장',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ],
+            ),
+            action: SnackBarAction(
+              label: '타이머 열기',
+              textColor: const Color(0xFF00E5A0),
+              onPressed: () {
+                RestTimerSheet.show(context, initialSeconds: 60);
+              },
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  double get _totalTableVolume {
+    double total = 0;
+    for (final row in _setRows) {
+      final w = double.tryParse(row.weightCtrl.text) ?? 0.0;
+      final r = int.tryParse(row.repsCtrl.text) ?? 0;
+      total += w * r;
+    }
+    return total;
+  }
+
+  int get _completedSetCount {
+    return _setRows.where((r) => r.isCompleted).length;
   }
 
   void _adjustSets(int delta) {
@@ -731,21 +874,80 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final exerciseName = _nameCtrl.text.trim();
+    if (exerciseName.isEmpty) return;
+
     setState(() => _saving = true);
 
     try {
-      final workout = Workout(
-        userId: 'user_01',
-        exerciseName: _nameCtrl.text.trim(),
-        sets: int.parse(_setsCtrl.text),
-        reps: int.parse(_repsCtrl.text),
-        weight: double.parse(_weightCtrl.text),
-        workoutDate: widget.initialDate,
-        memo: _memoCtrl.text.trim().isEmpty ? null : _memoCtrl.text.trim(),
-      );
+      Workout? lastCreated;
+      final baseDate = widget.initialDate;
 
-      final created = await widget.service.createWorkout(workout);
-      if (mounted) Navigator.of(context).pop(created);
+      if (_isTableMode && _setRows.isNotEmpty) {
+        // 플릭 스타일 세트 테이블 기록
+        final setDetailStrings = <String>[];
+        for (final row in _setRows) {
+          final w = double.tryParse(row.weightCtrl.text) ?? 40.0;
+          final r = int.tryParse(row.repsCtrl.text) ?? 10;
+          setDetailStrings.add('${row.setNumber}세트: ${w % 1 == 0 ? w.toInt() : w}kg×$r회');
+        }
+
+        final firstW = double.tryParse(_setRows.first.weightCtrl.text) ?? 40.0;
+        final firstR = int.tryParse(_setRows.first.repsCtrl.text) ?? 10;
+        final allSame = _setRows.every((r) {
+          final w = double.tryParse(r.weightCtrl.text) ?? 40.0;
+          final reps = int.tryParse(r.repsCtrl.text) ?? 10;
+          return w == firstW && reps == firstR;
+        });
+
+        final userMemo = _memoCtrl.text.trim();
+        final tableSummaryMemo = '[세트 상세] ${setDetailStrings.join(" / ")}${userMemo.isNotEmpty ? " • $userMemo" : ""}';
+
+        if (allSame) {
+          // 모든 세트가 동일하면 1건으로 집계하여 깔끔하게 저장
+          final workout = Workout(
+            userId: 'user_01',
+            exerciseName: exerciseName,
+            sets: _setRows.length,
+            reps: firstR,
+            weight: firstW,
+            workoutDate: baseDate,
+            memo: tableSummaryMemo,
+          );
+          lastCreated = await widget.service.createWorkout(workout);
+        } else {
+          // 점진적 과부하 등으로 세트별 무게/횟수가 다른 경우:
+          // 주간 볼륨 및 통계가 100% 오차 없이 정확히 계산되도록 각 세트를 저장
+          for (final row in _setRows) {
+            final w = double.tryParse(row.weightCtrl.text) ?? 40.0;
+            final r = int.tryParse(row.repsCtrl.text) ?? 10;
+            final workout = Workout(
+              userId: 'user_01',
+              exerciseName: exerciseName,
+              sets: 1,
+              reps: r,
+              weight: w,
+              workoutDate: baseDate,
+              memo: '${row.setNumber}/${_setRows.length}세트${userMemo.isNotEmpty ? " • $userMemo" : ""}',
+            );
+            lastCreated = await widget.service.createWorkout(workout);
+          }
+        }
+      } else {
+        // 간편 묶음 기록 모드
+        final workout = Workout(
+          userId: 'user_01',
+          exerciseName: exerciseName,
+          sets: int.parse(_setsCtrl.text),
+          reps: int.parse(_repsCtrl.text),
+          weight: double.parse(_weightCtrl.text),
+          workoutDate: baseDate,
+          memo: _memoCtrl.text.trim().isEmpty ? null : _memoCtrl.text.trim(),
+        );
+        lastCreated = await widget.service.createWorkout(workout);
+      }
+
+      if (mounted) Navigator.of(context).pop(lastCreated);
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -800,7 +1002,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
               ),
               const SizedBox(height: 16),
 
-              // 1.5. 최근 세트 원터치 복사 칩 (A 담당: 간편 입력 UX)
+              // 1.5. 최근 세트 원터치 복사 칩
               if (widget.recentWorkouts.isNotEmpty) ...[
                 Row(
                   children: const [
@@ -815,9 +1017,6 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 54,
-                  // 웹(마우스) 에서도 가로 드래그 스크롤이 가능하도록 ScrollBehavior 를
-                  // 확장한다. 기본값은 모바일 터치만 허용하므로 데스크탑 Chrome 에서
-                  // 칩이 화면을 넘어도 스크롤이 안 되는 UX 문제가 발생한다.
                   child: ScrollConfiguration(
                     behavior: const MaterialScrollBehavior().copyWith(
                       dragDevices: {
@@ -998,110 +1197,259 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 validator: (v) => (v == null || v.trim().isEmpty) ? '종목명을 입력하세요' : null,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // 3. 세트 / 반복 / 중량 입력 및 스텝 버튼
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 세트
-                  Expanded(
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _setsCtrl,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(labelText: '세트'),
-                          validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+              // 3. 기록 모드 전환 세그먼트 (플릭 스타일 테이블 vs 간편 묶음)
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF13171F),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _isTableMode = true),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _isTableMode ? const Color(0xFF00E5A0).withValues(alpha: 0.15) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isTableMode ? const Color(0xFF00E5A0) : Colors.transparent,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.table_rows_outlined, size: 14, color: _isTableMode ? const Color(0xFF00E5A0) : Colors.white54),
+                              const SizedBox(width: 6),
+                              Text(
+                                '플릭 세트 테이블',
+                                style: TextStyle(
+                                  color: _isTableMode ? const Color(0xFF00E5A0) : Colors.white60,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _QuickBtn(label: '-1', onTap: () => _adjustSets(-1)),
-                            const SizedBox(width: 4),
-                            _QuickBtn(label: '+1', onTap: () => _adjustSets(1)),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // 횟수
-                  Expanded(
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _repsCtrl,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(labelText: '회(Reps)'),
-                          validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _isTableMode = false),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: !_isTableMode ? const Color(0xFF00E5A0).withValues(alpha: 0.15) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: !_isTableMode ? const Color(0xFF00E5A0) : Colors.transparent,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.flash_on_outlined, size: 14, color: !_isTableMode ? const Color(0xFF00E5A0) : Colors.white54),
+                              const SizedBox(width: 6),
+                              Text(
+                                '간편 묶음 기록',
+                                style: TextStyle(
+                                  color: !_isTableMode ? const Color(0xFF00E5A0) : Colors.white60,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _QuickBtn(label: '-1', onTap: () => _adjustReps(-1)),
-                            const SizedBox(width: 4),
-                            _QuickBtn(label: '+1', onTap: () => _adjustReps(1)),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // 중량
-                  Expanded(
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _weightCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(labelText: '중량(kg)'),
-                          validator: (v) => (v == null || double.tryParse(v) == null) ? '숫자' : null,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _QuickBtn(label: '-5', onTap: () => _adjustWeight(-5)),
-                            const SizedBox(width: 4),
-                            _QuickBtn(label: '+5', onTap: () => _adjustWeight(5)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-              // 미세 중량 조절 칩
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Text('중량 퀵 조절: ', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                  _QuickBtn(label: '-2.5', onTap: () => _adjustWeight(-2.5)),
-                  const SizedBox(width: 4),
-                  _QuickBtn(label: '-1', onTap: () => _adjustWeight(-1)),
-                  const SizedBox(width: 4),
-                  _QuickBtn(label: '+1', onTap: () => _adjustWeight(1)),
-                  const SizedBox(width: 4),
-                  _QuickBtn(label: '+2.5', onTap: () => _adjustWeight(2.5)),
-                ],
+                  ],
+                ),
               ),
 
               const SizedBox(height: 14),
 
-              // 4. 메모 필드
+              // 4-A. 플릭 스타일 세트별 테이블 모드
+              if (_isTableMode) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF151922),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Column(
+                    children: [
+                      // 테이블 헤더
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                        child: Row(
+                          children: const [
+                            SizedBox(width: 36, child: Text('세트', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold))),
+                            SizedBox(width: 8),
+                            SizedBox(width: 72, child: Text('이전 기록', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38, fontSize: 11))),
+                            SizedBox(width: 8),
+                            Expanded(flex: 3, child: Text('kg', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold))),
+                            SizedBox(width: 8),
+                            Expanded(flex: 3, child: Text('회', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold))),
+                            SizedBox(width: 8),
+                            SizedBox(width: 36, child: Text('완료', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF00E5A0), fontSize: 11, fontWeight: FontWeight.bold))),
+                            SizedBox(width: 28),
+                          ],
+                        ),
+                      ),
+                      const Divider(color: Colors.white10, height: 12),
+
+                      // 세트 행 목록
+                      for (int i = 0; i < _setRows.length; i++) ...[
+                        _buildSetRowItem(i),
+                        if (i < _setRows.length - 1) const SizedBox(height: 6),
+                      ],
+
+                      const SizedBox(height: 12),
+
+                      // 하단 액션 및 실시간 통계 바
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _addSetRow,
+                            icon: const Icon(Icons.add, size: 14, color: Color(0xFF00E5A0)),
+                            label: const Text('세트 추가', style: TextStyle(color: Color(0xFF00E5A0), fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF00E5A0)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00E5A0).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '완료 $_completedSetCount/${_setRows.length} · ${_totalTableVolume.round()}kg 볼륨',
+                              style: const TextStyle(
+                                color: Color(0xFF00E5A0),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // 4-B. 기존 간편 묶음 기록 모드
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _setsCtrl,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            decoration: const InputDecoration(labelText: '세트'),
+                            validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _QuickBtn(label: '-1', onTap: () => _adjustSets(-1)),
+                              const SizedBox(width: 4),
+                              _QuickBtn(label: '+1', onTap: () => _adjustSets(1)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _repsCtrl,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            decoration: const InputDecoration(labelText: '회(Reps)'),
+                            validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _QuickBtn(label: '-1', onTap: () => _adjustReps(-1)),
+                              const SizedBox(width: 4),
+                              _QuickBtn(label: '+1', onTap: () => _adjustReps(1)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _weightCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            decoration: const InputDecoration(labelText: '중량(kg)'),
+                            validator: (v) => (v == null || double.tryParse(v) == null) ? '숫자' : null,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _QuickBtn(label: '-5', onTap: () => _adjustWeight(-5)),
+                              const SizedBox(width: 4),
+                              _QuickBtn(label: '+5', onTap: () => _adjustWeight(5)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text('중량 퀵 조절: ', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    _QuickBtn(label: '-2.5', onTap: () => _adjustWeight(-2.5)),
+                    const SizedBox(width: 4),
+                    _QuickBtn(label: '-1', onTap: () => _adjustWeight(-1)),
+                    const SizedBox(width: 4),
+                    _QuickBtn(label: '+1', onTap: () => _adjustWeight(1)),
+                    const SizedBox(width: 4),
+                    _QuickBtn(label: '+2.5', onTap: () => _adjustWeight(2.5)),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 14),
+
+              // 5. 메모 필드
               TextFormField(
                 controller: _memoCtrl,
                 style: const TextStyle(color: Colors.white),
@@ -1113,7 +1461,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
 
               const SizedBox(height: 20),
 
-              // 5. 완료 버튼
+              // 6. 완료 버튼
               ElevatedButton(
                 onPressed: _saving ? null : _submit,
                 style: ElevatedButton.styleFrom(
@@ -1129,6 +1477,136 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSetRowItem(int index) {
+    final row = _setRows[index];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      decoration: BoxDecoration(
+        color: row.isCompleted ? const Color(0xFF00E5A0).withValues(alpha: 0.06) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          // 세트 번호 뱃지
+          Container(
+            width: 36,
+            height: 28,
+            decoration: BoxDecoration(
+              color: row.isCompleted ? const Color(0xFF00E5A0) : const Color(0xFF1E2430),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '${row.setNumber}',
+              style: TextStyle(
+                color: row.isCompleted ? const Color(0xFF0E1116) : Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 이전 기록
+          SizedBox(
+            width: 72,
+            child: Text(
+              row.prevRecord ?? '-',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // kg 입력
+          Expanded(
+            flex: 3,
+            child: SizedBox(
+              height: 36,
+              child: TextFormField(
+                controller: row.weightCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.center,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  filled: true,
+                  fillColor: const Color(0xFF1C222D),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Colors.white12)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Colors.white12)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF00E5A0))),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // reps 입력
+          Expanded(
+            flex: 3,
+            child: SizedBox(
+              height: 36,
+              child: TextFormField(
+                controller: row.repsCtrl,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  filled: true,
+                  fillColor: const Color(0xFF1C222D),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Colors.white12)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Colors.white12)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF00E5A0))),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 완료 체크 버튼
+          InkWell(
+            onTap: () => _toggleSetComplete(index),
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: 36,
+              height: 32,
+              decoration: BoxDecoration(
+                color: row.isCompleted ? const Color(0xFF00E5A0) : const Color(0xFF1E2430),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: row.isCompleted ? const Color(0xFF00E5A0) : Colors.white24,
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.check,
+                size: 18,
+                color: row.isCompleted ? const Color(0xFF0E1116) : Colors.white30,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // 삭제 버튼
+          SizedBox(
+            width: 24,
+            child: _setRows.length > 1
+                ? InkWell(
+                    onTap: () => _removeSetRow(index),
+                    child: const Icon(Icons.close, size: 16, color: Colors.white30),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }
