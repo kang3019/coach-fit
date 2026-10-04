@@ -8,21 +8,21 @@
 
 ## 👥 1. 2인 팀 역할 분담 추천 모델
 
-CoachFit의 모노레포 구조(Flutter + Java + Python)에서는 **클라이언트(Flutter) ↔ 서버/AI(Backend) 계층형 분업**을 강력히 권장합니다.
+CoachFit의 모노레포 구조(Flutter + FastAPI 단일 통합 백엔드)에서는 **클라이언트(Flutter) ↔ 서버/AI(FastAPI) 계층형 분업**을 강력히 권장합니다.
 
 ```
 ┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐
 │        팀원 A (Client Lead)          │     │        팀원 B (Backend Lead)         │
 ├──────────────────────────────────────┤     ├──────────────────────────────────────┤
-│ • Flutter 모바일 앱 UI/UX            │     │ • Java Spring Boot 운동 CRUD & 통계  │
-│ • 세트 기록 테이블 & 휴식 타이머     │ ──▶ │ • Python FastAPI AI 코칭 로직/프롬프트│
-│ • 주간 볼륨 차트 (fl_chart)         │ ◀── │ • H2/MySQL 데이터베이스 영속화       │
-│ • 백엔드 REST API 연동               │     │ • 룰베이스 폴백 엔진 & API 문서화    │
+│ • Flutter 모바일 앱 UI/UX            │     │ • FastAPI 운동 기록 CRUD & 통계 API  │
+│ • 3D 근육 맵 & 세트 복사 칩          │ ──▶ │ • Python AI 코칭 로직 & 프롬프트 연동│
+│ • 주간 볼륨 차트 & 부위별 집계      │ ◀── │ • PostgreSQL / SQLite DB 영속화      │
+│ • 백엔드 REST API 연동               │     │ • 스마트 룰베이스 폴백 엔진 & Swagger│
 │ • 11/20 모바일 시연 및 발표 자료(PPT)│     │ • 데모 시연용 시드 데이터 준비       │
 └──────────────────────────────────────┘     └──────────────────────────────────────┘
 ```
 
-> **협업 이점**: 두 팀원이 작업하는 폴더(`mobile-app/` vs `java-backend/`, `python-ai-backend/`)가 완전히 분리되어 **코드 병합 충돌(Conflict)이 발생하지 않습니다.**
+> **협업 이점**: 두 팀원이 작업하는 폴더(`mobile-app/` vs `python-ai-backend/`)가 완전히 분리되어 **코드 병합 충돌(Conflict)이 발생하지 않습니다.**
 
 ---
 
@@ -53,9 +53,9 @@ develop (팀 개발 통합 브랜치)
 - **`develop`**: 평소 개발 작업들이 1차로 통합되는 기본 브랜치.
 - **`feature/{파트}-{기능명}`**: 새로운 기능 개발 브랜치.
   - 모바일 예시: `feature/app-workout-form`, `feature/app-timer`, `feature/app-volume-chart`
-  - 백엔드 예시: `feature/java-workout-api`, `feature/ai-rule-engine`, `feature/ai-prompt`
+  - 백엔드 예시: `feature/backend-workout-api`, `feature/ai-rule-engine`, `feature/ai-prompt`
 - **`fix/{파트}-{버그명}`**: 버그 수정 브랜치.
-  - 예시: `fix/app-overflow-error`, `fix/java-cors-issue`
+  - 예시: `fix/app-overflow-error`, `fix/backend-cors-issue`
 
 ---
 
