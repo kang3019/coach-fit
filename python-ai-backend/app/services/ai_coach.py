@@ -22,10 +22,30 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
 def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse:
     workouts = request.recent_workouts
     count = len(workouts)
+    profile = request.user_profile or {}
+
+    weight = profile.get("weight_kg")
+    muscle = profile.get("muscle_kg")
+    body_fat = profile.get("body_fat_percent")
+    height = profile.get("height_cm")
+
+    spec_parts = []
+    if height:
+        spec_parts.append(f"{height:.0f}cm")
+    if weight:
+        spec_parts.append(f"{weight:.1f}kg")
+    if muscle:
+        spec_parts.append(f"골격근량 {muscle:.1f}kg")
+    if body_fat:
+        spec_parts.append(f"체지방률 {body_fat:.1f}%")
+    spec_summary = f" [신체 스펙: {', '.join(spec_parts)}]" if spec_parts else ""
 
     if count == 0:
-        summary = "최근 운동 기록이 없습니다. 새로운 시작을 위해 기초 전신 루틴을 권장합니다."
-        advice = "운동을 오랜만에 시작하거나 처음이시라면 무리한 중량보다 정확한 가동 범위와 자세 정렬에 집중해주세요."
+        summary = f"최근 운동 기록이 없습니다.{spec_summary} 새로운 시작을 위해 기초 전신 루틴을 권장합니다."
+        advice = (
+            f"회원님의 목표인 '{request.user_goal}' 달성을 위해 무리한 중량보다 정확한 가동 범위와 자세 정렬에 집중해주세요. "
+            "체중과 골격근량 밸런스를 고려하여 초반에는 기초 다관절 운동으로 신경계를 활성화하는 것이 효과적입니다."
+        )
         routine = [
             RecommendedRoutineItem(
                 exercise_name="고블릿 스쿼트 (덤벨)",
@@ -56,16 +76,31 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
         total_volume = sum(w.weight * w.sets * w.reps for w in workouts)
 
         summary = (
-            f"최근 {count}개 세션 동안 총 {total_sets}세트, "
-            f"누적 볼륨 약 {int(total_volume):,}kg을 달성하셨습니다. "
-            f"(최근 운동: {', '.join(recent_names[:3])})"
+            f"최근 {count}개 세션(총 {total_sets}세트, 누적 볼륨 약 {int(total_volume):,}kg)과 "
+            f"신체 스펙{spec_summary}을 정밀 분석했습니다. (최근 운동: {', '.join(recent_names[:3])})"
         )
 
-        advice = (
-            f"회원님의 목표인 '{request.user_goal}'에 맞추어 점진적 과부하를 적용하기에 적절한 페이스입니다. "
-            "최근 상체 밀기 및 하체 운동의 빈도가 높았으므로, 오늘은 등(풀 계열)과 후면 사슬을 보강하여 "
-            "체형 밸런스를 잡고 부상을 예방하는 루틴을 추천드립니다."
-        )
+        advice_body = ""
+        if weight and weight > 0:
+            rel_strength = total_volume / (weight * max(count, 1))
+            advice_body = f"체중({weight:.1f}kg) 대비 세션당 평균 볼륨 지수는 {int(rel_strength):,}kg으로 양호한 근력 수준입니다. "
+
+        if "체지방" in (request.user_goal or ""):
+            advice = (
+                f"{advice_body}목표인 '{request.user_goal}'에 맞추어 대근육 복합 운동 위주로 심박수를 유지하고, "
+                "세트 간 휴식 시간을 60~75초로 타이트하게 통제하여 칼로리 소모와 심폐 지구력을 극대화하는 루틴을 권장합니다."
+            )
+        elif "근력" in (request.user_goal or ""):
+            advice = (
+                f"{advice_body}목표인 '{request.user_goal}'에 맞추어 점진적 과부하(Progressive Overload)를 안전하게 유도할 수 있도록 "
+                "신경계 피로를 관리하며 충분한 휴식(90~120초)과 함께 고중량 5~8회 반복 중심의 후면 사슬 강화 루틴을 추천드립니다."
+            )
+        else:
+            advice = (
+                f"{advice_body}목표인 '{request.user_goal}'에 맞추어 점진적 과부하를 적용하기에 아주 적절한 페이스입니다. "
+                "최근 상체 밀기 및 하체 운동의 빈도를 감안하여, 오늘은 등(풀 계열)과 후면 사슬을 보강하여 "
+                "체형 밸런스를 잡고 부상을 예방하는 루틴을 추천드립니다."
+            )
 
         routine = [
             RecommendedRoutineItem(
@@ -101,7 +136,7 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
 
 def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
     """
-    OpenAI ChatCompletion (gpt-4o / gpt-3.5-turbo) 연동 예시
+    OpenAI ChatCompletion (gpt-4o-mini) 연동
     """
     try:
         from openai import OpenAI
@@ -109,16 +144,18 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
 
         prompt_data = {
             "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
             "workouts": [w.model_dump() for w in request.recent_workouts]
         }
 
         system_prompt = """
         당신은 전문 피트니스 트레이너이자 재활 코치입니다.
-        사용자의 최근 운동 기록과 목표를 바탕으로 JSON 규격에 맞춰 코칭 리포트를 작성하세요.
+        사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 그리고 최근 운동 기록을 종합적으로 분석하여
+        개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 JSON 규격으로 작성하세요.
         응답은 다음 JSON 스키마를 만족해야 합니다:
         {
-            "summary": "운동 요약 문자열",
-            "coaching_advice": "코칭 조언 문자열",
+            "summary": "운동 및 신체 상태 요약 문자열",
+            "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
             "recommended_routine": [
                 {
                     "exercise_name": "운동명",
@@ -136,7 +173,7 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"기록 데이터: {json.dumps(prompt_data, ensure_ascii=False)}"}
+                {"role": "user", "content": f"기록 및 프로필 데이터: {json.dumps(prompt_data, ensure_ascii=False)}"}
             ],
             temperature=0.7
         )
@@ -155,3 +192,4 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         fallback = _generate_smart_dummy_coaching(request)
         fallback.summary += f" (OpenAI API 호출 에러로 더미 엔진 적용됨: {str(e)})"
         return fallback
+

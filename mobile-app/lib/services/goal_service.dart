@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 사용자의 운동 목표를 로컬(shared_preferences)에 영속화한다.
+import '../config/api_constants.dart';
+
+/// 사용자의 운동 목표를 로컬(shared_preferences) 및 백엔드 DB(FastAPI)에 영속화한다.
 /// 선택한 목표는 AI 코칭 호출 시 백엔드 `goal` 파라미터에 전달되어
 /// 프롬프트 분기를 유도한다 (WBS 1.1.3).
 enum WorkoutGoal {
@@ -49,6 +53,7 @@ class GoalService extends ChangeNotifier {
   factory GoalService() => _instance;
   GoalService._internal();
 
+  final http.Client _client = http.Client();
   WorkoutGoal? _cached;
 
   /// 저장된 목표를 읽는다. 없으면 기본값(근비대).
@@ -66,11 +71,31 @@ class GoalService extends ChangeNotifier {
     return _cached!;
   }
 
-  /// 저장 후 캐시 갱신 + 리스너에게 알림 (홈 탭 자동 AI 재호출 트리거).
-  Future<void> save(WorkoutGoal goal) async {
+  /// 저장 후 캐시 갱신 + 리스너 알림 + 백엔드 DB 동기화.
+  Future<void> save(
+    WorkoutGoal goal, {
+    String userId = ApiConstants.defaultUserId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefKey, goal.storageKey);
     _cached = goal;
     notifyListeners();
+
+    try {
+      final uri = Uri.parse(ApiConstants.profile);
+      await _client
+          .put(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=UTF-8'},
+            body: jsonEncode({
+              'userId': userId,
+              'workoutGoal': goal.aiPromptPhrase,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // 오프라인 시 로컬 설정 유지
+    }
   }
 }
+
