@@ -5,7 +5,11 @@ import '../../services/goal_service.dart';
 import '../../services/workout_service.dart';
 import '../coaching_screen.dart';
 import '../routine_detail_screen.dart';
+import '../widgets/home_progress_strip.dart';
+import '../widgets/last_workout_card.dart';
+import '../widgets/quick_register_row.dart';
 import '../widgets/rest_timer.dart';
+import '../widgets/smart_suggestion_card.dart';
 
 /// 1. 홈 탭 (Home Tab)
 /// - 오늘의 AI 추천 운동 루틴
@@ -139,6 +143,10 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: 16),
 
+            // 1.5 홈 진행 스트립 (A 담당: 오늘/주간/스트릭/체중)
+            const HomeProgressStrip(),
+            const SizedBox(height: 16),
+
             // 2. 오늘의 컨디션 체크
             _ConditionCheckCard(
               currentCondition: _selectedCondition,
@@ -151,6 +159,18 @@ class _HomeTabState extends State<HomeTab> {
                   ),
                 );
               },
+            ),
+            const SizedBox(height: 16),
+
+            // 2.5 지난 운동 복습 + progressive overload (A 담당)
+            LastWorkoutCard(
+              onStartRecording: widget.onNavigateToLog,
+            ),
+            const SizedBox(height: 16),
+
+            // 2.7 빠른 기록 (자주 하는 운동 Top 3) (A 담당)
+            QuickRegisterRow(
+              onAddCustom: widget.onNavigateToLog,
             ),
             const SizedBox(height: 16),
 
@@ -186,6 +206,10 @@ class _HomeTabState extends State<HomeTab> {
                 );
               },
             ),
+            const SizedBox(height: 16),
+
+            // 3.5 스마트 제안 로테이션 (휴식/랜덤/명언) (A 담당)
+            const SmartSuggestionCard(),
             const SizedBox(height: 16),
 
             // 스크린샷 '헬스 초보 무분할 루틴' 프리셋 바로가기 배너 (플릭 뷰)
