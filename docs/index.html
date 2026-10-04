@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CoachFit - 피트니스 트래킹 & AI 코칭 문서</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="CoachFit - 피트니스 트래킹 & 맞춤형 AI 코칭 서비스 프로젝트 문서 포털">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+  <style>
+    :root {
+      --theme-color: #00E5A0;
+      --base-background-color: #0E1116;
+      --sidebar-background: #151922;
+      --textColor: #E6EDF3;
+      --link-color: #00E5A0;
+    }
+    body {
+      background-color: #0E1116 !important;
+      color: #E6EDF3 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .sidebar {
+      background-color: #151922 !important;
+      border-right: 1px solid #21262D;
+    }
+    .sidebar-nav a {
+      color: #8B949E !important;
+      font-size: 14px;
+    }
+    .sidebar-nav a:hover,
+    .sidebar-nav li.active > a {
+      color: #00E5A0 !important;
+      font-weight: 600;
+    }
+    .app-name-link {
+      color: #00E5A0 !important;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .markdown-section pre {
+      background-color: #151922 !important;
+      border: 1px solid #30363D;
+      border-radius: 8px;
+    }
+    .markdown-section code {
+      color: #00E5A0 !important;
+      background-color: #1c212c !important;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+    .markdown-section blockquote {
+      border-left: 4px solid #00E5A0;
+      background: #151922;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      color: #C9D1D9;
+    }
+    .markdown-section table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1.5rem 0;
+    }
+    .markdown-section th, .markdown-section td {
+      border: 1px solid #30363D;
+      padding: 10px 14px;
+    }
+    .markdown-section th {
+      background-color: #151922;
+      color: #00E5A0;
+    }
+    .markdown-section tr:nth-child(2n) {
+      background-color: #12161f;
+    }
+    .mermaid {
+      background-color: #151922;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #30363D;
+      text-align: center;
+      margin: 20px 0;
+    }
+  </style>
+  <!-- Mermaid 최신 모듈 로드 -->
+  <script type="module">
+    import mermaid from "//cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "dark",
+      themeVariables: {
+        darkMode: true,
+        background: "#151922",
+        primaryColor: "#00E5A0",
+        primaryTextColor: "#0E1116",
+        primaryBorderColor: "#00E5A0",
+        lineColor: "#8B949E",
+        secondaryColor: "#FF4820",
+        tertiaryColor: "#21262D"
+      }
+    });
+    window.mermaid = mermaid;
+  </script>
+</head>
+<body>
+  <div id="app">🏋️ CoachFit 문서 로딩 중...</div>
+  <script>
+    window.$docsify = {
+      name: '🏋️ CoachFit',
+      repo: 'https://github.com/kang3019/coach-fit',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      auto2top: true,
+      homepage: 'README.md',
+      search: {
+        placeholder: '문서 검색...',
+        noData: '검색 결과가 없습니다.',
+        depth: 3
+      },
+      plugins: [
+        function(hook) {
+          hook.afterEach(function(html, next) {
+            next(html);
+          });
+          hook.doneEach(function() {
+            if (window.mermaid) {
+              window.mermaid.run({
+                querySelector: '.mermaid'
+              });
+            }
+          });
+        }
+      ],
+      markdown: {
+        renderer: {
+          code: function(code, lang) {
+            if (lang === "mermaid") {
+              return '<div class="mermaid">' + code + '</div>';
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      }
+    };
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>
