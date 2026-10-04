@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/workout.dart';
 import '../../services/workout_service.dart';
+import '../widgets/monthly_calendar_card.dart';
 import '../widgets/muscle_map_widget.dart';
 import '../widgets/weekly_volume_chart.dart';
 
@@ -263,6 +264,10 @@ class _StatsTabState extends State<StatsTab> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // 5. 월간 운동 캘린더 (A 담당: WBS Could — 스트릭 & 잔디)
+                const MonthlyCalendarCard(),
               ],
             );
           },
