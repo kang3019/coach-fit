@@ -91,12 +91,15 @@ coach fit/
 │   ├── style.css                      # 다크 테마 플릭 스타일 CSS
 │   └── app.js                         # Java & Python API 비동기 통신 및 Chart.js 렌더링
 │
+├── setup.md                           # 🚀 로컬 개발 및 서버 실행 상세 가이드
 └── README.md                          # 프로젝트 종합 가이드 문서
 ```
 
 ---
 
 ## 🚀 3. 로컬 실행 방법
+
+> 💡 **자세한 단계별 실행 및 트러블슈팅 가이드는 [setup.md](./setup.md)에서 확인하실 수 있습니다.**
 
 ### (1) Java Spring Boot 서버 실행 (포트 8080)
 
