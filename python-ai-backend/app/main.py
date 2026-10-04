@@ -20,6 +20,10 @@ from app.models.schemas import (
     CoachingResponse,
     WorkoutItem,
     ExerciseResponse,
+    BodyMetricCreate,
+    BodyMetricResponse,
+    UserProfileUpdate,
+    UserProfileResponse,
 )
 from app.services.ai_coach import generate_coaching_advice
 from app.services.workout_service import (
@@ -34,6 +38,17 @@ from app.services.exercise_service import (
     get_exercise_masters,
     seed_exercise_masters,
 )
+from app.services.body_metric_service import (
+    create_or_update_body_metric,
+    get_body_metrics,
+    get_latest_body_metric,
+    seed_initial_body_metrics,
+)
+from app.services.user_profile_service import (
+    get_or_create_user_profile,
+    update_user_profile,
+    seed_initial_user_profile,
+)
 
 from contextlib import asynccontextmanager
 
@@ -46,6 +61,8 @@ _db = SessionLocal()
 try:
     seed_initial_workouts(_db)
     seed_exercise_masters(_db)
+    seed_initial_body_metrics(_db)
+    seed_initial_user_profile(_db)
 finally:
     _db.close()
 
@@ -56,9 +73,12 @@ async def lifespan(app: FastAPI):
     try:
         seed_initial_workouts(db)
         seed_exercise_masters(db)
+        seed_initial_body_metrics(db)
+        seed_initial_user_profile(db)
     finally:
         db.close()
     yield
+
 
 
 
@@ -218,11 +238,20 @@ def api_generate_coaching(
     db: Session = Depends(get_db)
 ):
     """
-    DB에 저장된 사용자의 최근 운동 기록을 직접 조회하여
-    AI 코칭 피드백 및 맞춤 루틴을 생성합니다. (단일 서버에서 DB 직결)
+    DB에 저장된 사용자의 최근 운동 기록, 인바디 신체 측정치, 프로필 목표를
+    직접 종합 조회하여 초개인화 AI 코칭 피드백 및 맞춤 루틴을 생성합니다.
     """
     target_user_id = request.user_id if request and request.user_id else "user_01"
-    target_goal = request.goal if request and request.goal else "근비대 및 전신 근력 증진"
+
+    # DB에서 사용자 프로필 및 최신 신체 측정치 조회
+    user_profile = get_or_create_user_profile(db, user_id=target_user_id)
+    latest_metric = get_latest_body_metric(db, user_id=target_user_id)
+
+    target_goal = (
+        request.goal
+        if request and request.goal
+        else user_profile.workout_goal
+    )
 
     # DB에서 최근 10개 운동 기록 조회
     recent_db_records = get_recent_workouts(db, user_id=target_user_id, limit=10)
@@ -238,9 +267,19 @@ def api_generate_coaching(
         for r in recent_db_records
     ]
 
+    profile_dict = {
+        "height_cm": user_profile.height_cm,
+        "weight_kg": latest_metric.weight_kg if latest_metric and latest_metric.weight_kg else user_profile.weight_kg,
+        "muscle_kg": latest_metric.muscle_kg if latest_metric else None,
+        "body_fat_percent": latest_metric.body_fat_percent if latest_metric else None,
+        "target_weight_kg": user_profile.target_weight_kg,
+        "experience": user_profile.experience,
+    }
+
     coaching_req = CoachingRequest(
         user_id=target_user_id,
         user_goal=target_goal,
+        user_profile=profile_dict,
         recent_workouts=workout_items
     )
 
@@ -263,6 +302,76 @@ def api_coaching_direct(request: CoachingRequest):
         return generate_coaching_advice(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 코칭 생성 실패: {str(e)}")
+
+
+# ==========================================
+# 3. 신체 측정(Body Metrics / Inbody) API
+# ==========================================
+
+@app.get(
+    "/api/body-metrics",
+    response_model=List[BodyMetricResponse],
+    summary="신체 측정(인바디) 기록 전체 목록 조회"
+)
+def api_get_body_metrics(
+    userId: str = Query(default="user_01", alias="userId"),
+    db: Session = Depends(get_db)
+):
+    """
+    사용자의 체중, 골격근량, 체지방률 측정 이력 전체를 최신순으로 조회
+    """
+    return get_body_metrics(db, user_id=userId)
+
+
+@app.post(
+    "/api/body-metrics",
+    response_model=BodyMetricResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="신체 측정(체중, 골격근량, 체지방률) 기록 저장/수정"
+)
+def api_create_body_metric(
+    metric: BodyMetricCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    새로운 신체 측정 기록 등록 (동일 날짜 존재 시 자동 업데이트)
+    """
+    return create_or_update_body_metric(db, metric)
+
+
+# ==========================================
+# 4. 사용자 프로필 및 운동 목표 API
+# ==========================================
+
+@app.get(
+    "/api/profile",
+    response_model=UserProfileResponse,
+    summary="사용자 프로필 및 운동 목표 조회"
+)
+def api_get_profile(
+    userId: str = Query(default="user_01", alias="userId"),
+    db: Session = Depends(get_db)
+):
+    """
+    사용자의 신체 기본 스펙(키, 체중, 목표 체중) 및 운동 경력, 설정된 목표 조회
+    """
+    return get_or_create_user_profile(db, user_id=userId)
+
+
+@app.put(
+    "/api/profile",
+    response_model=UserProfileResponse,
+    summary="사용자 프로필 및 운동 목표 수정"
+)
+def api_update_profile(
+    profile: UserProfileUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    사용자의 프로필 정보(닉네임, 키, 체중, 경력, 운동 목표)를 DB에 반영
+    """
+    return update_user_profile(db, profile)
+
 
 
 if __name__ == "__main__":
