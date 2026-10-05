@@ -24,7 +24,12 @@ from app.models.schemas import (
     BodyMetricResponse,
     UserProfileUpdate,
     UserProfileResponse,
+    UserRegisterRequest,
+    UserLoginRequest,
+    TokenResponse,
+    UserResponse,
 )
+from app.models.user_db import UserRecord
 from app.services.ai_coach import generate_coaching_advice
 from app.services.workout_service import (
     create_workout,
@@ -49,6 +54,13 @@ from app.services.user_profile_service import (
     update_user_profile,
     seed_initial_user_profile,
 )
+from app.services.auth_service import (
+    register_user,
+    authenticate_user,
+    seed_default_users,
+)
+from app.utils.security import create_access_token
+from app.dependencies.auth import get_current_user, get_optional_current_user
 
 from contextlib import asynccontextmanager
 
@@ -59,6 +71,7 @@ load_dotenv()
 init_db()
 _db = SessionLocal()
 try:
+    seed_default_users(_db)
     seed_initial_workouts(_db)
     seed_exercise_masters(_db)
     seed_initial_body_metrics(_db)
@@ -66,11 +79,13 @@ try:
 finally:
     _db.close()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     db = SessionLocal()
     try:
+        seed_default_users(db)
         seed_initial_workouts(db)
         seed_exercise_masters(db)
         seed_initial_body_metrics(db)
@@ -80,12 +95,10 @@ async def lifespan(app: FastAPI):
     yield
 
 
-
-
 app = FastAPI(
     title="CoachFit Unified Backend API",
-    description="FastAPI + PostgreSQL 기반 단일 백엔드 (운동 기록 CRUD, 주간 볼륨 통계, AI 맞춤형 코칭)",
-    version="2.0.0",
+    description="FastAPI + PostgreSQL 기반 단일 백엔드 (JWT 인증, 운동 기록 CRUD, 주간 볼륨 통계, AI 맞춤형 코칭)",
+    version="2.1.0",
     lifespan=lifespan
 )
 
@@ -111,10 +124,11 @@ handler = Mangum(app) if Mangum else None
 def read_root():
     return {
         "service": "CoachFit Unified Backend",
-        "stack": "FastAPI + PostgreSQL (SQLAlchemy)",
+        "stack": "FastAPI + PostgreSQL (SQLAlchemy) + JWT Auth",
         "status": "online",
         "docs_url": "/docs",
         "endpoints": {
+            "auth": "/api/auth/login",
             "workouts": "/api/workouts",
             "weekly_stats": "/api/workouts/weekly-stats",
             "coaching_generate": "POST /api/coaching/generate",
@@ -129,7 +143,86 @@ def health_check():
 
 
 # ==========================================
-# 1. 운동 종목 마스터 사전 API (사진 & 부위 정보)
+# 1. 사용자 인증(Auth) 및 계정 관리 API
+# ==========================================
+
+@app.post(
+    "/api/auth/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="신규 회원가입"
+)
+def api_register(
+    req: UserRegisterRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    신규 회원가입 API
+    - 이메일, 비밀번호(Bcrypt 암호화), 닉네임, 신체 스펙 등록
+    - 사용자 프로필 및 초기 체성분 자동 연계 생성
+    - 가입 즉시 유효한 JWT Access Token 발급
+    """
+    user = register_user(db, req)
+    token = create_access_token({"sub": user.user_id, "email": user.email})
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user_id=user.user_id,
+        email=user.email,
+        nickname=user.nickname
+    )
+
+
+@app.post(
+    "/api/auth/login",
+    response_model=TokenResponse,
+    summary="이메일/비밀번호 로그인 및 JWT 토큰 발급"
+)
+def api_login(
+    req: UserLoginRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    로그인 API
+    - 이메일과 비밀번호 검증 후 JWT Access Token 발급
+    """
+    user = authenticate_user(db, email=req.email, password=req.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="이메일 또는 비밀번호가 올바르지 않습니다."
+        )
+    token = create_access_token({"sub": user.user_id, "email": user.email})
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user_id=user.user_id,
+        email=user.email,
+        nickname=user.nickname
+    )
+
+
+@app.get(
+    "/api/auth/me",
+    response_model=UserResponse,
+    summary="현재 로그인한 사용자 정보 조회"
+)
+def api_me(
+    current_user: UserRecord = Depends(get_current_user)
+):
+    """
+    현재 로그인된 사용자의 기본 계정 정보 반환 (JWT Bearer 인증 필수)
+    """
+    return UserResponse(
+        user_id=current_user.user_id,
+        email=current_user.email,
+        nickname=current_user.nickname,
+        created_at=current_user.created_at
+    )
+
+
+# ==========================================
+# 2. 운동 종목 마스터 사전 API (사진 & 부위 정보)
 # ==========================================
 
 @app.get(
@@ -149,9 +242,8 @@ def api_get_exercises(
 
 
 # ==========================================
-# 2. 운동 기록(Workout) CRUD API
+# 3. 운동 기록(Workout) CRUD API
 # ==========================================
-
 
 @app.post(
     "/api/workouts",
@@ -161,14 +253,17 @@ def api_get_exercises(
 )
 def api_create_workout(
     workout_in: WorkoutCreate,
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     운동 기록 등록 API
-    - Flutter 모바일 앱 및 웹 클라이언트에서 호출
+    - JWT 토큰이 있을 경우 로그인된 유저의 user_id로 자동 할당
     - PostgreSQL / SQLite DB에 즉시 영구 저장
     """
     try:
+        if current_user:
+            workout_in.user_id = current_user.user_id
         record = create_workout(db, workout_in)
         return record
     except Exception as e:
@@ -182,12 +277,15 @@ def api_create_workout(
 )
 def api_get_workouts(
     userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     사용자의 전체 운동 기록 목록 조회 API (최신 일자 순 정렬)
+    - JWT 토큰이 있으면 해당 유저의 기록만 조회
     """
-    return get_workouts_by_user(db, user_id=userId)
+    target_user_id = current_user.user_id if current_user else userId
+    return get_workouts_by_user(db, user_id=target_user_id)
 
 
 @app.delete(
@@ -197,16 +295,17 @@ def api_get_workouts(
 def api_delete_workout(
     workout_id: int,
     userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     운동 기록 단건 삭제 API
     """
-    success = delete_workout(db, workout_id=workout_id, user_id=userId)
+    target_user_id = current_user.user_id if current_user else userId
+    success = delete_workout(db, workout_id=workout_id, user_id=target_user_id)
     if not success:
         raise HTTPException(status_code=404, detail="해당 운동 기록을 찾을 수 없습니다.")
     return {"message": "운동 기록이 성공적으로 삭제되었습니다.", "deletedId": workout_id}
-
 
 
 @app.get(
@@ -216,16 +315,18 @@ def api_delete_workout(
 )
 def api_get_weekly_stats(
     userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     모바일 주간 볼륨 차트(fl_chart)용 요일별 누적 볼륨 통계 반환
     """
-    return get_weekly_volume_stats(db, user_id=userId)
+    target_user_id = current_user.user_id if current_user else userId
+    return get_weekly_volume_stats(db, user_id=target_user_id)
 
 
 # ==========================================
-# 2. AI 코칭(Coaching) API
+# 4. AI 코칭(Coaching) API
 # ==========================================
 
 @app.post(
@@ -235,13 +336,19 @@ def api_get_weekly_stats(
 )
 def api_generate_coaching(
     request: Optional[CoachingGenerateRequest] = None,
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     DB에 저장된 사용자의 최근 운동 기록, 인바디 신체 측정치, 프로필 목표를
     직접 종합 조회하여 초개인화 AI 코칭 피드백 및 맞춤 루틴을 생성합니다.
     """
-    target_user_id = request.user_id if request and request.user_id else "user_01"
+    if current_user:
+        target_user_id = current_user.user_id
+    elif request and request.user_id:
+        target_user_id = request.user_id
+    else:
+        target_user_id = "user_01"
 
     # DB에서 사용자 프로필 및 최신 신체 측정치 조회
     user_profile = get_or_create_user_profile(db, user_id=target_user_id)
@@ -305,7 +412,7 @@ def api_coaching_direct(request: CoachingRequest):
 
 
 # ==========================================
-# 3. 신체 측정(Body Metrics / Inbody) API
+# 5. 신체 측정(Body Metrics / Inbody) API
 # ==========================================
 
 @app.get(
@@ -315,12 +422,14 @@ def api_coaching_direct(request: CoachingRequest):
 )
 def api_get_body_metrics(
     userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     사용자의 체중, 골격근량, 체지방률 측정 이력 전체를 최신순으로 조회
     """
-    return get_body_metrics(db, user_id=userId)
+    target_user_id = current_user.user_id if current_user else userId
+    return get_body_metrics(db, user_id=target_user_id)
 
 
 @app.post(
@@ -331,16 +440,19 @@ def api_get_body_metrics(
 )
 def api_create_body_metric(
     metric: BodyMetricCreate,
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     새로운 신체 측정 기록 등록 (동일 날짜 존재 시 자동 업데이트)
     """
+    if current_user:
+        metric.user_id = current_user.user_id
     return create_or_update_body_metric(db, metric)
 
 
 # ==========================================
-# 4. 사용자 프로필 및 운동 목표 API
+# 6. 사용자 프로필 및 운동 목표 API
 # ==========================================
 
 @app.get(
@@ -350,12 +462,14 @@ def api_create_body_metric(
 )
 def api_get_profile(
     userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     사용자의 신체 기본 스펙(키, 체중, 목표 체중) 및 운동 경력, 설정된 목표 조회
     """
-    return get_or_create_user_profile(db, user_id=userId)
+    target_user_id = current_user.user_id if current_user else userId
+    return get_or_create_user_profile(db, user_id=target_user_id)
 
 
 @app.put(
@@ -365,13 +479,15 @@ def api_get_profile(
 )
 def api_update_profile(
     profile: UserProfileUpdate,
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     사용자의 프로필 정보(닉네임, 키, 체중, 경력, 운동 목표)를 DB에 반영
     """
+    if current_user:
+        profile.user_id = current_user.user_id
     return update_user_profile(db, profile)
-
 
 
 if __name__ == "__main__":

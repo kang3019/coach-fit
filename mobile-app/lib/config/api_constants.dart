@@ -38,7 +38,9 @@ class ApiConstants {
   static String get exercises => '$baseUrl/api/exercises';
   static String get bodyMetrics => '$baseUrl/api/body-metrics';
   static String get profile => '$baseUrl/api/profile';
+  static String get authRegister => '$baseUrl/api/auth/register';
+  static String get authLogin => '$baseUrl/api/auth/login';
+  static String get authMe => '$baseUrl/api/auth/me';
 
   static const String defaultUserId = 'user_01';
-
 }

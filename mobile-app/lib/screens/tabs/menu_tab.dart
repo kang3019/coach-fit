@@ -10,8 +10,10 @@ import '../../services/goal_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/reminder_service.dart';
 import '../../services/workout_journal_service.dart';
+import '../../services/auth_service.dart';
 import '../about_screen.dart';
 import '../achievements_screen.dart';
+import '../auth/login_screen.dart';
 import '../favorites_screen.dart';
 import '../profile_edit_screen.dart';
 import '../widgets/menu_monthly_summary_card.dart';
@@ -496,16 +498,76 @@ class _MenuTabState extends State<MenuTab> {
                   title: Text('앱 버전',
                       style:
                           TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Text('v2.0.0',
+                  trailing: Text('v2.1.0 (JWT Auth)',
                       style: TextStyle(
                           color: Colors.white38, fontSize: 12)),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 24),
+
+          // 🚪 로그아웃 버튼
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                side: BorderSide(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.logout_rounded, size: 20),
+              label: const Text(
+                '로그아웃',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              onPressed: _confirmLogout,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF151922),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('로그아웃', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          '정말 로그아웃하시겠습니까?\n로그아웃 시 로그인 화면으로 이동합니다.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService.instance.logout();
+      ProfileService().clearCache();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   // ===== helpers =====
@@ -1130,9 +1192,10 @@ class _ProfileCardState extends State<_ProfileCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${profile.gender.label} · ${profile.experience.description}',
-                      style:
-                          const TextStyle(color: Colors.white60, fontSize: 13),
+                      AuthService.instance.currentUser?.email.isNotEmpty == true
+                          ? '${AuthService.instance.currentUser!.email} · ${profile.gender.label}'
+                          : '${profile.gender.label} · ${profile.experience.description}',
+                      style: const TextStyle(color: Colors.white60, fontSize: 13),
                     ),
                     const SizedBox(height: 2),
                     const Text(

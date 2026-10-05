@@ -37,6 +37,7 @@ def get_db():
 
 def init_db():
     """테이블 자동 생성"""
+    from app.models.user_db import UserRecord
     from app.models.workout_db import WorkoutRecord
     from app.models.exercise_db import ExerciseMaster
     from app.models.body_metric_db import BodyMetricRecord

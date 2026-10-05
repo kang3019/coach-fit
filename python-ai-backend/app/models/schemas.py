@@ -183,3 +183,51 @@ class ExerciseResponse(BaseModel):
         "from_attributes": True,
     }
 
+
+# ==========================================
+# 6. 사용자 인증(Auth) 및 계정 관리 스키마
+# ==========================================
+
+class UserRegisterRequest(BaseModel):
+    email: str
+    password: str
+    nickname: str = "운동인"
+    height_cm: Optional[float] = Field(default=None, validation_alias="heightCm", serialization_alias="heightCm")
+    weight_kg: Optional[float] = Field(default=None, validation_alias="weightKg", serialization_alias="weightKg")
+    target_weight_kg: Optional[float] = Field(default=None, validation_alias="targetWeightKg", serialization_alias="targetWeightKg")
+    experience: Optional[str] = "beginner"
+    workout_goal: Optional[str] = Field(default="근비대 및 전신 근력 증진", validation_alias="workoutGoal", serialization_alias="workoutGoal")
+
+    model_config = {
+        "populate_by_name": True,
+    }
+
+
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str = Field(..., validation_alias="accessToken", serialization_alias="accessToken")
+    token_type: str = Field(default="bearer", validation_alias="tokenType", serialization_alias="tokenType")
+    user_id: str = Field(..., validation_alias="userId", serialization_alias="userId")
+    email: str
+    nickname: str
+
+    model_config = {
+        "populate_by_name": True,
+    }
+
+
+class UserResponse(BaseModel):
+    user_id: str = Field(..., validation_alias="userId", serialization_alias="userId")
+    email: str
+    nickname: str
+    created_at: Optional[dt_datetime] = Field(default=None, validation_alias="createdAt", serialization_alias="createdAt")
+
+    model_config = {
+        "populate_by_name": True,
+        "from_attributes": True,
+    }
+
