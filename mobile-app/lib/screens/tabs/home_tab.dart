@@ -375,12 +375,12 @@ class _ConditionCheckCard extends StatelessWidget {
                 final isSelected = cond == currentCondition;
                 return Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () => onChanged(cond),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 2),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF00E5A0).withValues(alpha: 0.2)
@@ -393,12 +393,15 @@ class _ConditionCheckCard extends StatelessWidget {
                           ),
                         ),
                         child: Center(
-                          child: Text(
-                            cond,
-                            style: TextStyle(
-                              color: isSelected ? const Color(0xFF00E5A0) : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              cond,
+                              style: TextStyle(
+                                color: isSelected ? const Color(0xFF00E5A0) : Colors.white70,
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
