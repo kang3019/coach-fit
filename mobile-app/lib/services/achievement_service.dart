@@ -1,5 +1,18 @@
 import '../models/workout.dart';
 
+/// 업적 카테고리.
+enum AchievementCategory {
+  streak('🔥', '스트릭'),
+  volume('📈', '볼륨'),
+  big3('💯', 'BIG3'),
+  time('⏰', '시간대'),
+  variety('🎨', '다양성');
+
+  final String emoji;
+  final String label;
+  const AchievementCategory(this.emoji, this.label);
+}
+
 /// 1개 업적 정의.
 class Achievement {
   final String id;
@@ -9,6 +22,7 @@ class Achievement {
   final bool unlocked;
   final int progress;
   final int target;
+  final AchievementCategory category;
 
   const Achievement({
     required this.id,
@@ -18,6 +32,7 @@ class Achievement {
     required this.unlocked,
     required this.progress,
     required this.target,
+    required this.category,
   });
 
   double get ratio => target == 0 ? 0 : (progress / target).clamp(0.0, 1.0);
@@ -45,29 +60,15 @@ class AchievementService {
         workouts.where((w) => _isNight(w.createdAt ?? w.workoutDate)).length;
 
     return [
+      // ===== 스트릭 =====
       _ach(
-        id: 'first_workout',
-        emoji: '🎉',
-        title: '첫 운동 시작',
-        description: '첫 번째 운동 기록 작성',
-        progress: totalCount.clamp(0, 1),
-        target: 1,
-      ),
-      _ach(
-        id: 'ten_workouts',
-        emoji: '💪',
-        title: '꾸준한 열정',
-        description: '총 10회 운동 완료',
-        progress: totalCount,
-        target: 10,
-      ),
-      _ach(
-        id: 'hundred_workouts',
-        emoji: '🏆',
-        title: '백번의 땀',
-        description: '총 100회 운동 완료',
-        progress: totalCount,
-        target: 100,
+        id: 'current_streak_3',
+        emoji: '⚡',
+        title: '리듬 유지',
+        description: '현재 3일 연속 운동 중',
+        progress: currentStreak,
+        target: 3,
+        category: AchievementCategory.streak,
       ),
       _ach(
         id: 'streak_7',
@@ -76,6 +77,7 @@ class AchievementService {
         description: '7일 연속 운동',
         progress: longestStreak,
         target: 7,
+        category: AchievementCategory.streak,
       ),
       _ach(
         id: 'streak_30',
@@ -84,6 +86,35 @@ class AchievementService {
         description: '30일 연속 운동',
         progress: longestStreak,
         target: 30,
+        category: AchievementCategory.streak,
+      ),
+      // ===== 볼륨 =====
+      _ach(
+        id: 'first_workout',
+        emoji: '🎉',
+        title: '첫 운동 시작',
+        description: '첫 번째 운동 기록 작성',
+        progress: totalCount.clamp(0, 1),
+        target: 1,
+        category: AchievementCategory.volume,
+      ),
+      _ach(
+        id: 'ten_workouts',
+        emoji: '💪',
+        title: '꾸준한 열정',
+        description: '총 10회 운동 완료',
+        progress: totalCount,
+        target: 10,
+        category: AchievementCategory.volume,
+      ),
+      _ach(
+        id: 'hundred_workouts',
+        emoji: '🏆',
+        title: '백번의 땀',
+        description: '총 100회 운동 완료',
+        progress: totalCount,
+        target: 100,
+        category: AchievementCategory.volume,
       ),
       _ach(
         id: 'volume_100k',
@@ -92,7 +123,9 @@ class AchievementService {
         description: '누적 볼륨 100,000kg',
         progress: totalVolume.toInt(),
         target: 100000,
+        category: AchievementCategory.volume,
       ),
+      // ===== BIG3 =====
       _ach(
         id: 'bench_100',
         emoji: '💯',
@@ -100,6 +133,7 @@ class AchievementService {
         description: '벤치프레스 100kg 1회 성공',
         progress: maxBench.toInt(),
         target: 100,
+        category: AchievementCategory.big3,
       ),
       _ach(
         id: 'squat_140',
@@ -108,6 +142,7 @@ class AchievementService {
         description: '스쿼트 140kg 1회 성공',
         progress: maxSquat.toInt(),
         target: 140,
+        category: AchievementCategory.big3,
       ),
       _ach(
         id: 'dead_180',
@@ -116,15 +151,9 @@ class AchievementService {
         description: '데드리프트 180kg 1회 성공',
         progress: maxDead.toInt(),
         target: 180,
+        category: AchievementCategory.big3,
       ),
-      _ach(
-        id: 'variety_20',
-        emoji: '🎨',
-        title: '다재다능',
-        description: '서로 다른 종목 20개 수행',
-        progress: uniqueExercises,
-        target: 20,
-      ),
+      // ===== 시간대 =====
       _ach(
         id: 'early_bird',
         emoji: '🌅',
@@ -132,6 +161,7 @@ class AchievementService {
         description: '오전 6~9시 운동 5회',
         progress: morningCount,
         target: 5,
+        category: AchievementCategory.time,
       ),
       _ach(
         id: 'night_owl',
@@ -140,14 +170,17 @@ class AchievementService {
         description: '밤 10시 이후 운동 5회',
         progress: nightCount,
         target: 5,
+        category: AchievementCategory.time,
       ),
+      // ===== 다양성 =====
       _ach(
-        id: 'current_streak_3',
-        emoji: '⚡',
-        title: '리듬 유지',
-        description: '현재 3일 연속 운동 중',
-        progress: currentStreak,
-        target: 3,
+        id: 'variety_20',
+        emoji: '🎨',
+        title: '다재다능',
+        description: '서로 다른 종목 20개 수행',
+        progress: uniqueExercises,
+        target: 20,
+        category: AchievementCategory.variety,
       ),
     ];
   }
@@ -161,6 +194,7 @@ class AchievementService {
     required String description,
     required int progress,
     required int target,
+    required AchievementCategory category,
   }) {
     final p = progress.clamp(0, target);
     return Achievement(
@@ -171,6 +205,7 @@ class AchievementService {
       unlocked: p >= target,
       progress: p,
       target: target,
+      category: category,
     );
   }
 
