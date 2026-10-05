@@ -116,18 +116,56 @@
   </div>
 
   <script>
-    // 플러터가 준비되면 스플래시 제거.
-    // flutter_bootstrap.js 가 로드되면서 Flutter 가 첫 프레임을 그리는 시점을 감지.
-    window.addEventListener('flutter-first-frame', function () {
-      var splash = document.getElementById('coachfit-splash');
-      if (!splash) return;
-      splash.classList.add('fade-out');
+    // 플러터 첫 프레임이 그려진 뒤에도 CanvasKit 가 한국어 폰트 로딩을 끝내기 전까지는
+    // 모든 한글이 두부 글리프(□□)로 보임. 스플래시를 안전하게 유지하려면:
+    //   1) flutter-first-frame 이벤트 대기 (Flutter 렌더 준비)
+    //   2) document.fonts.ready 대기 (브라우저 폰트 로딩)
+    //   3) 최소 추가 지연 900ms (CanvasKit 비동기 폰트 fetch 여유)
+    // 셋 다 만족되면 fade-out.
+    (function () {
+      var firstFrameDone = false;
+      var fontsDone = false;
+      var splashRemoved = false;
+
+      function tryRemove() {
+        if (splashRemoved) return;
+        if (!firstFrameDone || !fontsDone) return;
+        splashRemoved = true;
+        var splash = document.getElementById('coachfit-splash');
+        if (!splash) return;
+        splash.classList.add('fade-out');
+        setTimeout(function () {
+          if (splash && splash.parentNode) {
+            splash.parentNode.removeChild(splash);
+          }
+        }, 400);
+      }
+
+      window.addEventListener('flutter-first-frame', function () {
+        // 첫 프레임 후 추가 250ms 짧은 안전 지연 — 폰트가 거의 다 로드된 상태라
+        // 과도한 대기는 체감 로딩 시간만 늘림.
+        setTimeout(function () {
+          firstFrameDone = true;
+          tryRemove();
+        }, 250);
+      });
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () {
+          fontsDone = true;
+          tryRemove();
+        });
+      } else {
+        fontsDone = true;
+      }
+
+      // 최후 보루: 8초 지나도 이벤트 안 오면 강제로 제거 (앱이 깨진 상태를 방지).
       setTimeout(function () {
-        if (splash && splash.parentNode) {
-          splash.parentNode.removeChild(splash);
-        }
-      }, 450);
-    });
+        firstFrameDone = true;
+        fontsDone = true;
+        tryRemove();
+      }, 8000);
+    })();
   </script>
 
   <script src="flutter_bootstrap.js" async></script>
