@@ -1,38 +1,135 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="CoachFit — AI 코치가 함께하는 피트니스 트래커">
+  <meta name="theme-color" content="#0E1116">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="coachfit_mobile">
+  <meta name="apple-mobile-web-app-title" content="CoachFit">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>coachfit_mobile</title>
+  <title>CoachFit</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* 플러터 웹 초기 로딩 중 한글 폰트/CanvasKit 다운로드 지연으로
+       두부 글리프(□□)가 깜빡이는 걸 가리는 다크 스플래시 화면.
+       Flutter 가 첫 프레임을 그리면 자동으로 fade-out 후 제거됨. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0E1116;
+      overflow: hidden;
+    }
+
+    #coachfit-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0E1116;
+      z-index: 999999;
+      transition: opacity 0.4s ease-out;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    #coachfit-splash.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-logo {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(0, 229, 160, 0.3), rgba(0, 229, 160, 0.1));
+      border: 2px solid #00E5A0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+      box-shadow: 0 0 40px rgba(0, 229, 160, 0.4);
+      animation: splash-pulse 1.6s ease-in-out infinite;
+    }
+
+    .splash-title {
+      margin-top: 20px;
+      font-size: 28px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+
+    .splash-subtitle {
+      margin-top: 6px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .splash-spinner {
+      margin-top: 32px;
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(0, 229, 160, 0.15);
+      border-top-color: #00E5A0;
+      border-radius: 50%;
+      animation: splash-spin 0.9s linear infinite;
+    }
+
+    @keyframes splash-pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 40px rgba(0, 229, 160, 0.4);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 60px rgba(0, 229, 160, 0.6);
+      }
+    }
+
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
+  <!-- 로딩 스플래시 — 플러터 첫 프레임 렌더 시 자바스크립트가 제거 -->
+  <div id="coachfit-splash">
+    <div class="splash-logo">💪</div>
+    <div class="splash-title">CoachFit</div>
+    <div class="splash-subtitle">AI Fitness Coach</div>
+    <div class="splash-spinner"></div>
+  </div>
+
+  <script>
+    // 플러터가 준비되면 스플래시 제거.
+    // flutter_bootstrap.js 가 로드되면서 Flutter 가 첫 프레임을 그리는 시점을 감지.
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('coachfit-splash');
+      if (!splash) return;
+      splash.classList.add('fade-out');
+      setTimeout(function () {
+        if (splash && splash.parentNode) {
+          splash.parentNode.removeChild(splash);
+        }
+      }, 450);
+    });
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
