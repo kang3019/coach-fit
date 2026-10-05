@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_constants.dart';
 import '../models/user_profile.dart';
+import 'auth_service.dart';
 
 /// UserProfile 을 백엔드 DB(FastAPI) 및 로컬(SharedPreferences)에 동기화하는 싱글톤.
 /// - 온라인 시: FastAPI 백엔드 DB와 양방향 동기화
@@ -19,12 +20,20 @@ class ProfileService extends ChangeNotifier {
   final http.Client _client = http.Client();
   UserProfile? _cached;
 
+  void clearCache() {
+    _cached = null;
+    notifyListeners();
+  }
+
   /// 저장된 프로필 로드 (백엔드 DB 우선 조회, 실패 시 로컬 캐시 복구).
-  Future<UserProfile> load({String userId = ApiConstants.defaultUserId}) async {
+  Future<UserProfile> load({String? userId}) async {
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
+    final headers = await AuthService.instance.getAuthHeaders();
+
     // 1. 백엔드 DB 조회 시도
     try {
-      final uri = Uri.parse('${ApiConstants.profile}?userId=$userId');
-      final res = await _client.get(uri).timeout(const Duration(seconds: 4));
+      final uri = Uri.parse('${ApiConstants.profile}?userId=$targetUserId');
+      final res = await _client.get(uri, headers: headers).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         final profile = UserProfile.fromJson(decoded);
@@ -56,8 +65,11 @@ class ProfileService extends ChangeNotifier {
   /// 프로필 저장 (로컬 캐시 즉시 갱신 + 백엔드 DB 동기화).
   Future<void> save(
     UserProfile profile, {
-    String userId = ApiConstants.defaultUserId,
+    String? userId,
   }) async {
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
+    final headers = await AuthService.instance.getAuthHeaders();
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefKey, jsonEncode(profile.toJson()));
     _cached = profile;
@@ -66,7 +78,7 @@ class ProfileService extends ChangeNotifier {
     try {
       final uri = Uri.parse(ApiConstants.profile);
       final body = {
-        'userId': userId,
+        'userId': targetUserId,
         'nickname': profile.nickname,
         'gender': profile.gender.name,
         if (profile.heightCm != null) 'heightCm': profile.heightCm,
@@ -77,7 +89,7 @@ class ProfileService extends ChangeNotifier {
       await _client
           .put(
             uri,
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
+            headers: headers,
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 5));
@@ -86,4 +98,3 @@ class ProfileService extends ChangeNotifier {
     }
   }
 }
-

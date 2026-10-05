@@ -5,6 +5,7 @@ import '../config/api_constants.dart';
 import '../models/coaching_result.dart';
 import '../models/exercise_master.dart';
 import '../models/workout.dart';
+import 'auth_service.dart';
 
 /// FastAPI 백엔드(8000) 운동 기록 CRUD 및 운동 마스터 REST 호출.
 class WorkoutService {
@@ -39,13 +40,14 @@ class WorkoutService {
         .toList();
   }
 
-
-  /// GET /api/workouts?userId=user_01
+  /// GET /api/workouts?userId=...
   Future<List<Workout>> fetchWorkouts({
-    String userId = ApiConstants.defaultUserId,
+    String? userId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.workouts}?userId=$userId');
-    final res = await _client.get(uri).timeout(const Duration(seconds: 8));
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
+    final headers = await AuthService.instance.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.workouts}?userId=$targetUserId');
+    final res = await _client.get(uri, headers: headers).timeout(const Duration(seconds: 8));
 
     if (res.statusCode != 200) {
       throw Exception('운동 기록 조회 실패 (status=${res.statusCode})');
@@ -58,11 +60,19 @@ class WorkoutService {
 
   /// POST /api/workouts
   Future<Workout> createWorkout(Workout workout) async {
+    final headers = await AuthService.instance.getAuthHeaders();
+    final effectiveUserId = workout.userId.isNotEmpty && workout.userId != ApiConstants.defaultUserId
+        ? workout.userId
+        : await AuthService.instance.getCurrentUserId();
+
+    final payload = workout.toCreateJson();
+    payload['userId'] = effectiveUserId;
+
     final res = await _client
         .post(
           Uri.parse(ApiConstants.workouts),
-          headers: {'Content-Type': 'application/json; charset=UTF-8'},
-          body: jsonEncode(workout.toCreateJson()),
+          headers: headers,
+          body: jsonEncode(payload),
         )
         .timeout(const Duration(seconds: 8));
 
@@ -74,12 +84,13 @@ class WorkoutService {
   }
 
   /// GET /api/workouts/weekly-stats
-  /// 응답 예: { userId, totalRecords, weeklyVolumeByDay: {"MON": 3500.0, ...} }
   Future<Map<String, double>> fetchWeeklyVolume({
-    String userId = ApiConstants.defaultUserId,
+    String? userId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.weeklyStats}?userId=$userId');
-    final res = await _client.get(uri).timeout(const Duration(seconds: 8));
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
+    final headers = await AuthService.instance.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.weeklyStats}?userId=$targetUserId');
+    final res = await _client.get(uri, headers: headers).timeout(const Duration(seconds: 8));
     if (res.statusCode != 200) {
       throw Exception('주간 통계 조회 실패 (status=${res.statusCode})');
     }
@@ -91,9 +102,11 @@ class WorkoutService {
   }
 
   /// DELETE /api/workouts/{id}
-  Future<void> deleteWorkout(int id, {String userId = ApiConstants.defaultUserId}) async {
-    final uri = Uri.parse('${ApiConstants.workouts}/$id?userId=$userId');
-    final res = await _client.delete(uri).timeout(const Duration(seconds: 8));
+  Future<void> deleteWorkout(int id, {String? userId}) async {
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
+    final headers = await AuthService.instance.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.workouts}/$id?userId=$targetUserId');
+    final res = await _client.delete(uri, headers: headers).timeout(const Duration(seconds: 8));
     if (res.statusCode != 200 && res.statusCode != 204) {
       throw Exception('운동 기록 삭제 실패 (status=${res.statusCode})');
     }
@@ -102,14 +115,15 @@ class WorkoutService {
   /// AI 추천 루틴의 종목들을 오늘 운동 기록으로 일괄 등록
   Future<List<Workout>> importRoutine(
     List<RecommendedRoutineItem> items, {
-    String userId = ApiConstants.defaultUserId,
+    String? userId,
     DateTime? date,
   }) async {
+    final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();
     final targetDate = date ?? DateTime.now();
     final results = <Workout>[];
     for (final item in items) {
       final workout = Workout(
-        userId: userId,
+        userId: targetUserId,
         exerciseName: item.exerciseName,
         sets: item.sets > 0 ? item.sets : 3,
         reps: item.reps > 0 ? item.reps : 10,
@@ -125,4 +139,3 @@ class WorkoutService {
 
   void dispose() => _client.close();
 }
-
