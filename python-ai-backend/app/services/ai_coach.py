@@ -6,15 +6,27 @@ from app.models.schemas import CoachingRequest, CoachingResponse, RecommendedRou
 
 def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     """
-    Java 서버로부터 전달받은 최근 운동 기록을 분석하여
-    AI 코칭 조언과 오늘의 맞춤 추천 루틴을 생성합니다.
-    (API 키 설정 시 LLM 연동, 기본 상태에서는 정교한 규칙 기반 더미 코칭 제공)
+    최근 운동 기록 + 신체 스펙 + 목표를 분석하여 AI 코칭 조언과
+    오늘의 맞춤 추천 루틴을 생성합니다.
+
+    AI_PROVIDER 환경변수로 공급자 선택:
+    - "claude"  → Anthropic Claude (claude-opus-5-5, adaptive thinking)
+    - "openai"  → OpenAI gpt-4o-mini
+    - "dummy"   → 규칙 기반 스마트 더미 (키 없이도 동작)
+
+    API 키가 없거나 호출 실패 시 자동으로 더미 폴백.
     """
-    openai_key = os.getenv("OPENAI_API_KEY")
     ai_provider = os.getenv("AI_PROVIDER", "dummy").lower()
 
-    if openai_key and ai_provider == "openai":
-        return _call_openai_coaching(request, openai_key)
+    if ai_provider == "claude":
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        if anthropic_key:
+            return _call_claude_coaching(request, anthropic_key)
+
+    if ai_provider == "openai":
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            return _call_openai_coaching(request, openai_key)
 
     return _generate_smart_dummy_coaching(request)
 
@@ -191,5 +203,89 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         # API 오류 발생 시 스마트 더미로 폴백
         fallback = _generate_smart_dummy_coaching(request)
         fallback.summary += f" (OpenAI API 호출 에러로 더미 엔진 적용됨: {str(e)})"
+        return fallback
+
+
+def _call_claude_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
+    """
+    Anthropic Claude 연동 (claude-opus-5-5 + adaptive thinking).
+
+    - OpenAI 버전과 동일한 JSON 스키마 응답을 받아 CoachingResponse 로 매핑.
+    - 호출 실패 시 스마트 더미로 폴백 (서비스 중단 방지).
+    """
+    try:
+        from anthropic import Anthropic
+        client = Anthropic(api_key=api_key)
+
+        prompt_data = {
+            "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
+            "workouts": [w.model_dump() for w in request.recent_workouts]
+        }
+
+        system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
+사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 최근 운동 기록을 종합적으로 분석하여
+개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 작성합니다.
+
+**반드시 아래 JSON 스키마만 포함하는 응답을 작성하세요. 마크다운 코드 블록이나 설명 문구 없이 순수 JSON 만 반환합니다.**
+
+{
+  "summary": "운동 및 신체 상태 요약 문자열",
+  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "recommended_routine": [
+    {
+      "exercise_name": "운동명",
+      "sets": 4,
+      "reps": 10,
+      "focus": "타겟 부위",
+      "tip": "자세 팁"
+    }
+  ]
+}
+
+recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다."""
+
+        user_message = (
+            f"기록 및 프로필 데이터 (JSON): {json.dumps(prompt_data, ensure_ascii=False)}\n\n"
+            "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
+        )
+
+        # streaming + get_final_message 로 긴 응답/타임아웃 안전 처리
+        with client.messages.stream(
+            model="claude-opus-5-5",
+            max_tokens=16000,
+            thinking={"type": "adaptive"},
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+        ) as stream:
+            response = stream.get_final_message()
+
+        # 텍스트 블록만 모아서 JSON 파싱
+        text_content = ""
+        for block in response.content:
+            if getattr(block, "type", None) == "text":
+                text_content += block.text
+
+        # 모델이 코드 블록을 둘러쌀 수도 있으니 가장 바깥 { ... } 구간만 추출
+        start = text_content.find("{")
+        end = text_content.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("Claude 응답에서 JSON 객체를 찾지 못했습니다.")
+
+        parsed = json.loads(text_content[start:end + 1])
+
+        return CoachingResponse(
+            summary=parsed.get("summary", ""),
+            coaching_advice=parsed.get("coaching_advice", ""),
+            recommended_routine=[
+                RecommendedRoutineItem(**item)
+                for item in parsed.get("recommended_routine", [])
+            ],
+            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+    except Exception as e:
+        # API 오류 발생 시 스마트 더미로 폴백
+        fallback = _generate_smart_dummy_coaching(request)
+        fallback.summary += f" (Claude API 호출 에러로 더미 엔진 적용됨: {str(e)})"
         return fallback
 
