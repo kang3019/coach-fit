@@ -316,12 +316,16 @@ class _ExerciseCardTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        exercise.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          exercise.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -346,6 +350,8 @@ class _ExerciseCardTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       exercise.englishName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white38, fontSize: 11),
                     ),
                   ],

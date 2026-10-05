@@ -236,7 +236,7 @@ class _HomeTabState extends State<HomeTab> {
                           imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/2330.gif',
                         ),
                         RoutineExerciseItem(
-                          name: '바벨 숄더 프레스(오버헤드 프레스, 밀리터리 프레스)',
+                          name: '바벨 숄더 프레스',
                           targetMuscle: '어깨, 삼두',
                           imageUrl: 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/0086.gif',
                         ),
