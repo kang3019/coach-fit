@@ -142,12 +142,12 @@
       }
 
       window.addEventListener('flutter-first-frame', function () {
-        // 첫 프레임 후 추가 900ms 대기 — CanvasKit 폰트 비동기 다운로드가
-        // 거의 완료되는 체감 안전 구간.
+        // 첫 프레임 후 추가 250ms 짧은 안전 지연 — 폰트가 거의 다 로드된 상태라
+        // 과도한 대기는 체감 로딩 시간만 늘림.
         setTimeout(function () {
           firstFrameDone = true;
           tryRemove();
-        }, 900);
+        }, 250);
       });
 
       if (document.fonts && document.fonts.ready) {
