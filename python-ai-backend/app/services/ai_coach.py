@@ -21,6 +21,7 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     if ai_provider == "claude":
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         if anthropic_key:
+            # Claude Sonnet 5.5 — 가격 효율적이면서 품질 높음.
             return _call_claude_coaching(request, anthropic_key)
 
     if ai_provider == "openai":
@@ -208,10 +209,13 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
 
 def _call_claude_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
     """
-    Anthropic Claude 연동 (claude-opus-5-5 + adaptive thinking).
+    Anthropic Claude 연동 (claude-sonnet-5-5 + adaptive thinking + server-side fallback).
 
+    - 모델: Claude Sonnet 5.5 — 가격은 Opus 의 1/2 ($2 입력 / $10 출력 per 1M tokens),
+      일반 코딩/추천 작업은 Opus 와 거의 동급 품질. 학생 사이드 프로젝트에 비용 효율적.
     - OpenAI 버전과 동일한 JSON 스키마 응답을 받아 CoachingResponse 로 매핑.
-    - 호출 실패 시 스마트 더미로 폴백 (서비스 중단 방지).
+    - 안전장치 2단: (1) 서버사이드 refusal fallback (안전필터 거부 시 다른 모델로 자동 전환),
+                   (2) 호출 자체 실패 시 스마트 더미로 폴백.
     """
     try:
         from anthropic import Anthropic
@@ -250,13 +254,16 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
         )
 
-        # streaming + get_final_message 로 긴 응답/타임아웃 안전 처리
-        with client.messages.stream(
-            model="claude-opus-5-5",
+        # streaming + get_final_message 로 긴 응답/타임아웃 안전 처리.
+        # Sonnet 5.5 는 server-side fallback(refusal 발생 시 자동 다른 모델 호출) 기본 활성화 권장.
+        with client.beta.messages.stream(
+            model="claude-sonnet-5-5",
             max_tokens=16000,
             thinking={"type": "adaptive"},
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
         ) as stream:
             response = stream.get_final_message()
 
