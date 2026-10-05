@@ -186,13 +186,13 @@ def seed_exercise_masters(db: Session, force: bool = False):
 
         # --- 어깨 (Shoulders) ---
         ExerciseMaster(
-            name="바벨 숄더 프레스(오버헤드 프레스, 밀리터리 프레스)",
-            english_name="Barbell Military Press",
+            name="바벨 숄더 프레스",
+            english_name="Barbell Overhead Press (OHP)",
             category="어깨",
             equipment="바벨",
             target_muscle="어깨, 삼두",
             image_url=f"{base_cdn}/0086.gif",
-            instructions="코어와 둔근을 단단히 조이고, 바벨을 턱을 스쳐 머리 위로 수직으로 곧게 밀어올립니다."
+            instructions="코어와 둔근을 단단히 조이고, 바벨을 턱을 스쳐 머리 위로 수직으로 곧게 밀어올립니다. (오버헤드 프레스, 밀리터리 프레스)",
         ),
         ExerciseMaster(
             name="덤벨 숄더 프레스",

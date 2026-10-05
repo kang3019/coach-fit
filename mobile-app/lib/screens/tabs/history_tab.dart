@@ -1080,6 +1080,8 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                           children: [
                             Text(
                               _selectedMaster!.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
