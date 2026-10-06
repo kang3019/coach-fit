@@ -162,10 +162,11 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
 
 def _call_groq_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
     """
-    Groq 연동 (Llama 3.3 70B).
+    Groq 연동 (openai/gpt-oss-120b).
 
     - 완전 무료 (카드 등록 X), 분당 30회 / 일일 거의 무제한
     - OpenAI 호환 API, response_format=json_object 지원
+    - 모델: openai/gpt-oss-120b (131K context, 품질 최상)
     - 호출 실패 시 스마트 더미로 폴백
     """
     try:
@@ -201,7 +202,7 @@ def _call_groq_coaching(request: CoachingRequest, api_key: str) -> CoachingRespo
 recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다."""
 
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
