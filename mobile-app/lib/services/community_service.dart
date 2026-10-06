@@ -362,14 +362,6 @@ class CommunityService extends ChangeNotifier {
   // ===== Challenges (정적 목록) =====
   List<CommunityChallenge> get challenges => const [
         CommunityChallenge(
-          id: 'streak7',
-          emoji: '🔥',
-          title: '7일 연속 운동',
-          description: '한 주 동안 매일 한 세트 이상',
-          targetCount: 7,
-          unit: '일',
-        ),
-        CommunityChallenge(
           id: 'legs5',
           emoji: '🦵',
           title: '주 5회 하체',
