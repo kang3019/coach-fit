@@ -10,8 +10,9 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     오늘의 맞춤 추천 루틴을 생성합니다.
 
     AI_PROVIDER 환경변수로 공급자 선택:
-    - "gemini"  → Google Gemini (gemini-2.5-flash, 무료 티어 하루 1,500회)
-    - "claude"  → Anthropic Claude (claude-sonnet-5-5)
+    - "groq"    → Groq Llama 3.3 70B (완전 무료, 분당 30회, 카드 등록 불필요)
+    - "gemini"  → Google Gemini (gemini-3.8-flash, 결제 설정 필요)
+    - "claude"  → Anthropic Claude (claude-sonnet-5-5, $5 무료 크레딧)
     - "openai"  → OpenAI gpt-4o-mini
     - "dummy"   → 규칙 기반 스마트 더미 (키 없이도 동작)
 
@@ -19,10 +20,15 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     """
     ai_provider = os.getenv("AI_PROVIDER", "dummy").lower()
 
+    if ai_provider == "groq":
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            # Groq Llama 3.3 70B — 완전 무료 (카드 등록 불필요).
+            return _call_groq_coaching(request, groq_key)
+
     if ai_provider == "gemini":
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
-            # Gemini 2.5 Flash — 무료 티어로 넉넉하게 운영 가능.
             return _call_gemini_coaching(request, gemini_key)
 
     if ai_provider == "claude":
@@ -154,6 +160,85 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
     )
 
 
+def _call_groq_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
+    """
+    Groq 연동 (Llama 3.3 70B).
+
+    - 완전 무료 (카드 등록 X), 분당 30회 / 일일 거의 무제한
+    - OpenAI 호환 API, response_format=json_object 지원
+    - 호출 실패 시 스마트 더미로 폴백
+    """
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+
+        prompt_data = {
+            "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts],
+        }
+
+        system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
+사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 최근 운동 기록을 종합적으로 분석하여
+개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 작성합니다.
+
+반드시 아래 JSON 스키마만 포함하는 응답을 작성하세요. 마크다운 코드 블록이나 설명 문구 없이 순수 JSON 만 반환합니다.
+
+{
+  "summary": "운동 및 신체 상태 요약 문자열",
+  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "recommended_routine": [
+    {
+      "exercise_name": "운동명",
+      "sets": 4,
+      "reps": 10,
+      "focus": "타겟 부위",
+      "tip": "자세 팁"
+    }
+  ]
+}
+
+recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다."""
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"기록 및 프로필 데이터 (JSON): "
+                        f"{json.dumps(prompt_data, ensure_ascii=False)}\n\n"
+                        "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
+                    ),
+                },
+            ],
+            temperature=0.7,
+        )
+
+        content = response.choices[0].message.content or ""
+        if not content.strip():
+            raise ValueError("Groq 응답이 비어 있습니다.")
+
+        parsed = json.loads(content)
+
+        return CoachingResponse(
+            summary=parsed.get("summary", ""),
+            coaching_advice=parsed.get("coaching_advice", ""),
+            recommended_routine=[
+                RecommendedRoutineItem(**item)
+                for item in parsed.get("recommended_routine", [])
+            ],
+            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+    except Exception as e:
+        # API 오류 발생 시 스마트 더미로 폴백
+        fallback = _generate_smart_dummy_coaching(request)
+        fallback.summary += f" (Groq API 호출 에러로 더미 엔진 적용됨: {str(e)})"
+        return fallback
+
+
 def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
     """
     OpenAI ChatCompletion (gpt-4o-mini) 연동
@@ -165,7 +250,7 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         prompt_data = {
             "user_goal": request.user_goal,
             "user_profile": request.user_profile,
-            "workouts": [w.model_dump() for w in request.recent_workouts]
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts]
         }
 
         system_prompt = """
@@ -231,7 +316,7 @@ def _call_claude_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         prompt_data = {
             "user_goal": request.user_goal,
             "user_profile": request.user_profile,
-            "workouts": [w.model_dump() for w in request.recent_workouts]
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts]
         }
 
         system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
@@ -321,7 +406,7 @@ def _call_gemini_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         prompt_data = {
             "user_goal": request.user_goal,
             "user_profile": request.user_profile,
-            "workouts": [w.model_dump() for w in request.recent_workouts],
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts],
         }
 
         system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
