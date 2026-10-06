@@ -7,8 +7,6 @@ import '../coaching_screen.dart';
 import '../routine_detail_screen.dart';
 import '../widgets/home_progress_strip.dart';
 import '../widgets/last_workout_card.dart';
-import '../widgets/quick_register_row.dart';
-import '../widgets/rest_timer.dart';
 import '../widgets/smart_suggestion_card.dart';
 
 /// 1. 홈 탭 (Home Tab)
@@ -82,9 +80,6 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  void _openTimer() {
-    RestTimerSheet.show(context, initialSeconds: 90);
-  }
 
 
   @override
@@ -110,22 +105,6 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: '휴식 타이머',
-            onPressed: _openTimer,
-            icon: const Icon(Icons.timer_outlined),
-          ),
-          IconButton(
-            tooltip: '알림',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('새로운 알림이 없습니다.')),
-              );
-            },
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -165,12 +144,6 @@ class _HomeTabState extends State<HomeTab> {
             // 2.5 지난 운동 복습 + progressive overload (A 담당)
             LastWorkoutCard(
               onStartRecording: widget.onNavigateToLog,
-            ),
-            const SizedBox(height: 16),
-
-            // 2.7 빠른 기록 (자주 하는 운동 Top 3) (A 담당)
-            QuickRegisterRow(
-              onAddCustom: widget.onNavigateToLog,
             ),
             const SizedBox(height: 16),
 
@@ -250,28 +223,12 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: 20),
 
             // 4. 빠른 액션 바로가기 그리드
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.edit_note_rounded,
-                    title: '세트 기록하기',
-                    subtitle: '오늘 한 운동 입력',
-                    color: scheme.primary,
-                    onTap: widget.onNavigateToLog,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.timer_rounded,
-                    title: '휴식 타이머',
-                    subtitle: '60s / 90s 카운트다운',
-                    color: const Color(0xFF60A5FA),
-                    onTap: _openTimer,
-                  ),
-                ),
-              ],
+            _QuickActionCard(
+              icon: Icons.edit_note_rounded,
+              title: '세트 기록하기',
+              subtitle: '오늘 한 운동 입력',
+              color: scheme.primary,
+              onTap: widget.onNavigateToLog,
             ),
           ],
         ),

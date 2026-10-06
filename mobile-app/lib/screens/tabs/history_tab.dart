@@ -253,7 +253,7 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
           unselectedLabelColor: Colors.white54,
           tabs: const [
             Tab(text: '🏋️ 날짜별 운동 기록'),
-            Tab(text: '⚖️ 신체 변화 (눈바디)'),
+            Tab(text: '⚖️ 신체 변화'),
           ],
         ),
       ),
