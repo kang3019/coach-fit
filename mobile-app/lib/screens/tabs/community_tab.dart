@@ -4,9 +4,7 @@ import 'package:intl/intl.dart';
 import '../../services/community_service.dart';
 import '../../services/workout_service.dart';
 import '../community_post_detail_screen.dart';
-import '../widgets/community_challenge_banner.dart';
 import '../widgets/community_comment_sheet.dart';
-import '../widgets/community_crew_ranking.dart';
 import '../widgets/muscle_map_widget.dart';
 
 /// 4. 커뮤니티 탭 (Community Tab)
@@ -254,10 +252,6 @@ class _CommunityTabState extends State<CommunityTab> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
-              const CommunityChallengeBanner(),
-              const SizedBox(height: 14),
-              const CommunityCrewRanking(),
-              const SizedBox(height: 14),
               _FilterChipsRow(
                 current: _filter,
                 onChanged: (f) => setState(() => _filter = f),
