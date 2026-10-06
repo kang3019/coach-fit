@@ -10,7 +10,8 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     오늘의 맞춤 추천 루틴을 생성합니다.
 
     AI_PROVIDER 환경변수로 공급자 선택:
-    - "claude"  → Anthropic Claude (claude-opus-5-5, adaptive thinking)
+    - "gemini"  → Google Gemini (gemini-2.5-flash, 무료 티어 하루 1,500회)
+    - "claude"  → Anthropic Claude (claude-sonnet-5-5)
     - "openai"  → OpenAI gpt-4o-mini
     - "dummy"   → 규칙 기반 스마트 더미 (키 없이도 동작)
 
@@ -18,10 +19,16 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     """
     ai_provider = os.getenv("AI_PROVIDER", "dummy").lower()
 
+    if ai_provider == "gemini":
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key:
+            # Gemini 2.5 Flash — 무료 티어로 넉넉하게 운영 가능.
+            return _call_gemini_coaching(request, gemini_key)
+
     if ai_provider == "claude":
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         if anthropic_key:
-            # Claude Sonnet 5.5 — 가격 효율적이면서 품질 높음.
+            # Claude Sonnet 5.5 — 유료, 품질 최상.
             return _call_claude_coaching(request, anthropic_key)
 
     if ai_provider == "openai":
@@ -294,5 +301,84 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         # API 오류 발생 시 스마트 더미로 폴백
         fallback = _generate_smart_dummy_coaching(request)
         fallback.summary += f" (Claude API 호출 에러로 더미 엔진 적용됨: {str(e)})"
+        return fallback
+
+
+def _call_gemini_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
+    """
+    Google Gemini 연동 (gemini-2.5-flash).
+
+    - 모델: Gemini 2.5 Flash — 무료 티어 하루 1,500회 / 분당 15회.
+      데모 개발 패턴에는 추가 비용 $0 로 커버 가능.
+    - response_mime_type="application/json" 으로 구조화 JSON 응답 강제.
+    - 호출 실패 시 스마트 더미로 폴백.
+    """
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=api_key)
+
+        prompt_data = {
+            "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
+            "workouts": [w.model_dump() for w in request.recent_workouts],
+        }
+
+        system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
+사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 최근 운동 기록을 종합적으로 분석하여
+개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 작성합니다.
+
+반드시 아래 JSON 스키마만 포함하는 응답을 작성하세요:
+{
+  "summary": "운동 및 신체 상태 요약 문자열",
+  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "recommended_routine": [
+    {
+      "exercise_name": "운동명",
+      "sets": 4,
+      "reps": 10,
+      "focus": "타겟 부위",
+      "tip": "자세 팁"
+    }
+  ]
+}
+
+recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다."""
+
+        user_message = (
+            f"기록 및 프로필 데이터 (JSON): {json.dumps(prompt_data, ensure_ascii=False)}\n\n"
+            "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
+        )
+
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=system_prompt,
+            generation_config={
+                "response_mime_type": "application/json",
+                "temperature": 0.7,
+            },
+        )
+
+        response = model.generate_content(user_message)
+        content = response.text or ""
+
+        if not content.strip():
+            raise ValueError("Gemini 응답이 비어 있습니다.")
+
+        parsed = json.loads(content)
+
+        return CoachingResponse(
+            summary=parsed.get("summary", ""),
+            coaching_advice=parsed.get("coaching_advice", ""),
+            recommended_routine=[
+                RecommendedRoutineItem(**item)
+                for item in parsed.get("recommended_routine", [])
+            ],
+            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+    except Exception as e:
+        # API 오류 발생 시 스마트 더미로 폴백
+        fallback = _generate_smart_dummy_coaching(request)
+        fallback.summary += f" (Gemini API 호출 에러로 더미 엔진 적용됨: {str(e)})"
         return fallback
 
