@@ -436,7 +436,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         )
 
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.8-flash",
             system_instruction=system_prompt,
             generation_config={
                 "response_mime_type": "application/json",
