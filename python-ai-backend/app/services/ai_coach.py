@@ -1,8 +1,50 @@
 import os
 import json
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from app.models.schemas import CoachingRequest, CoachingResponse, RecommendedRoutineItem
+
+
+def _safe_routine_item(raw: dict) -> Optional[RecommendedRoutineItem]:
+    """LLM 응답의 루틴 아이템을 안전하게 RecommendedRoutineItem 으로 변환.
+
+    LLM 이 reps/sets 를 가끔 null 또는 문자열로 반환하는 케이스를 흡수.
+    - exercise_name 없거나 공백: 아이템 통째로 스킵 (None 반환)
+    - sets/reps 가 null 이거나 변환 불가: 안전한 기본값(3세트/10회) 적용
+    """
+    if not isinstance(raw, dict):
+        return None
+    name = (raw.get("exercise_name") or "").strip()
+    if not name:
+        return None
+
+    def _as_int(value, default: int) -> int:
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    return RecommendedRoutineItem(
+        exercise_name=name,
+        sets=_as_int(raw.get("sets"), 3),
+        reps=_as_int(raw.get("reps"), 10),
+        focus=(raw.get("focus") or "").strip() or "타겟 부위",
+        tip=(raw.get("tip") or "").strip() or "자세를 정확히 유지하세요.",
+    )
+
+
+def _safe_routine_list(raw_list) -> List[RecommendedRoutineItem]:
+    """루틴 리스트 전체를 안전 변환 — 유효하지 않은 아이템은 자동 제외."""
+    if not isinstance(raw_list, list):
+        return []
+    items: List[RecommendedRoutineItem] = []
+    for raw in raw_list:
+        item = _safe_routine_item(raw)
+        if item is not None:
+            items.append(item)
+    return items
 
 def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     """
@@ -231,10 +273,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         return CoachingResponse(
             summary=parsed.get("summary", ""),
             coaching_advice=parsed.get("coaching_advice", ""),
-            recommended_routine=[
-                RecommendedRoutineItem(**item)
-                for item in parsed.get("recommended_routine", [])
-            ],
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
@@ -294,7 +333,7 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
         return CoachingResponse(
             summary=parsed.get("summary", ""),
             coaching_advice=parsed.get("coaching_advice", ""),
-            recommended_routine=[RecommendedRoutineItem(**item) for item in parsed.get("recommended_routine", [])],
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
     except Exception as e:
@@ -381,10 +420,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         return CoachingResponse(
             summary=parsed.get("summary", ""),
             coaching_advice=parsed.get("coaching_advice", ""),
-            recommended_routine=[
-                RecommendedRoutineItem(**item)
-                for item in parsed.get("recommended_routine", [])
-            ],
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
     except Exception as e:
@@ -460,10 +496,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         return CoachingResponse(
             summary=parsed.get("summary", ""),
             coaching_advice=parsed.get("coaching_advice", ""),
-            recommended_routine=[
-                RecommendedRoutineItem(**item)
-                for item in parsed.get("recommended_routine", [])
-            ],
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
@@ -564,10 +597,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         return CoachingResponse(
             summary=parsed.get("summary", ""),
             coaching_advice=parsed.get("coaching_advice", ""),
-            recommended_routine=[
-                RecommendedRoutineItem(**item)
-                for item in parsed.get("recommended_routine", [])
-            ],
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
