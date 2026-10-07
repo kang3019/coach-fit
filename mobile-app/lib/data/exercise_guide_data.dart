@@ -138,7 +138,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['풀업', '턱걸이', 'pull-up', 'pullup'],
     targetMuscles: '광배근 · 이두근 · 코어',
     emoji: '🤸',
-    gifId: '1817',
+    gifId: '2318',
     formPoints: [
       '오버그립으로 어깨너비보다 약간 넓게',
       '턱이 바를 넘을 때까지 당기고 천천히 내려옵니다',
@@ -311,7 +311,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['플랭크', 'plank'],
     targetMuscles: '복근 · 코어 전체',
     emoji: '🧘',
-    gifId: '0973',
+    gifId: '0199',
     formPoints: [
       '머리-엉덩이-발뒤꿈치가 일직선',
       '배꼽을 척추 쪽으로 당기듯 코어 유지',
