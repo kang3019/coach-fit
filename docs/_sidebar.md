@@ -10,3 +10,7 @@
 
 * **아키텍처 결정 (ADR)**
   * [ADR-0004: 백엔드 단일화](adr-0004.md)
+
+* **인프라 & AI (AWS)**
+  * [☁️ AWS 풀스택 셋업 & 배포 가이드](aws_setup_guide.md)
+  * [🎤 AWS Bedrock 도입 배경 & Q&A 대비](aws-bedrock-ppt-qa.md)
