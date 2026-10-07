@@ -1,8 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/exercise_guide_data.dart';
 import '../../models/exercise_master.dart';
 import '../../models/workout.dart';
 import '../../services/pr_service.dart';
@@ -562,8 +560,6 @@ class _WorkoutItemCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dateStr = DateFormat('MM.dd (E)', 'ko_KR').format(workout.workoutDate);
 
-    final guide = findExerciseGuide(workout.exerciseName);
-    final gifUrl = guide?.gifUrl;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -572,45 +568,6 @@ class _WorkoutItemCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                // 썸네일 (GIF 매칭 시, cached_network_image 로 디스크 캐시)
-                // ValueKey(exerciseName) 로 ListView 위젯 재사용 시 썸네일 강제 리빌드
-                ClipRRect(
-                  key: ValueKey('thumb_${workout.exerciseName}'),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    color: const Color(0xFF0E1116),
-                    child: gifUrl != null
-                        ? CachedNetworkImage(
-                            key: ValueKey(gifUrl),
-                            imageUrl: gifUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Center(
-                              child: SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation(scheme.primary),
-                                ),
-                              ),
-                            ),
-                            errorWidget: (_, __, ___) => Icon(
-                              Icons.fitness_center_rounded,
-                              color: scheme.primary.withValues(alpha: 0.6),
-                              size: 22,
-                            ),
-                          )
-                        : Icon(
-                            Icons.fitness_center_rounded,
-                            color: scheme.primary.withValues(alpha: 0.6),
-                            size: 22,
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     workout.exerciseName,
