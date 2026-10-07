@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/workout.dart';
 import '../services/workout_service.dart';
+import 'widgets/common/empty_state_view.dart';
 
 /// 선택한 운동 종목의 과거 기록을 라인 차트로 시각화.
 /// A 담당: 종목별 성장 그래프 (D).
@@ -56,9 +57,10 @@ class _ExerciseGrowthScreenState extends State<ExerciseGrowthScreen> {
           final names = _distinctExerciseNames(all);
           if (names.isEmpty) {
             return const Center(
-              child: Text(
-                '분석할 운동 기록이 없습니다',
-                style: TextStyle(color: Colors.white54),
+              child: EmptyStateView(
+                icon: Icons.insights_outlined,
+                title: '분석할 운동 기록이 없습니다',
+                message: '운동 기록을 쌓으면 종목별 성장 그래프가 표시돼요.',
               ),
             );
           }

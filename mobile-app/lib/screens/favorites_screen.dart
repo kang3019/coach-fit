@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/favorite_exercises_service.dart';
 import '../services/workout_service.dart';
+import 'widgets/common/empty_state_view.dart';
 
 /// (F) 즐겨찾기 운동 목록 화면.
 /// 저장된 즐겨찾기 + 추천 추가 (자주 하는 종목 기반).
@@ -70,18 +71,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
           const SizedBox(height: 8),
           if (favorites.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF171B22),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                '아직 즐겨찾기가 없어요.\n아래 추천에서 종목을 추가해보세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
+            const EmptyStateView(
+              icon: Icons.star_outline_rounded,
+              title: '아직 즐겨찾기가 없어요',
+              message: '아래 추천에서 종목을 추가해보세요.',
+              padding: EdgeInsets.symmetric(vertical: 24),
             )
           else
             Wrap(

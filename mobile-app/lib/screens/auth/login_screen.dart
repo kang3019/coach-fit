@@ -40,14 +40,16 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await AuthService.instance.login(
+      final user = await AuthService.instance.login(
         email: targetEmail,
         password: targetPassword,
       );
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        MaterialPageRoute(
+          builder: (_) => MainNavigationScreen(welcomeNickname: user.nickname),
+        ),
       );
     } catch (e) {
       if (!mounted) return;

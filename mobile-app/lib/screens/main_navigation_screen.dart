@@ -12,7 +12,10 @@ import 'tabs/menu_tab.dart';
 /// 4. 커뮤니티 (Community) - 오운완 인증 피드 및 응원
 /// 5. 메뉴 (Menu/My) - 내 프로필 및 설정
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  /// 로그인 성공 직후 전달받는 사용자 닉네임.
+  /// 값이 있으면 홈 진입 시 1회 환영 스낵바가 노출됩니다.
+  final String? welcomeNickname;
+  const MainNavigationScreen({super.key, this.welcomeNickname});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -20,6 +23,24 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.welcomeNickname != null && widget.welcomeNickname!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('환영합니다 ${widget.welcomeNickname}님 💪'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      });
+    }
+  }
 
   void _onTabSelected(int index) {
     setState(() {
