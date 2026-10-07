@@ -125,6 +125,21 @@ gantt
   - [x] 2.7.5 공용 `AppSnackbar` 유틸 — success/error/info 3종 variant (1d) - *PR #41 완료*
   - [x] 2.7.6 공용 위젯 초기 적용 (favorites_screen, exercise_growth_screen) (1d) - *PR #41 완료*
   - [ ] 2.7.7 공용 위젯 전체 화면 확대 적용 (home/history/stats/community 잔여) (2d) - *진행 예정*
+- **2.8 운동 가이드 GIF 시각화 통합 (Exercise GIF Visualization)**
+  - [x] 2.8.1 운동 가이드 데이터에 CDN GIF ID 필드 추가 (omercotkd/exercises-gifs 재활용) (1d) - *PR #44 완료*
+  - [x] 2.8.2 핵심 20종목 GIF ID 매핑 (벤치/스쿼트/데드리프트/오버헤드 등 BIG3·보조 전부) (1d) - *PR #44 완료*
+  - [x] 2.8.3 추가 종목 3종 (머신 체스트 프레스 · 인클라인 덤벨 프레스 · 페이스 풀) 신설 (1d) - *PR #49~#50 완료*
+  - [x] 2.8.4 운동 가이드 모달 상단 1:1 비율 GIF 섹션 자동 삽입 (loadingBuilder + errorBuilder) (1d) - *PR #44 완료*
+  - [x] 2.8.5 홈 탭 AI 추천 루틴 3개 아이템에 44x44 GIF 썸네일 자동 매칭 (1d) - *PR 머지 완료*
+  - [x] 2.8.6 기록 탭 운동 카드 44x44 썸네일 — Image.network + gaplessPlayback 안정화 (1d) - *PR #54 완료*
+  - [x] 2.8.7 RoutineDetailScreen 에 AI 결과 → RoutineExerciseItem 변환 시 GIF URL 자동 세팅 (1d) - *PR #55 완료*
+- **2.9 멀티 LLM Provider 아키텍처 (Multi-LLM Backend)**
+  - [x] 2.9.1 Groq provider 통합 — openai/gpt-oss-120b, 완전 무료 티어 (2d) - *PR 머지 완료*
+  - [x] 2.9.2 Google Gemini provider 통합 — gemini-3.8-flash (1d) - *PR #33 완료*
+  - [x] 2.9.3 Anthropic Claude provider 통합 — claude-sonnet-5-5 (1d) - *PR #31 완료*
+  - [x] 2.9.4 `AI_PROVIDER` 환경변수 5단 폴백 라우팅 (bedrock→groq→gemini→claude→openai→dummy) (1d) - *PR 머지 완료*
+  - [x] 2.9.5 LLM 응답 null reps/sets Pydantic 공통 핸들러 전 provider 적용 (1d) - *PR #52 완료*
+  - [x] 2.9.6 `WorkoutItem.workout_date` Pydantic v2 `mode="json"` 직렬화 수정 (1d) - *PR 머지 완료*
 
 ### 3. 데이터 / 백엔드 / AI (최우선 순위 연동)
 - **3.1 백엔드 통합 및 DB CRUD API**
