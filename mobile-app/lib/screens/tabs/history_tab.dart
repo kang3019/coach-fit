@@ -409,6 +409,7 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
                 )
               else
                 ...filteredList.map((w) => _WorkoutItemCard(
+                      key: ValueKey('card_${w.id}_${w.exerciseName}'),
                       workout: w,
                       onDelete: () => _confirmDelete(w),
                       onEdit: () => _openEditSheet(w),
@@ -550,6 +551,7 @@ class _WorkoutItemCard extends StatelessWidget {
   final VoidCallback? onEdit;
 
   const _WorkoutItemCard({
+    super.key,
     required this.workout,
     required this.onDelete,
     this.onEdit,
@@ -571,7 +573,9 @@ class _WorkoutItemCard extends StatelessWidget {
             Row(
               children: [
                 // 썸네일 (GIF 매칭 시, cached_network_image 로 디스크 캐시)
+                // ValueKey(exerciseName) 로 ListView 위젯 재사용 시 썸네일 강제 리빌드
                 ClipRRect(
+                  key: ValueKey('thumb_${workout.exerciseName}'),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     width: 44,
@@ -579,6 +583,7 @@ class _WorkoutItemCard extends StatelessWidget {
                     color: const Color(0xFF0E1116),
                     child: gifUrl != null
                         ? CachedNetworkImage(
+                            key: ValueKey(gifUrl),
                             imageUrl: gifUrl,
                             fit: BoxFit.cover,
                             placeholder: (_, __) => Center(
