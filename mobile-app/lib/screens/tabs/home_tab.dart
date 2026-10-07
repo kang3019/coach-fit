@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/exercise_guide_data.dart';
 import '../../models/coaching_result.dart';
 import '../../services/coaching_service.dart';
 import '../../services/goal_service.dart';
@@ -476,51 +477,90 @@ class _AiRoutineCardState extends State<_AiRoutineCard> {
           ),
           const SizedBox(height: 8),
 
-          // 추천 운동 종목 목록
-          ...widget.result.recommendedRoutine.take(3).map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.exerciseName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+          // 추천 운동 종목 목록 — 썸네일 GIF 자동 매칭 (exercise_guide_data 재사용)
+          ...widget.result.recommendedRoutine.take(3).map((item) {
+            final guide = findExerciseGuide(item.exerciseName);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  // 썸네일 (GIF 매칭 시 재생, 아니면 덤벨 아이콘)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      color: const Color(0xFF0E1116),
+                      child: guide?.gifUrl != null
+                          ? Image.network(
+                              guide!.gifUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Icon(
+                                  Icons.fitness_center_rounded,
+                                  color: scheme.primary.withValues(alpha: 0.6),
+                                  size: 22,
+                                ),
+                              ),
+                              loadingBuilder: (ctx, child, progress) =>
+                                  progress == null
+                                      ? child
+                                      : Center(
+                                          child: SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                      scheme.primary),
+                                            ),
+                                          ),
+                                        ),
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.fitness_center_rounded,
+                                color: scheme.primary.withValues(alpha: 0.6),
+                                size: 22,
+                              ),
                             ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.exerciseName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                          if (item.focus.isNotEmpty)
-                            Text(
-                              item.focus,
-                              style: const TextStyle(color: Colors.white38, fontSize: 11),
-                            ),
-                        ],
-                      ),
+                        ),
+                        if (item.focus.isNotEmpty)
+                          Text(
+                            item.focus,
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11),
+                          ),
+                      ],
                     ),
-                    Text(
-                      '${item.sets}세트 × ${item.reps}회',
-                      style: TextStyle(
-                        color: scheme.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  Text(
+                    '${item.sets}세트 × ${item.reps}회',
+                    style: TextStyle(
+                      color: scheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 14),
 
           // 1. 3D 근육 지도 & 루틴 상세 화면 열기 버튼 (플릭 스타일)
