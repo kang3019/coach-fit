@@ -123,6 +123,57 @@ class ExerciseGuideSheet extends StatelessWidget {
               ),
             ],
           ),
+
+          // 자세 애니메이션 GIF (gifId 있을 때만, 민권이 쓰는 CDN 재활용)
+          if (guide.gifUrl != null) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: AspectRatio(
+                aspectRatio: 1.0,
+                child: Container(
+                  color: const Color(0xFF0E1116),
+                  child: Image.network(
+                    guide.gifUrl!,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (ctx, child, progress) {
+                      if (progress == null) return child;
+                      return Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation(accent),
+                            value: progress.expectedTotalBytes != null
+                                ? progress.cumulativeBytesLoaded /
+                                    progress.expectedTotalBytes!
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported_outlined,
+                              color: Colors.white24, size: 36),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '자세 영상을 불러올 수 없어요',
+                            style: TextStyle(
+                                color: Colors.white38, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 24),
 
           // 자세 포인트
