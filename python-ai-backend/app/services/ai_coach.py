@@ -10,6 +10,7 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     오늘의 맞춤 추천 루틴을 생성합니다.
 
     AI_PROVIDER 환경변수로 공급자 선택:
+    - "bedrock" → AWS Bedrock (Claude 3.5 Sonnet / Nova, 교수님 권고 표준)
     - "groq"    → Groq Llama 3.3 70B (완전 무료, 분당 30회, 카드 등록 불필요)
     - "gemini"  → Google Gemini (gemini-3.8-flash, 결제 설정 필요)
     - "claude"  → Anthropic Claude (claude-sonnet-5-5, $5 무료 크레딧)
@@ -19,6 +20,9 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     API 키가 없거나 호출 실패 시 자동으로 더미 폴백.
     """
     ai_provider = os.getenv("AI_PROVIDER", "dummy").lower()
+
+    if ai_provider == "bedrock":
+        return _call_bedrock_coaching(request)
 
     if ai_provider == "groq":
         groq_key = os.getenv("GROQ_API_KEY")
@@ -466,5 +470,108 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         # API 오류 발생 시 스마트 더미로 폴백
         fallback = _generate_smart_dummy_coaching(request)
         fallback.summary += f" (Gemini API 호출 에러로 더미 엔진 적용됨: {str(e)})"
+        return fallback
+
+
+def _call_bedrock_coaching(request: CoachingRequest) -> CoachingResponse:
+    """
+    AWS Bedrock 연동 (교수님 권고 AWS 정석 아키텍처).
+    - AWS SDK: boto3 bedrock-runtime converse API 사용
+    - 자격 증명: EC2 IAM Role(인스턴스 프로파일) 우선 자동 감지,
+      로컬 개발 시 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY 환경변수 지원
+    - 기본 모델: Anthropic Claude 3.5 Sonnet (BEDROCK_MODEL_ID)
+    - 리전: AWS_REGION (기본: us-east-1)
+    - 호출 실패 시 스마트 더미로 자동 폴백
+    """
+    try:
+        import boto3
+
+        region_name = os.getenv("AWS_REGION", "us-east-1")
+        model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+
+        # EC2 IAM Role 우선, 환경변수에 명시된 경우만 직접 주입
+        boto3_kwargs = {"region_name": region_name}
+        access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        if access_key and secret_key:
+            boto3_kwargs["aws_access_key_id"] = access_key
+            boto3_kwargs["aws_secret_access_key"] = secret_key
+            session_token = os.getenv("AWS_SESSION_TOKEN")
+            if session_token:
+                boto3_kwargs["aws_session_token"] = session_token
+
+        client = boto3.client(service_name="bedrock-runtime", **boto3_kwargs)
+
+        prompt_data = {
+            "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts],
+        }
+
+        system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
+사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 최근 운동 기록을 종합적으로 분석하여
+개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 작성합니다.
+
+반드시 아래 JSON 스키마만 포함하는 유효한 JSON 형식으로 응답하세요:
+{
+  "summary": "운동 및 신체 상태 요약 문자열",
+  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "recommended_routine": [
+    {
+      "exercise_name": "운동명",
+      "sets": 4,
+      "reps": 10,
+      "focus": "타겟 부위",
+      "tip": "자세 팁"
+    }
+  ]
+}
+
+recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다.
+응답에는 마크다운 백틱(```json)이나 다른 설명 없이 오직 JSON 텍스트만 출력하세요."""
+
+        user_message = (
+            f"기록 및 프로필 데이터 (JSON): {json.dumps(prompt_data, ensure_ascii=False)}\n\n"
+            "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
+        )
+
+        response = client.converse(
+            modelId=model_id,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"text": user_message}]
+                }
+            ],
+            system=[{"text": system_prompt}],
+            inferenceConfig={
+                "temperature": 0.7,
+                "maxTokens": 2048,
+            }
+        )
+
+        output_message = response.get("output", {}).get("message", {})
+        content_blocks = output_message.get("content", [])
+        text_content = "".join(b.get("text", "") for b in content_blocks if "text" in b)
+
+        start = text_content.find("{")
+        end = text_content.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("Bedrock 응답에서 JSON 객체를 찾지 못했습니다.")
+
+        parsed = json.loads(text_content[start:end + 1])
+
+        return CoachingResponse(
+            summary=parsed.get("summary", ""),
+            coaching_advice=parsed.get("coaching_advice", ""),
+            recommended_routine=[
+                RecommendedRoutineItem(**item)
+                for item in parsed.get("recommended_routine", [])
+            ],
+            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+    except Exception as e:
+        fallback = _generate_smart_dummy_coaching(request)
+        fallback.summary += f" (AWS Bedrock API 호출 에러로 더미 엔진 적용됨: {str(e)})"
         return fallback
 
