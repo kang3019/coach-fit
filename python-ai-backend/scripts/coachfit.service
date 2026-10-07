@@ -1,0 +1,17 @@
+[Unit]
+Description=CoachFit FastAPI Backend Server (EC2 24/7 Service)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/coach-fit/python-ai-backend
+ExecStart=/home/ubuntu/coach-fit/python-ai-backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=3
+EnvironmentFile=-/home/ubuntu/coach-fit/python-ai-backend/.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
