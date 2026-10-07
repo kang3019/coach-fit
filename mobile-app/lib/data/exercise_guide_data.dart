@@ -57,6 +57,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['플라이', '플라'],
     targetMuscles: '대흉근 (스트레치 자극)',
     emoji: '🤸',
+    gifId: '0315',
     formPoints: [
       '팔꿈치를 약간 굽힌 상태로 각도 고정',
       '가슴이 늘어나는 느낌이 들 때까지 벌리고 수축하며 모읍니다',
@@ -170,6 +171,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['사레레', '사이드레이즈', '사이드 레이즈', '레터럴', 'lateral'],
     targetMuscles: '측면 삼각근',
     emoji: '💪',
+    gifId: '0313',
     formPoints: [
       '팔꿈치를 약간 굽히고 손목보다 약간 높게 유지',
       '어깨까지 들어올리며 측면 삼각근 수축을 느낍니다',
@@ -233,6 +235,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['카프', '카프레이즈', 'calf'],
     targetMuscles: '비복근 · 가자미근',
     emoji: '🦵',
+    gifId: '0968',
     formPoints: [
       '발뒤꿈치를 최대한 높이 들어올립니다',
       '정점에서 1초 수축 후 천천히 내립니다',
@@ -248,6 +251,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['덤벨컬', '덤벨 컬', '바이셉'],
     targetMuscles: '이두근 · 전완근',
     emoji: '💪',
+    gifId: '0290',
     formPoints: [
       '팔꿈치를 몸통에 고정',
       '손목을 뒤집으며 어깨 쪽으로 들어올립니다',
@@ -277,6 +281,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['트라이셉스', '익스텐션', '삼두', 'tricep'],
     targetMuscles: '삼두근',
     emoji: '💪',
+    gifId: '0351',
     formPoints: [
       '팔꿈치를 머리 옆에 고정',
       '팔꿈치만 굽혔다 펴며 삼두를 수축합니다',
@@ -337,6 +342,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['러닝', '달리기', 'running', 'run'],
     targetMuscles: '하체 전반 · 심폐지구력',
     emoji: '🏃',
+    gifId: '1660',
     formPoints: [
       '발 전체로 착지, 발뒤꿈치부터 발끝 순서',
       '팔을 90도로 가볍게 흔듭니다',
