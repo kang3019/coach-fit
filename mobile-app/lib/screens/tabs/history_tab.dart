@@ -7,6 +7,7 @@ import '../../services/pr_service.dart';
 import '../../services/workout_service.dart';
 import '../exercise_growth_screen.dart';
 import '../widgets/body_measurement_section.dart';
+import '../widgets/exercise_guide_sheet.dart';
 import '../widgets/exercise_picker_modal.dart';
 import '../widgets/rest_timer.dart';
 import '../widgets/history_day_header.dart';
@@ -580,6 +581,16 @@ class _WorkoutItemCard extends StatelessWidget {
                   style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
                 const SizedBox(width: 6),
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => ExerciseGuideSheet.show(
+                      context, workout.exerciseName),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.info_outline,
+                        size: 16, color: Colors.white38),
+                  ),
+                ),
                 if (onEdit != null)
                   InkWell(
                     borderRadius: BorderRadius.circular(16),
