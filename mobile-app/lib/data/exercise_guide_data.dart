@@ -100,6 +100,22 @@ const List<ExerciseGuide> kExerciseGuides = [
     ],
   ),
   ExerciseGuide(
+    name: '디클라인 벤치 프레스',
+    matchKeywords: ['디클라인', 'decline'],
+    targetMuscles: '대흉근 하부',
+    emoji: '🏋️',
+    gifId: '0027',
+    formPoints: [
+      '벤치를 15~30도 디클라인으로 세팅',
+      '발 걸이에 발을 고정하고 그립은 어깨너비보다 약간 넓게',
+      '바가 가슴 아래쪽에 닿을 때까지 내립니다',
+    ],
+    mistakes: [
+      '목을 바닥 쪽으로 내리면 혈압 상승 위험',
+      '엉덩이가 떠있으면 가슴 자극 분산',
+    ],
+  ),
+  ExerciseGuide(
     name: '푸시업',
     matchKeywords: ['푸시업', '푸쉬업', 'push'],
     targetMuscles: '대흉근 · 삼두근 · 코어',
@@ -166,6 +182,22 @@ const List<ExerciseGuide> kExerciseGuides = [
     ],
   ),
   ExerciseGuide(
+    name: '시티드 로우',
+    matchKeywords: ['시티드', '시티드로우', 'seated row'],
+    targetMuscles: '광배근 · 승모근 중부 · 능형근',
+    emoji: '🏋️',
+    gifId: '1428',
+    formPoints: [
+      '발판에 발을 단단히 고정하고 등을 곧게 유지',
+      '손잡이를 명치 쪽으로 당기며 어깨뼈를 조입니다',
+      '정점에서 1초 수축 후 천천히 복귀 (상체 반동 X)',
+    ],
+    mistakes: [
+      '허리로 당기면 척추 부상 위험',
+      '어깨가 올라가면 승모근으로 자극 치환됨',
+    ],
+  ),
+  ExerciseGuide(
     name: '풀업',
     matchKeywords: ['풀업', '턱걸이', 'pull-up', 'pullup'],
     targetMuscles: '광배근 · 이두근 · 코어',
@@ -212,6 +244,54 @@ const List<ExerciseGuide> kExerciseGuides = [
     mistakes: [
       '팔꿈치가 아래로 쳐지면 등 근육만 자극됨',
       '허리로 반동 주면 자극 분산',
+    ],
+  ),
+  ExerciseGuide(
+    name: '아놀드 프레스',
+    matchKeywords: ['아놀드', 'arnold'],
+    targetMuscles: '전면/측면 삼각근 · 삼두근',
+    emoji: '💪',
+    gifId: '0012',
+    formPoints: [
+      '덤벨을 손바닥이 몸을 향하게 가슴 앞에 위치',
+      '밀어올리며 손목을 회전시켜 손바닥이 앞을 향하게',
+      '정점에서 전면·측면 삼각근 모두 자극 느끼기',
+    ],
+    mistakes: [
+      '회전과 밀기를 분리하지 않으면 자극 애매해짐',
+      '너무 무거운 중량은 어깨 관절에 부담',
+    ],
+  ),
+  ExerciseGuide(
+    name: '프론트 레이즈',
+    matchKeywords: ['프론트레이즈', '프론트 레이즈', 'front raise'],
+    targetMuscles: '전면 삼각근',
+    emoji: '💪',
+    gifId: '0314',
+    formPoints: [
+      '덤벨을 허벅지 앞에 들고 팔꿈치 약간 굽혀 고정',
+      '어깨 높이까지 천천히 들어올립니다 (수평 or 약간 위)',
+      '천천히 내리며 원심성 수축에 집중',
+    ],
+    mistakes: [
+      '반동으로 올리면 전면 삼각근 자극 X',
+      '어깨가 올라가면 승모근 개입',
+    ],
+  ),
+  ExerciseGuide(
+    name: '리어 델트 플라이',
+    matchKeywords: ['리어', '벤트오버', 'rear delt'],
+    targetMuscles: '후면 삼각근 · 승모근 중부',
+    emoji: '💪',
+    gifId: '0317',
+    formPoints: [
+      '상체를 45도 숙이고 등은 평평하게 유지',
+      '팔꿈치를 약간 굽히고 벌리듯 들어올림',
+      '어깨뼈를 조이는 느낌 유지',
+    ],
+    mistakes: [
+      '반동 X, 경량으로 정확한 자세 우선',
+      '머리를 치켜들면 목 긴장',
     ],
   ),
   ExerciseGuide(
@@ -279,6 +359,54 @@ const List<ExerciseGuide> kExerciseGuides = [
     ],
   ),
   ExerciseGuide(
+    name: '레그 익스텐션',
+    matchKeywords: ['레그 익스텐션', '레그익스텐션', 'leg extension'],
+    targetMuscles: '대퇴사두근 (고립)',
+    emoji: '🦵',
+    gifId: '1458',
+    formPoints: [
+      '발판 위치를 정강이 중앙에 맞춤',
+      '등을 등받이에 밀착하고 발뒤꿈치 들지 않기',
+      '정점에서 1초 수축, 완전히 펴지 않고 90% 지점에서 복귀',
+    ],
+    mistakes: [
+      '완전히 펴면 무릎 관절에 부담',
+      '반동으로 하면 대퇴사두 자극 분산',
+    ],
+  ),
+  ExerciseGuide(
+    name: '레그 컬',
+    matchKeywords: ['레그 컬', '레그컬', 'leg curl'],
+    targetMuscles: '햄스트링 (고립)',
+    emoji: '🦵',
+    gifId: '1456',
+    formPoints: [
+      '발판은 발뒤꿈치 바로 위에 위치',
+      '엉덩이가 뜨지 않게 밴드/벨트 고정',
+      '최대 수축점에서 1초 멈춤',
+    ],
+    mistakes: [
+      '엉덩이가 뜨면 햄스트링 자극 분산',
+      '너무 무거운 중량은 햄스트링 염좌 위험',
+    ],
+  ),
+  ExerciseGuide(
+    name: '힙 쓰러스트',
+    matchKeywords: ['힙쓰러스트', '힙 쓰러스트', 'hip thrust'],
+    targetMuscles: '둔근 (대둔근) · 햄스트링',
+    emoji: '🦵',
+    gifId: '1683',
+    formPoints: [
+      '어깨뼈를 벤치 가장자리에 걸치고 무릎은 90도',
+      '발뒤꿈치로 바닥을 밀며 엉덩이를 들어올림',
+      '정점에서 엉덩이 조여 1~2초 유지',
+    ],
+    mistakes: [
+      '허리로 올리면 둔근 자극 X, 척추 부상',
+      '턱이 들리면 목 과신전',
+    ],
+  ),
+  ExerciseGuide(
     name: '카프 레이즈',
     matchKeywords: ['카프', '카프레이즈', 'calf'],
     targetMuscles: '비복근 · 가자미근',
@@ -294,6 +422,38 @@ const List<ExerciseGuide> kExerciseGuides = [
   ),
 
   // ===== 팔 =====
+  ExerciseGuide(
+    name: '해머 컬',
+    matchKeywords: ['해머컬', '해머 컬', 'hammer curl'],
+    targetMuscles: '이두근 · 전완근 (상완요골근)',
+    emoji: '💪',
+    gifId: '0291',
+    formPoints: [
+      '덤벨을 손바닥이 몸을 향하게 (뉴트럴 그립)',
+      '팔꿈치를 몸통에 붙여 고정 후 들어올립니다',
+      '손목을 돌리지 않고 그립 유지',
+    ],
+    mistakes: [
+      '반동 X, 전완근 수축에 집중',
+      '팔꿈치가 앞으로 나오면 전면 삼각근 개입',
+    ],
+  ),
+  ExerciseGuide(
+    name: '프리처 컬',
+    matchKeywords: ['프리처', 'preacher'],
+    targetMuscles: '이두근 (고립, 하부)',
+    emoji: '💪',
+    gifId: '0030',
+    formPoints: [
+      '프리처 벤치에 겨드랑이를 밀착하고 팔꿈치 고정',
+      '어깨너비 그립, 손목 꺾지 않고 들어올림',
+      '최저점에서 완전히 펴지 않고 85% 지점에서 복귀',
+    ],
+    mistakes: [
+      '완전히 펴면 이두 인대 부상 위험',
+      '팔꿈치가 벤치에서 떨어지면 자극 분산',
+    ],
+  ),
   ExerciseGuide(
     name: '덤벨 컬',
     matchKeywords: ['덤벨컬', '덤벨 컬', '바이셉'],
