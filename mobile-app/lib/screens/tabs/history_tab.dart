@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../data/exercise_guide_data.dart';
 import '../../models/exercise_master.dart';
 import '../../models/workout.dart';
 import '../../services/pr_service.dart';
@@ -559,6 +560,7 @@ class _WorkoutItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final dateStr = DateFormat('MM.dd (E)', 'ko_KR').format(workout.workoutDate);
+    final gifUrl = findExerciseGuide(workout.exerciseName)?.gifUrl;
 
     return Card(
       child: Padding(
@@ -568,6 +570,39 @@ class _WorkoutItemCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                // 썸네일 — Flutter 기본 Image.network, gaplessPlayback 으로 전환 시 깜빡임 최소화
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: gifUrl != null
+                        ? Image.network(
+                            gifUrl,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFF0E1116),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.fitness_center_rounded,
+                                color: scheme.primary.withValues(alpha: 0.6),
+                                size: 22,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: const Color(0xFF0E1116),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.fitness_center_rounded,
+                              color: scheme.primary.withValues(alpha: 0.6),
+                              size: 22,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     workout.exerciseName,
