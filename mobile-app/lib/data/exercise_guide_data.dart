@@ -69,6 +69,22 @@ const List<ExerciseGuide> kExerciseGuides = [
     ],
   ),
   ExerciseGuide(
+    name: '인클라인 덤벨 프레스',
+    matchKeywords: ['인클라인', 'incline'],
+    targetMuscles: '대흉근 상부 · 전면 삼각근',
+    emoji: '🏋️',
+    gifId: '0303',
+    formPoints: [
+      '벤치 각도를 30~45도로 설정 (너무 높으면 어깨 개입)',
+      '덤벨은 가슴 쇄골 라인에 위치, 팔꿈치 각도 45도 유지',
+      '정점에서 덤벨이 거의 맞닿도록 모아 올립니다',
+    ],
+    mistakes: [
+      '벤치 각도 60도 이상은 어깨 운동으로 변함',
+      '덤벨을 머리 쪽으로 밀면 어깨 부상 위험',
+    ],
+  ),
+  ExerciseGuide(
     name: '덤벨 플라이',
     matchKeywords: ['플라이', '플라'],
     targetMuscles: '대흉근 (스트레치 자극)',
@@ -180,6 +196,22 @@ const List<ExerciseGuide> kExerciseGuides = [
     mistakes: [
       '허리를 과도하게 뒤로 젖히면 허리 부상',
       '바가 앞으로 치우치면 어깨 부상 위험',
+    ],
+  ),
+  ExerciseGuide(
+    name: '페이스 풀',
+    matchKeywords: ['페이스풀', '페이스 풀', 'face pull'],
+    targetMuscles: '후면 삼각근 · 승모근 중부 · 회전근개',
+    emoji: '💪',
+    gifId: '0309',
+    formPoints: [
+      '케이블을 어깨 높이로 조정 후 로프 양 끝을 잡습니다',
+      '팔꿈치가 어깨 라인에 평행하게 유지하며 얼굴 쪽으로 당깁니다',
+      '정점에서 외회전을 추가해 엄지가 뒤를 향하도록 수축',
+    ],
+    mistakes: [
+      '팔꿈치가 아래로 쳐지면 등 근육만 자극됨',
+      '허리로 반동 주면 자극 분산',
     ],
   ),
   ExerciseGuide(
