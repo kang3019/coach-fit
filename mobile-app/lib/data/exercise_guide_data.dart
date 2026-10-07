@@ -33,9 +33,25 @@ class ExerciseGuide {
       : 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/$gifId.gif';
 }
 
-/// 20개 핵심 종목 가이드.
+/// 핵심 종목 가이드.
 const List<ExerciseGuide> kExerciseGuides = [
   // ===== 가슴 =====
+  ExerciseGuide(
+    name: '머신 체스트 프레스',
+    matchKeywords: ['머신 체스트', '머신체스트', '체스트 프레스', '체스트프레스'],
+    targetMuscles: '대흉근 · 삼두근',
+    emoji: '🏋️',
+    gifId: '0577',
+    formPoints: [
+      '등을 등받이에 밀착하고 발바닥은 바닥에 평평하게 고정',
+      '손잡이를 가슴 중앙 높이로 조정 후 어깨너비로 그립',
+      '팔꿈치가 완전히 펴지지 않을 때까지 밀어낸 후 천천히 복귀',
+    ],
+    mistakes: [
+      '어깨가 앞으로 말리면 전면 삼각근에 과부하',
+      '반동으로 밀면 가슴 자극 분산',
+    ],
+  ),
   ExerciseGuide(
     name: '벤치 프레스',
     matchKeywords: ['벤치', '벤치프레스', 'bench'],
