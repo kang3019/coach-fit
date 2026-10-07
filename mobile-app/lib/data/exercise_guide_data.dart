@@ -12,6 +12,11 @@ class ExerciseGuide {
   final List<String> formPoints;
   final List<String> mistakes;
 
+  /// omercotkd/exercises-gifs CDN 의 GIF ID (예: '0043' → 바벨 스쿼트).
+  /// 값이 있으면 가이드 모달 상단에 애니메이션 GIF 표시.
+  /// 민권이 홈 탭 프리셋 루틴 상세에서 쓰는 동일 CDN 재사용.
+  final String? gifId;
+
   const ExerciseGuide({
     required this.name,
     required this.matchKeywords,
@@ -19,7 +24,13 @@ class ExerciseGuide {
     required this.emoji,
     required this.formPoints,
     required this.mistakes,
+    this.gifId,
   });
+
+  /// 전체 CDN URL — gifId 가 있을 때만 유효.
+  String? get gifUrl => gifId == null
+      ? null
+      : 'https://cdn.jsdelivr.net/gh/omercotkd/exercises-gifs@main/assets/$gifId.gif';
 }
 
 /// 20개 핵심 종목 가이드.
@@ -30,6 +41,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['벤치', '벤치프레스', 'bench'],
     targetMuscles: '대흉근 · 삼두근 · 전면 삼각근',
     emoji: '🏋️',
+    gifId: '0025',
     formPoints: [
       '어깨뼈를 벤치에 꽉 눌러 고정 후 가슴을 살짝 들어올립니다',
       '바가 쇄골 아래 가슴 중앙에 닿을 때까지 천천히 내립니다',
@@ -59,6 +71,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['푸시업', '푸쉬업', 'push'],
     targetMuscles: '대흉근 · 삼두근 · 코어',
     emoji: '💪',
+    gifId: '0974',
     formPoints: [
       '손은 어깨너비보다 약간 넓게',
       '머리-엉덩이-발뒤꿈치가 일직선 유지',
@@ -76,6 +89,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['데드', '데드리프트', 'dead'],
     targetMuscles: '척추기립근 · 둔근 · 햄스트링 · 광배근',
     emoji: '🏋️‍♂️',
+    gifId: '0032',
     formPoints: [
       '발은 어깨너비, 바는 발등 중간 위에 위치',
       '엉덩이를 뒤로 빼면서 상체를 숙여 바를 잡습니다',
@@ -91,6 +105,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['랫풀', '랫 풀', '풀다운', 'lat'],
     targetMuscles: '광배근 · 승모근 하부 · 이두근',
     emoji: '🏋️',
+    gifId: '2330',
     formPoints: [
       '바를 어깨너비보다 조금 넓게 오버그립',
       '가슴을 들고 어깨뼈를 내리며 쇄골 쪽으로 당깁니다',
@@ -106,6 +121,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['로우', '바벨로우', 'row'],
     targetMuscles: '광배근 · 승모근 중부 · 능형근',
     emoji: '🏋️',
+    gifId: '0304',
     formPoints: [
       '상체를 45도 숙이고 허리는 평평하게 유지',
       '바를 명치 쪽으로 끌어당깁니다',
@@ -121,6 +137,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['풀업', '턱걸이', 'pull-up', 'pullup'],
     targetMuscles: '광배근 · 이두근 · 코어',
     emoji: '🤸',
+    gifId: '1817',
     formPoints: [
       '오버그립으로 어깨너비보다 약간 넓게',
       '턱이 바를 넘을 때까지 당기고 천천히 내려옵니다',
@@ -137,6 +154,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['오버헤드', '밀리터리', '숄더프레스', '숄더 프레스', 'overhead'],
     targetMuscles: '삼각근 · 삼두근 · 상부 승모근',
     emoji: '🏋️',
+    gifId: '0086',
     formPoints: [
       '발은 어깨너비, 코어를 단단히 조입니다',
       '바가 머리 위로 수직 궤적을 그리며 올라갑니다',
@@ -168,6 +186,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['스쿼트', 'squat'],
     targetMuscles: '대퇴사두근 · 둔근 · 햄스트링',
     emoji: '🦵',
+    gifId: '0043',
     formPoints: [
       '발은 어깨너비, 발끝은 15도 바깥을 향합니다',
       '엉덩이를 뒤로 빼면서 허벅지가 바닥과 평행이 될 때까지 앉습니다',
@@ -183,6 +202,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['레그프레스', '레그 프레스', 'leg press'],
     targetMuscles: '대퇴사두근 · 둔근 · 햄스트링',
     emoji: '🦵',
+    gifId: '1457',
     formPoints: [
       '발은 어깨너비, 발판 중앙에 위치',
       '무릎이 90도가 될 때까지 천천히 내립니다',
@@ -197,6 +217,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['런지', 'lunge'],
     targetMuscles: '대퇴사두근 · 둔근 · 햄스트링',
     emoji: '🦵',
+    gifId: '0607',
     formPoints: [
       '한쪽 발을 크게 앞으로 내딛습니다',
       '뒷무릎이 바닥에 거의 닿을 때까지 내립니다',
@@ -242,6 +263,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['바벨컬', '바벨 컬', 'barbell curl'],
     targetMuscles: '이두근',
     emoji: '💪',
+    gifId: '0033',
     formPoints: [
       '어깨너비 언더그립으로 바를 잡습니다',
       '팔꿈치 고정하고 들어올립니다',
@@ -268,6 +290,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['딥스', 'dips'],
     targetMuscles: '삼두근 · 대흉근 하부',
     emoji: '💪',
+    gifId: '0287',
     formPoints: [
       '팔꿈치가 90도가 될 때까지 내립니다',
       '어깨가 올라가지 않도록 유지',
@@ -283,6 +306,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['플랭크', 'plank'],
     targetMuscles: '복근 · 코어 전체',
     emoji: '🧘',
+    gifId: '0973',
     formPoints: [
       '머리-엉덩이-발뒤꿈치가 일직선',
       '배꼽을 척추 쪽으로 당기듯 코어 유지',
@@ -297,6 +321,7 @@ const List<ExerciseGuide> kExerciseGuides = [
     matchKeywords: ['크런치', 'crunch'],
     targetMuscles: '복직근 상부',
     emoji: '🧘',
+    gifId: '0233',
     formPoints: [
       '손은 머리 뒤 또는 가슴 위',
       '복근 수축으로 상체를 들어올립니다',
