@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/exercise_guide_data.dart';
 import '../models/coaching_result.dart';
 import '../models/exercise_master.dart';
 import '../models/workout.dart';
@@ -46,11 +47,14 @@ class RoutineDetailScreen extends StatefulWidget {
     VoidCallback? onStartWorkout,
   }) {
     final exercises = result.recommendedRoutine.map((item) {
+      // 운동 가이드와 자동 매칭하여 CDN GIF URL 세팅 (매칭 안 되면 null → 기본 아이콘)
+      final gifUrl = findExerciseGuide(item.exerciseName)?.gifUrl;
       return RoutineExerciseItem(
         name: item.exerciseName,
         targetMuscle: item.focus,
         sets: item.sets > 0 ? item.sets : 4,
         reps: item.reps > 0 ? item.reps : 10,
+        imageUrl: gifUrl,
       );
     }).toList();
 
