@@ -2,10 +2,13 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/user_profile.dart';
 import '../../services/body_record_service.dart';
+import '../../services/profile_service.dart';
 
 /// 신체 측정 섹션. 더미 데이터 대신 로컬 저장소 사용.
 /// H: 체중/골격근량/체지방률 입력 + 체중 추이 라인 그래프.
+/// G: 프로필의 targetWeightKg 와 비교한 감량/증량 목표 진행도 바.
 class BodyMeasurementSection extends StatefulWidget {
   const BodyMeasurementSection({super.key});
 
@@ -15,24 +18,34 @@ class BodyMeasurementSection extends StatefulWidget {
 
 class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
   final BodyRecordService _service = BodyRecordService();
+  final ProfileService _profileService = ProfileService();
   List<BodyRecord> _records = const [];
+  UserProfile? _profile;
 
   @override
   void initState() {
     super.initState();
     _service.addListener(_reload);
+    _profileService.addListener(_loadProfile);
     _reload();
+    _loadProfile();
   }
 
   @override
   void dispose() {
     _service.removeListener(_reload);
+    _profileService.removeListener(_loadProfile);
     super.dispose();
   }
 
   Future<void> _reload() async {
     final list = await _service.loadAll();
     if (mounted) setState(() => _records = list);
+  }
+
+  Future<void> _loadProfile() async {
+    final p = await _profileService.load();
+    if (mounted) setState(() => _profile = p);
   }
 
   Future<void> _openInput() async {
@@ -136,6 +149,15 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
               ],
             ),
           ),
+        // G: 목표 체중 진행도 (프로필에 목표 체중 있고 최신 체중 있을 때)
+        if (latest?.weightKg != null &&
+            (_profile?.targetWeightKg ?? 0) > 0) ...[
+          const SizedBox(height: 10),
+          _TargetProgressCard(
+            currentKg: latest!.weightKg!,
+            targetKg: _profile!.targetWeightKg!,
+          ),
+        ],
         if (_records.length >= 2) ...[
           const SizedBox(height: 10),
           _WeightChart(records: _records),
@@ -146,6 +168,111 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
 
   String _fmt(double? v) =>
       v == null ? '-' : (v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1));
+}
+
+/// G: 감량/증량 목표 체중 진행도 카드.
+/// 프로필의 targetWeightKg 와 최신 체중을 비교해 진행률(%)과 남은 kg 를 표시.
+class _TargetProgressCard extends StatelessWidget {
+  final double currentKg;
+  final double targetKg;
+  const _TargetProgressCard({required this.currentKg, required this.targetKg});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final diff = currentKg - targetKg;
+    final isReducing = diff > 0; // 감량 목표
+    final absDiff = diff.abs();
+    // 진행도 근사 — 시작점을 "현재 + 3kg 거리" 로 가정 (목표 세팅 시점의 체중 미기록 상태)
+    final startDist = absDiff + 3.0;
+    final progress =
+        absDiff < 0.1 ? 1.0 : (1.0 - (absDiff / startDist)).clamp(0.0, 1.0);
+    final percent = (progress * 100).round();
+
+    final goalText =
+        isReducing ? '감량 목표' : (diff < 0 ? '증량 목표' : '유지 목표');
+    final diffText = absDiff < 0.1
+        ? '목표 달성!'
+        : isReducing
+            ? '${absDiff.toStringAsFixed(1)}kg 남음'
+            : '+${absDiff.toStringAsFixed(1)}kg 필요';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withValues(alpha: 0.15),
+            accent.withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_rounded, color: accent, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '🎯 $goalText',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$percent%',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white10,
+              valueColor: AlwaysStoppedAnimation(accent),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '현재 ${currentKg.toStringAsFixed(1)}kg',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+              Text(
+                diffText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '목표 ${targetKg.toStringAsFixed(1)}kg',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _LatestTile extends StatelessWidget {
