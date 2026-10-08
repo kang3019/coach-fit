@@ -63,6 +63,19 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     """
     ai_provider = os.getenv("AI_PROVIDER", "dummy").lower()
 
+    # Bedrock LLM 게이트웨이 (학교/기관 5만원 한도 제어 OpenAI 호환 API)
+    gateway_key = os.getenv("BEDROCK_GATEWAY_API_KEY")
+    gateway_url = os.getenv("BEDROCK_GATEWAY_BASE_URL")
+    gateway_model = os.getenv("BEDROCK_GATEWAY_MODEL", "bedrock-sonnet")
+
+    if (ai_provider in ("bedrock-gateway", "bedrock")) and gateway_key and gateway_url:
+        return _call_bedrock_gateway_coaching(
+            request,
+            api_key=gateway_key,
+            base_url=gateway_url,
+            model_name=gateway_model,
+        )
+
     if ai_provider == "bedrock":
         return _call_bedrock_coaching(request)
 
@@ -519,7 +532,7 @@ def _call_bedrock_coaching(request: CoachingRequest) -> CoachingResponse:
     try:
         import boto3
 
-        region_name = os.getenv("AWS_REGION", "us-east-1")
+        region_name = os.getenv("AWS_REGION", "ap-northeast-2")
         model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
 
         # EC2 IAM Role 우선, 환경변수에 명시된 경우만 직접 주입
@@ -604,4 +617,87 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
         fallback = _generate_smart_dummy_coaching(request)
         fallback.summary += f" (AWS Bedrock API 호출 에러로 더미 엔진 적용됨: {str(e)})"
         return fallback
+
+
+def _call_bedrock_gateway_coaching(
+    request: CoachingRequest,
+    api_key: str,
+    base_url: str,
+    model_name: str = "bedrock-sonnet",
+) -> CoachingResponse:
+    """
+    Bedrock LLM 게이트웨이 연동 (학교/기관 5만원 한도 제어 OpenAI 호환 API).
+    - base_url: 게이트웨이 엔드포인트 URL
+    - api_key: 게이트웨이 API 키
+    - model: bedrock-sonnet (기본) / bedrock-haiku / bedrock-gpt-5.6-luna
+    - OpenAI 호환 API (chat.completions.create) 로 호출
+    - 실패 시 스마트 더미 엔진으로 자동 폴백
+    """
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=api_key, base_url=base_url)
+
+        prompt_data = {
+            "user_goal": request.user_goal,
+            "user_profile": request.user_profile,
+            "workouts": [w.model_dump(mode="json") for w in request.recent_workouts],
+        }
+
+        system_prompt = """당신은 전문 피트니스 트레이너이자 재활 코치입니다.
+사용자의 신체 스펙(키, 체중, 골격근량, 체지방률, 경력), 운동 목표, 최근 운동 기록을 종합적으로 분석하여
+개인 맞춤형 코칭 피드백과 오늘 수행할 추천 운동 루틴을 작성합니다.
+
+반드시 아래 JSON 스키마만 포함하는 유효한 JSON 형식으로 응답하세요:
+{
+  "summary": "운동 및 신체 상태 요약 문자열",
+  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "recommended_routine": [
+    {
+      "exercise_name": "운동명",
+      "sets": 4,
+      "reps": 10,
+      "focus": "타겟 부위",
+      "tip": "자세 팁"
+    }
+  ]
+}
+
+recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 1~2문장으로 구체적인 자세 교정 포인트를 포함합니다.
+응답에는 마크다운 백틱(```json)이나 다른 설명 없이 오직 JSON 텍스트만 출력하세요."""
+
+        user_message = (
+            f"기록 및 프로필 데이터 (JSON): {json.dumps(prompt_data, ensure_ascii=False)}\n\n"
+            "위 데이터를 분석하여 지정된 JSON 스키마로 코칭 결과를 반환하세요."
+        )
+
+        response = client.chat.completions.create(
+            model=model_name,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.7,
+        )
+
+        content = response.choices[0].message.content or ""
+        start = content.find("{")
+        end = content.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("Bedrock 게이트웨이 응답에서 JSON 객체를 찾지 못했습니다.")
+
+        parsed = json.loads(content[start:end + 1])
+
+        return CoachingResponse(
+            summary=parsed.get("summary", ""),
+            coaching_advice=parsed.get("coaching_advice", ""),
+            recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
+            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+    except Exception as e:
+        fallback = _generate_smart_dummy_coaching(request)
+        fallback.summary += f" (Bedrock Gateway 호출 에러로 더미 엔진 적용됨: {str(e)})"
+        return fallback
+
 

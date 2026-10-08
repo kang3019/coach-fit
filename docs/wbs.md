@@ -158,7 +158,7 @@ gantt
   - [x] 3.2.5 Anthropic Claude (Sonnet 5.5 + adaptive thinking) 코칭 provider 연동 (1d) - *PR #29, #31 완료*
   - [x] 3.2.6 Google Gemini (gemini-2.5-flash 무료 티어) provider 연동 (1d) - *PR #33 완료*
   - [x] 3.2.7 Groq (openai/gpt-oss-120b 초고속 추론) provider 연동 및 날짜 직렬화 보정 (1d) - *PR #34, #36 완료*
-  - [ ] 3.2.8 [교수님 권고] AWS Bedrock AI 코칭 엔진 연동 (`boto3` Converse API, Claude 3.5 Sonnet / Amazon Nova, EC2 IAM Role 무키 인증) (2d) - *진행 예정*
+  - [x] 3.2.8 [교수님 권고] AWS Bedrock AI 코칭 엔진 연동 (`boto3` Converse API, Claude 3.5 Sonnet / Nova + 서울 리전 ap-northeast-2 + 5만원 한도 제어 Bedrock 게이트웨이 키 지원) (2d) - *완료*
 - **3.3 데이터베이스 & 영속화**
   - [x] 3.3.1 최초 기동 시 시연용 운동 기록 및 인바디 시드 데이터 자동 적재 (1d) - *완료*
   - [x] 3.3.2 PostgreSQL / SQLite 유연한 DB 스위칭 환경 구축 (2d) - *완료*
@@ -171,7 +171,7 @@ gantt
   - [x] 4.1.3 발표장 Wi-Fi 단절 대비 오프라인 완결형 로컬 구동 스크립트 및 setup.md 작성 (1d) - *완료*
   - [ ] 4.1.4 [교수님 권고] AWS EC2 인스턴스 구축, pem 키 SSH 보안 접속 및 `git pull` 자동 배포 파이프라인(`deploy.sh` & Systemd 상시 가동) (2d) - *진행 예정*
   - [x] 4.1.5 플러터 웹 데모 로딩 스플래시 추가 (로고/스피너/페이드아웃 + 두부 글리프 가림) (1d) - *PR #26 ~ #27 완료*
-  - [ ] 4.1.6 AWS 풀스택(EC2 + RDS + Bedrock) 환경 구축 및 pem 키 배포 가이드 문서화 (`docs/aws_setup_guide.md`) (1d) - *진행 예정*
+  - [x] 4.1.6 AWS 풀스택(EC2 + RDS + Bedrock) 환경 구축 및 pem 키 배포 가이드 문서화 (`docs/aws_setup_guide.md`, CDK 서울 리전 반영) (1d) - *완료*
 - **4.2 품질 관리**
   - [ ] 4.2.1 모바일 폼 유효성 검사 (음수 무게 입력 방지 등) (1d)
   - [x] 4.2.2 서버 헬스체크 및 예외 처리 고도화 (1d) - *완료*
