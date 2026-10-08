@@ -563,7 +563,10 @@ class _WorkoutItemCard extends StatelessWidget {
     final gifUrl = findExerciseGuide(workout.exerciseName)?.gifUrl;
 
     return Card(
-      child: Padding(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => ExerciseGuideSheet.show(context, workout.exerciseName),
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,6 +671,7 @@ class _WorkoutItemCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }
