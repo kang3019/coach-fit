@@ -16,13 +16,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nicknameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _heightController = TextEditingController(text: '175');
-  final _weightController = TextEditingController(text: '70');
-  final _targetWeightController = TextEditingController(text: '68');
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _targetWeightController = TextEditingController();
 
   int _step = 0;
-  String _experience = 'intermediate';
-  String _goal = '근비대 및 전신 근력 증진';
+  String _experience = '';
+  String _goal = '';
   bool _acceptedTerms = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -54,6 +54,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _errorMessage = null);
     if (!_formKey.currentState!.validate()) return;
+    if (_goal.isEmpty || _experience.isEmpty) {
+      setState(() => _errorMessage = '운동 목표와 현재 운동 경력을 선택해 주세요.');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -129,72 +133,95 @@ class _RegisterScreenState extends State<RegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _StepIntro(
-          eyebrow: '반가워요',
-          title: '코치핏 계정을\n만들어볼까요?',
-          caption: '기록이 사라지지 않도록 계정 정보를 입력해 주세요.',
+          eyebrow: 'ACCOUNT',
+          title: '운동 기록을 안전하게\n보관해 드릴게요.',
+          caption: '로그인에 사용할 기본 정보만 입력해 주세요.',
         ),
-        const SizedBox(height: 36),
-        const _FieldLabel('이름'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _nicknameController,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            hintText: '이름 또는 닉네임을 입력해 주세요',
-            prefixIcon: Icon(Icons.person_outline_rounded),
+        const SizedBox(height: 32),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.018),
+            border: Border.all(color: CoachFitColors.divider),
+            borderRadius: BorderRadius.circular(18),
           ),
-          validator: (value) =>
-              value == null || value.trim().isEmpty ? '사용할 이름을 입력해 주세요.' : null,
-        ),
-        const SizedBox(height: 18),
-        const _FieldLabel('이메일'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            hintText: 'coachfit@example.com',
-            prefixIcon: Icon(Icons.mail_outline_rounded),
-          ),
-          validator: (value) => value == null || !value.contains('@')
-              ? '올바른 이메일을 입력해 주세요.'
-              : null,
-        ),
-        const SizedBox(height: 18),
-        const _FieldLabel('비밀번호'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            hintText: '6자 이상 입력해 주세요',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            suffixIcon: IconButton(
-              onPressed: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
-              icon: Icon(
-                _obscurePassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _FieldLabel('이름'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nicknameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: '이름 또는 닉네임을 입력해 주세요',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? '사용할 이름을 입력해 주세요.'
+                    : null,
               ),
-            ),
+              const SizedBox(height: 16),
+              const _FieldLabel('이메일'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: 'coachfit@example.com',
+                  prefixIcon: Icon(Icons.mail_outline_rounded),
+                ),
+                validator: (value) => value == null || !value.contains('@')
+                    ? '올바른 이메일을 입력해 주세요.'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              const _FieldLabel('비밀번호'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: '6자 이상 입력해 주세요',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  suffixIcon: IconButton(
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                  ),
+                ),
+                validator: (value) => value == null || value.length < 6
+                    ? '비밀번호는 6자 이상이어야 합니다.'
+                    : null,
+              ),
+            ],
           ),
-          validator: (value) =>
-              value == null || value.length < 6 ? '비밀번호는 6자 이상이어야 합니다.' : null,
         ),
-        const SizedBox(height: 17),
-        CheckboxListTile(
-          value: _acceptedTerms,
-          onChanged: (value) => setState(() => _acceptedTerms = value ?? false),
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          activeColor: CoachFitColors.orange,
-          title: const Text(
-            '서비스 이용약관 및 개인정보 처리방침에 동의합니다.',
-            style: TextStyle(color: CoachFitColors.textMuted, fontSize: 11),
+        const SizedBox(height: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: CoachFitColors.surface,
+            border: Border.all(color: CoachFitColors.divider),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: CheckboxListTile(
+            value: _acceptedTerms,
+            onChanged: (value) =>
+                setState(() => _acceptedTerms = value ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+            dense: true,
+            activeColor: CoachFitColors.orange,
+            title: const Text(
+              '서비스 이용약관 및 개인정보 처리방침에 동의합니다.',
+              style: TextStyle(color: CoachFitColors.textMuted, fontSize: 11),
+            ),
           ),
         ),
         if (_errorMessage != null) ...[
@@ -207,7 +234,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('다음'),
+              Text('다음 단계'),
               SizedBox(width: 6),
               Icon(Icons.chevron_right_rounded, size: 20),
             ],
@@ -223,12 +250,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _StepIntro(
-          eyebrow: '마지막 단계',
-          title: '목표에 맞는 코칭을\n준비할게요.',
-          caption: '나중에 마이 탭에서 언제든 변경할 수 있어요.',
+          eyebrow: 'PERSONALIZE',
+          title: '어떤 운동을 원하는지\n알려주세요.',
+          caption: '선택한 내용은 맞춤 루틴에 반영되며 언제든 변경할 수 있어요.',
         ),
         const SizedBox(height: 32),
-        const _FieldLabel('운동 목표'),
+        const _ChoiceHeading(title: '운동 목표', caption: '하나를 선택해 주세요'),
         const SizedBox(height: 10),
         GridView.count(
           crossAxisCount: 2,
@@ -265,7 +292,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
         const SizedBox(height: 25),
-        const _FieldLabel('운동 경력'),
+        const _ChoiceHeading(title: '운동 경력', caption: '현재 수준에 가까운 항목'),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(5),
@@ -312,6 +339,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 unit: 'cm',
                 controller: _heightController,
                 minimum: 50,
+                optional: true,
+                hintText: '예: 175',
               ),
             ),
             const SizedBox(width: 10),
@@ -321,6 +350,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 unit: 'kg',
                 controller: _weightController,
                 minimum: 20,
+                optional: true,
+                hintText: '예: 72',
               ),
             ),
           ],
@@ -331,6 +362,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           unit: 'kg',
           controller: _targetWeightController,
           minimum: 20,
+          optional: true,
+          hintText: '예: 68',
         ),
         if (_errorMessage != null) ...[
           const SizedBox(height: 14),
@@ -338,7 +371,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ],
         const SizedBox(height: 25),
         ElevatedButton(
-          onPressed: _isLoading ? null : _register,
+          onPressed: _isLoading || _goal.isEmpty || _experience.isEmpty
+              ? null
+              : _register,
           child: _isLoading
               ? const SizedBox(
                   width: 22,
@@ -348,7 +383,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     strokeWidth: 2.4,
                   ),
                 )
-              : const Text('맞춤 코칭 시작하기'),
+              : const Text('코치핏 시작하기'),
         ),
       ],
     );
@@ -484,6 +519,27 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
+class _ChoiceHeading extends StatelessWidget {
+  final String title;
+  final String caption;
+
+  const _ChoiceHeading({required this.title, required this.caption});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _FieldLabel(title),
+        const Spacer(),
+        Text(
+          caption,
+          style: const TextStyle(color: CoachFitColors.textMuted, fontSize: 9),
+        ),
+      ],
+    );
+  }
+}
+
 class _GoalCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -601,12 +657,16 @@ class _NumberField extends StatelessWidget {
   final String unit;
   final TextEditingController controller;
   final double minimum;
+  final bool optional;
+  final String? hintText;
 
   const _NumberField({
     required this.label,
     required this.unit,
     required this.controller,
     required this.minimum,
+    this.optional = false,
+    this.hintText,
   });
 
   @override
@@ -614,14 +674,31 @@ class _NumberField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label),
+        Row(
+          children: [
+            _FieldLabel(label),
+            if (optional) ...[
+              const SizedBox(width: 4),
+              const Text(
+                '선택',
+                style: TextStyle(
+                  color: CoachFitColors.textMuted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(suffixText: unit),
+          decoration: InputDecoration(hintText: hintText, suffixText: unit),
           validator: (value) {
-            final parsed = double.tryParse(value?.trim() ?? '');
+            final normalized = value?.trim() ?? '';
+            if (optional && normalized.isEmpty) return null;
+            final parsed = double.tryParse(normalized);
             if (parsed == null || parsed < minimum) return '값을 확인해 주세요.';
             return null;
           },
