@@ -84,6 +84,7 @@ gantt
   - [x] 2.2.10 세션 통째 복사 (과거 날 운동 → 오늘로) + 빈 날짜 복원 (같은 요일 세션 추천) (1d) - *PR #17 완료*
   - [x] 2.2.11 종목 검색 + 부위 필터 chip (가슴/등/어깨/하체/이두) + 메모 전용 필터 (1d) - *PR #17 완료*
   - [x] 2.2.12 신체 측정 입력 UI + 체중 추이 라인 차트 (로컬 ChangeNotifier → 서버 DB 양방향 동기화) (2d) - *PR #17 + PR #19 완료*
+  - [x] 2.2.13 신체 변화 — 감량/증량 목표 체중 진행도 바 (ProfileService.targetWeightKg 자동 연동, 민트 그라데이션 카드 + 진행률 % + 남은 kg) (1d) - *PR #58 완료*
 - **2.3 AI 맞춤 코칭 & 루틴 추천 (AI Coach)**
   - [x] 2.3.1 AI 추천 요청 트리거 및 응답 카드 UI 스켈레톤 (1d) - *기완료*
   - [x] 2.3.2 최근 피로도 분석 기반 오늘 추천 운동 목록 표출 UI (2d) - *완료*
@@ -125,6 +126,7 @@ gantt
   - [x] 2.7.5 공용 `AppSnackbar` 유틸 — success/error/info 3종 variant + hideCurrentSnackBar 선행 (1d) - *PR #41 완료*
   - [x] 2.7.6 공용 위젯 초기 적용 (favorites_screen, exercise_growth_screen) (1d) - *PR #41 완료*
   - [ ] 2.7.7 공용 위젯 전체 화면 확대 적용 (home/history/stats/community 잔여) (2d) - *진행 예정*
+  - [x] 2.7.8 기록 운동 카드 UX — 카드 전체 영역 탭 → 가이드 모달 자동 오픈 (InkWell 래핑, ⓘ 아이콘은 시각 힌트로 유지, 수정/삭제 아이콘 이벤트 전파 차단) (0.5d) - *PR #57 완료*
 - **2.8 운동 가이드 GIF 시각화 통합 (Exercise GIF Visualization)**
   - [x] 2.8.1 운동 가이드 데이터에 CDN GIF ID 필드 추가 (omercotkd/exercises-gifs 재활용) (1d) - *PR #44 완료*
   - [x] 2.8.2 핵심 20종목 GIF ID 매핑 (벤치/스쿼트/데드리프트/오버헤드 등 BIG3·보조 전부) (1d) - *PR #44 완료*
