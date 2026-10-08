@@ -4,6 +4,6 @@ import 'package:coachfit_mobile/main.dart';
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const CoachFitApp());
-    expect(find.text('CoachFit Mobile'), findsOneWidget);
+    expect(find.text('CoachFit'), findsOneWidget);
   });
 }

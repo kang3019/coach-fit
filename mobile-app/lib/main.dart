@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'screens/auth/login_screen.dart';
-import 'screens/main_navigation_screen.dart';
+import 'screens/auth/app_launch_screen.dart';
 import 'services/app_settings_service.dart';
 import 'services/auth_service.dart';
+import 'theme/coachfit_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,11 +48,6 @@ class _CoachFitAppState extends State<CoachFitApp> {
   Widget build(BuildContext context) {
     final seed = _settings.themeAccent.color;
     final scale = _settings.textScale.factor;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.dark,
-    );
-
     return MaterialApp(
       title: 'CoachFit',
       debugShowCheckedModeBanner: false,
@@ -64,45 +59,8 @@ class _CoachFitAppState extends State<CoachFitApp> {
           child: child,
         );
       },
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: scheme,
-        scaffoldBackgroundColor: const Color(0xFF0E1116),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF171B22),
-          elevation: 0,
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0E1116),
-          elevation: 0,
-          centerTitle: false,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF1E232F),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-      home: widget.initialLoggedIn
-          ? const MainNavigationScreen()
-          : const LoginScreen(),
+      theme: CoachFitTheme.dark(seed),
+      home: AppLaunchScreen(initialLoggedIn: widget.initialLoggedIn),
     );
   }
 }
