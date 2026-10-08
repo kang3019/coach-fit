@@ -16,7 +16,18 @@ class ApiConstants {
   /// 위험 관리 문서(04-risk-management.md)의 "발표 3일 전 실기기 검증" 대응.
   static const String _physicalDeviceHostOverride = '';
 
+  /// AWS EC2 실서버 배포 시 퍼블릭 IP 또는 도메인을 기입한다.
+  /// 예: '43.200.179.25' (AWS 서울 리전 EC2 퍼블릭 IP)
+  static const String _ec2HostOverride = '43.200.179.25';
+
+  /// AWS EC2 실서버로 원터치 전환할 때 true 로 설정한다.
+  static const bool useEc2Backend = true;
+
   static String get baseUrl {
+    if (useEc2Backend && _ec2HostOverride.isNotEmpty) {
+      return 'http://$_ec2HostOverride:$_backendPort';
+    }
+
     if (kIsWeb) {
       return 'http://localhost:$_backendPort';
     }

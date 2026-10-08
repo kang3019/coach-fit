@@ -162,10 +162,14 @@ nano .env
 
 아래 내용을 기입하고 저장(`Ctrl + O` -> `Enter` -> `Ctrl + X`):
 ```env
-# AI 코칭 공급자: AWS Bedrock 활성화
-AI_PROVIDER=bedrock
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+# AI 코칭 공급자: 학교/기관 5만원 한도 제어 Bedrock 게이트웨이 (OpenAI 호환 규격)
+AI_PROVIDER=bedrock-gateway
+BEDROCK_GATEWAY_BASE_URL=<발급받은-게이트웨이-BASE-URL>
+BEDROCK_GATEWAY_API_KEY=<발급받은-게이트웨이-API-KEY>
+BEDROCK_GATEWAY_MODEL=bedrock-sonnet # bedrock-sonnet | bedrock-haiku | bedrock-gpt-5.6-luna
+
+# AWS 서울 리전 (ap-northeast-2)
+AWS_REGION=ap-northeast-2
 
 # 서버 설정
 HOST=0.0.0.0
@@ -174,7 +178,6 @@ PORT=8000
 # AWS RDS (PostgreSQL) 연결 URL
 DATABASE_URL=postgresql://coachfit_admin:CoachFit2026!Secure@<RDS-엔드포인트-주소>:5432/coachfit
 ```
-*(참고: EC2에 IAM Role이 연결되어 있으므로 `AWS_ACCESS_KEY_ID`나 시크릿 키는 전혀 적을 필요가 없습니다!)*
 
 ---
 
@@ -199,11 +202,11 @@ bash scripts/deploy.sh
 모바일 앱의 [mobile-app/lib/config/api_constants.dart](file:///C:/coach%20fit/mobile-app/lib/config/api_constants.dart) 파일을 열고:
 
 ```dart
-// EC2 퍼블릭 IP를 기입합니다
-static const String _remoteBaseUrl = 'http://<EC2-퍼블릭-IP>:8000/api';
+// AWS EC2 서울 리전 퍼블릭 IP를 기입합니다
+static const String _ec2HostOverride = '<EC2-퍼블릭-IP>';
 
-// 실서버 연결을 원할 경우 useRemoteBackend = true 로 설정
-static const bool useRemoteBackend = true;
+// AWS EC2 실서버로 원터치 전환할 때 true 로 설정
+static const bool useEc2Backend = true;
 ```
 
 이제 스마트폰 실기기나 에뮬레이터에서 회원가입, 운동 기록, AI 코칭을 실행하면 **AWS EC2 + AWS RDS + AWS Bedrock**으로 구성된 정석 클라우드 파이프라인을 통해 즉시 동작합니다!
