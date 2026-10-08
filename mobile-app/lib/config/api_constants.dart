@@ -17,11 +17,11 @@ class ApiConstants {
   static const String _physicalDeviceHostOverride = '';
 
   /// AWS EC2 실서버 배포 시 퍼블릭 IP 또는 도메인을 기입한다.
-  /// 예: '43.200.12.34' (AWS 서울 리전 EC2 퍼블릭 IP)
-  static const String _ec2HostOverride = '';
+  /// 예: '43.200.179.25' (AWS 서울 리전 EC2 퍼블릭 IP)
+  static const String _ec2HostOverride = '43.200.179.25';
 
   /// AWS EC2 실서버로 원터치 전환할 때 true 로 설정한다.
-  static const bool useEc2Backend = false;
+  static const bool useEc2Backend = true;
 
   static String get baseUrl {
     if (useEc2Backend && _ec2HostOverride.isNotEmpty) {
