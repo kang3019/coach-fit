@@ -95,7 +95,7 @@ class RecommendedRoutineCard extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   color: const Color(0xFF0A0C10),
-                  padding: const EdgeInsets.only(top: 16, bottom: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -103,7 +103,7 @@ class RecommendedRoutineCard extends StatelessWidget {
                         onTap: onOpen3dDetail,
                         child: MuscleMapWidget(
                           activeMuscles: activeMuscles,
-                          height: 230,
+                          height: 300,
                           showLabels: false,
                         ),
                       ),
