@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../theme/coachfit_theme.dart';
@@ -5,18 +7,118 @@ import '../main_navigation_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
-class AppLaunchScreen extends StatelessWidget {
+class AppLaunchScreen extends StatefulWidget {
   final bool initialLoggedIn;
 
   const AppLaunchScreen({super.key, required this.initialLoggedIn});
 
   @override
-  Widget build(BuildContext context) {
-    if (initialLoggedIn) {
-      return const MainNavigationScreen();
+  State<AppLaunchScreen> createState() => _AppLaunchScreenState();
+}
+
+class _AppLaunchScreenState extends State<AppLaunchScreen> {
+  bool _showWelcome = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(milliseconds: 1300), _finishSplash);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _finishSplash() {
+    if (!mounted) return;
+    if (widget.initialLoggedIn) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+      );
+      return;
     }
-    return const Scaffold(
-      body: _WelcomeView(),
+    setState(() => _showWelcome = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 450),
+        child: _showWelcome ? const _WelcomeView() : const _SplashView(),
+      ),
+    );
+  }
+}
+
+class _SplashView extends StatelessWidget {
+  const _SplashView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      key: const ValueKey('splash'),
+      fit: StackFit.expand,
+      children: [
+        const _AmbientGlow(
+          alignment: Alignment.center,
+          color: CoachFitColors.orange,
+        ),
+        SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: CoachFitColors.orange,
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: [
+                    BoxShadow(
+                      color: CoachFitColors.orange.withValues(alpha: 0.28),
+                      blurRadius: 44,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: Colors.white,
+                  size: 44,
+                ),
+              ),
+              const SizedBox(height: 22),
+              const Text(
+                'CoachFit',
+                style: TextStyle(
+                  color: CoachFitColors.text,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '매일 더 나은 나를 만드는 가장 똑똑한 루틴',
+                style: TextStyle(color: CoachFitColors.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 44),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: CoachFitColors.orange,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -267,6 +369,30 @@ class _FeatureItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AmbientGlow extends StatelessWidget {
+  final Alignment alignment;
+  final Color color;
+
+  const _AmbientGlow({required this.alignment, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: alignment,
+      child: Container(
+        width: 280,
+        height: 280,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color.withValues(alpha: 0.12), Colors.transparent],
+          ),
+        ),
       ),
     );
   }

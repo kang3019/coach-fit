@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../main_navigation_screen.dart';
+import 'app_launch_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -103,7 +104,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _errorMessage = null;
                   });
                 } else {
-                  Navigator.of(context).pop();
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const AppLaunchScreen(initialLoggedIn: false),
+                      ),
+                    );
+                  }
                 }
               },
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../main_navigation_screen.dart';
+import 'app_launch_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -87,7 +88,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: IconButton.filledTonal(
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () {
+                              if (Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
+                              } else {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AppLaunchScreen(initialLoggedIn: false),
+                                  ),
+                                );
+                              }
+                            },
                             icon: const Icon(Icons.arrow_back_rounded),
                             style: IconButton.styleFrom(
                               backgroundColor: CoachFitColors.surface,
