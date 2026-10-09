@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
 
 abstract final class CoachFitColors {
-  static const background = Color(0xFF090B0F);
-  static const surface = Color(0xFF11151B);
-  static const surfaceRaised = Color(0xFF171C24);
-  static const surfaceSoft = Color(0xFF1D232D);
-  static const orange = Color(0xFFFF5A31);
-  static const mint = Color(0xFF31E6AA);
+  // 기본 테마 (AMOLED 다크 & 서피스)
+  static const background = Color(0xFF0E1116);
+  static const surface = Color(0xFF151922);
+  static const surfaceRaised = Color(0xFF1D232D);
+  static const surfaceSoft = Color(0xFF242C38);
+
+  // 포인트 악센트 & 상태
+  static const orange = Color(0xFFFF4820);
+  static const mint = Color(0xFF00E5A0);
+  static const accent = orange;
+  static const success = mint;
+
+  // 텍스트 & 경계선
   static const text = Color(0xFFF5F7F9);
   static const textSoft = Color(0xFFA9B0BB);
   static const textMuted = Color(0xFF6F7783);
-  static const divider = Color(0x14FFFFFF);
+  static const textPrimary = text;
+  static const textSecondary = textSoft;
+  static const divider = Color(0x1AFFFFFF);
+  static const border = divider;
+}
+
+abstract final class CoachFitSpacing {
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double xxl = 32;
+}
+
+abstract final class CoachFitRadius {
+  static const double small = 10;
+  static const double medium = 16;
+  static const double large = 20;
+  static const double hero = 24;
 }
 
 abstract final class CoachFitTheme {
