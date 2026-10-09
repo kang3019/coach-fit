@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../models/coaching_result.dart';
+import '../../models/workout.dart';
 import '../../services/coaching_service.dart';
 import '../../services/goal_service.dart';
+import '../../services/profile_service.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../../widgets/home/condition_selector.dart';
+import '../../widgets/home/home_summary.dart';
 import '../../widgets/home/recommended_routine_card.dart';
 import '../../widgets/home/today_plan_card.dart';
 import '../../widgets/home/weekly_rhythm_card.dart';
@@ -35,13 +38,16 @@ class _HomeTabState extends State<HomeTab> {
   final CoachingService _coachingService = CoachingService();
   final WorkoutService _workoutService = WorkoutService();
   final GoalService _goalService = GoalService();
+  final ProfileService _profileService = ProfileService();
   late Future<CoachingResult> _coachingFuture;
-  String _selectedCondition = '좋음 🔥';
+  late Future<HomeSummary> _summaryFuture;
+  String _selectedCondition = '좋아요';
 
   @override
   void initState() {
     super.initState();
     _coachingFuture = _coachingService.requestCoaching();
+    _summaryFuture = _loadHomeSummary();
     // 메뉴 탭에서 운동 목표를 바꾸면 자동으로 AI 코칭 재호출
     _goalService.addListener(_onGoalChanged);
   }
@@ -63,6 +69,34 @@ class _HomeTabState extends State<HomeTab> {
     });
   }
 
+  Future<HomeSummary> _loadHomeSummary() async {
+    final profile = await _profileService.load();
+    List<Workout> workouts;
+    try {
+      workouts = await _workoutService.fetchWorkouts();
+    } catch (_) {
+      workouts = const [];
+    }
+    return HomeSummary.fromWorkouts(
+      nickname: profile.nickname,
+      workouts: workouts,
+      now: DateTime.now(),
+    );
+  }
+
+  void _refreshHome() {
+    setState(() {
+      _coachingFuture = _coachingService.requestCoaching();
+      _summaryFuture = _loadHomeSummary();
+    });
+  }
+
+  String _focusMuscle(CoachingResult? result) {
+    final items = result?.recommendedRoutine ?? const <RecommendedRoutineItem>[];
+    if (items.isEmpty || items.first.focus.trim().isEmpty) return '전신';
+    return items.first.focus.trim().split(RegExp(r'\s+')).first;
+  }
+
   Future<void> _handleImportRoutine(List<RecommendedRoutineItem> items) async {
     try {
       final created = await _workoutService.importRoutine(items);
@@ -70,7 +104,7 @@ class _HomeTabState extends State<HomeTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('AI 추천 루틴 ${created.length}개 종목이 오늘 기록에 추가되었습니다!'),
-            backgroundColor: const Color(0xFF00E5A0),
+            backgroundColor: CoachFitColors.mint,
           ),
         );
         widget.onNavigateToLog();
@@ -140,25 +174,34 @@ class _HomeTabState extends State<HomeTab> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          setState(() {
-            _coachingFuture = _coachingService.requestCoaching();
-          });
-          await _coachingFuture;
+          _refreshHome();
+          await Future.wait([_coachingFuture, _summaryFuture]);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             // 1. 오늘의 플랜 카드 (Gestalt 공통영역: 인사말, 회복 완료, 주간 목표 링, 지표)
-            TodayPlanCard(
-              userName: '민준',
-              focusMuscle: '가슴',
-              recoveryStatus: '회복 완료',
-              subMessage: '지난 운동 후 72시간이 지났어요.\n지금이 다시 자극하기 좋은 타이밍이에요.',
-              currentWeeklyWorkouts: 3,
-              targetWeeklyWorkouts: 4,
-              streakDays: 12,
-              growthRate: '+18% 성장',
-              onTapStats: widget.onNavigateToStats,
+            FutureBuilder<HomeSummary>(
+              future: _summaryFuture,
+              builder: (context, summarySnapshot) {
+                final summary = summarySnapshot.data ?? HomeSummary.loading();
+                return FutureBuilder<CoachingResult>(
+                  future: _coachingFuture,
+                  builder: (context, coachingSnapshot) {
+                    return TodayPlanCard(
+                      userName: summary.nickname,
+                      focusMuscle: _focusMuscle(coachingSnapshot.data),
+                      recoveryStatus: summary.recoveryStatus,
+                      subMessage: summary.recoveryMessage,
+                      currentWeeklyWorkouts: summary.currentWeeklyWorkouts,
+                      targetWeeklyWorkouts: summary.targetWeeklyWorkouts,
+                      streakDays: summary.streakDays,
+                      growthRate: summary.growthLabel,
+                      onTapStats: widget.onNavigateToStats,
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: CoachFitSpacing.lg),
 
@@ -186,9 +229,7 @@ class _HomeTabState extends State<HomeTab> {
                   isLoading: snap.connectionState == ConnectionState.waiting,
                   errorMessage: snap.hasError ? snap.error.toString() : null,
                   onRetry: () {
-                    setState(() {
-                      _coachingFuture = _coachingService.requestCoaching();
-                    });
+                    _refreshHome();
                   },
                   onImportRoutine: _handleImportRoutine,
                   onStartRoutine: widget.onNavigateToLog,
@@ -217,11 +258,17 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: CoachFitSpacing.lg),
 
             // 4. 이번 주 리듬
-            WeeklyRhythmCard(
-              completedDays: const [true, false, true, false, true, false, false],
-              todayIndex: 5,
-              remainingWorkouts: 1,
-              onTapStats: widget.onNavigateToStats,
+            FutureBuilder<HomeSummary>(
+              future: _summaryFuture,
+              builder: (context, snapshot) {
+                final summary = snapshot.data ?? HomeSummary.loading();
+                return WeeklyRhythmCard(
+                  completedDays: summary.completedDays,
+                  todayIndex: summary.todayIndex,
+                  remainingWorkouts: summary.remainingWorkouts,
+                  onTapStats: widget.onNavigateToStats,
+                );
+              },
             ),
             const SizedBox(height: CoachFitSpacing.lg),
 
