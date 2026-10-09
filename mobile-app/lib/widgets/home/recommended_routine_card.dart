@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models/coaching_result.dart';
+import '../../screens/widgets/muscle_map_widget.dart';
 import '../../theme/coachfit_theme.dart';
 import '../common/coachfit_card.dart';
 import '../common/section_header.dart';
-import 'anatomy_3d_display.dart';
 
 /// 오늘의 AI 추천 운동 카드 (Gestalt 시각적 위계 및 단일 주 행동 CTA)
-/// - 상단 3D 해부도 타겟 근육 하이라이트
+/// - 상단 API 연동 정밀 인체 해부도 (타겟 부위 실시간 동적 점등)
 /// - 루틴 정보, 종목 리스트, 주요 액션 버튼('추천 루틴 시작하기') 및 상세 링크
 class RecommendedRoutineCard extends StatelessWidget {
   final CoachingResult? result;
@@ -52,6 +52,20 @@ class RecommendedRoutineCard extends StatelessWidget {
       routineTitle = _formatRoutineTitle(targetMuscle);
     }
 
+    // 루틴 아이템들로부터 실시간 타겟 근육 세트 추출
+    final activeMuscles = <MuscleGroup>{};
+    for (final item in items) {
+      activeMuscles.addAll(
+        MuscleGroupExtension.parseFromText('${item.exerciseName} ${item.focus}'),
+      );
+    }
+    if (activeMuscles.isEmpty) {
+      activeMuscles.addAll(MuscleGroupExtension.parseFromText(targetMuscle));
+    }
+    if (activeMuscles.isEmpty) {
+      activeMuscles.add(MuscleGroup.chest);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -73,12 +87,70 @@ class RecommendedRoutineCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 3D 해부도 상단 디스플레이
-              GestureDetector(
-                onTap: onOpen3dDetail,
-                child: Anatomy3dDisplay(
-                  focusMuscle: targetMuscle,
-                  height: 220,
+              // 1. API 연동 인터랙티브 벡터 인체 해부도 (앞면/뒷면)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(CoachFitRadius.large),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFF0A0C10),
+                  padding: const EdgeInsets.only(top: 16, bottom: 8),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: onOpen3dDetail,
+                        child: MuscleMapWidget(
+                          activeMuscles: activeMuscles,
+                          height: 230,
+                          showLabels: false,
+                        ),
+                      ),
+                      // 우측 하단 플로팅 부위 배지 (예: • 가슴 집중)
+                      Positioned(
+                        right: CoachFitSpacing.md,
+                        bottom: CoachFitSpacing.sm,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: CoachFitSpacing.sm + 2,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(CoachFitRadius.small),
+                            border: Border.all(
+                              color: CoachFitColors.orange.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: CoachFitColors.orange,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$targetMuscle 집중',
+                                style: const TextStyle(
+                                  color: CoachFitColors.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
