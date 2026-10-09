@@ -3,15 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/exercise_guide_data.dart';
 import '../../models/exercise_master.dart';
+import '../../models/user_profile.dart';
 import '../../models/workout.dart';
+import '../../services/body_record_service.dart';
+import '../../services/profile_service.dart';
 import '../../services/pr_service.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
+import '../../widgets/history/gestalt_body_metrics_card.dart';
+import '../../widgets/history/recent_workout_card.dart';
+import '../../widgets/history/workout_calendar_strip.dart';
+import '../../widgets/history/workout_summary_strip.dart';
 import '../exercise_growth_screen.dart';
 import '../widgets/body_measurement_section.dart';
 import '../widgets/exercise_guide_sheet.dart';
 import '../widgets/exercise_picker_modal.dart';
 import '../widgets/rest_timer.dart';
-import '../widgets/history_day_header.dart';
+import '../../widgets/common/section_header.dart';
 import 'history_filter_and_edit.dart';
 import 'muscle_map_widget_shim.dart';
 
@@ -25,31 +33,49 @@ class HistoryTab extends StatefulWidget {
   State<HistoryTab> createState() => _HistoryTabState();
 }
 
-class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _HistoryTabState extends State<HistoryTab> {
   final WorkoutService _workoutService = WorkoutService();
   final PrService _prService = PrService();
+  final BodyRecordService _bodyRecordService = BodyRecordService();
+  final ProfileService _profileService = ProfileService();
   late Future<List<Workout>> _workoutsFuture;
 
   DateTime _selectedDate = DateTime.now();
+  List<BodyRecord> _bodyRecords = const [];
+  UserProfile? _userProfile;
 
   // A 담당 추가: 검색/필터/메모 전용 토글 상태
   String _searchQuery = '';
   MuscleGroup? _bodyFilter;
   bool _memoOnly = false;
+  bool _showFilters = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _workoutsFuture = _workoutService.fetchWorkouts();
+    _bodyRecordService.addListener(_loadBodyRecords);
+    _profileService.addListener(_loadProfile);
+    _loadBodyRecords();
+    _loadProfile();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _bodyRecordService.removeListener(_loadBodyRecords);
+    _profileService.removeListener(_loadProfile);
     _workoutService.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBodyRecords() async {
+    final list = await _bodyRecordService.loadAll();
+    if (mounted) setState(() => _bodyRecords = list);
+  }
+
+  Future<void> _loadProfile() async {
+    final p = await _profileService.load();
+    if (mounted) setState(() => _userProfile = p);
   }
 
   Future<void> _refresh() async {
@@ -230,192 +256,315 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '운동 & 신체 기록',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            tooltip: '종목별 성장 그래프',
-            onPressed: _openGrowthScreen,
-            icon: const Icon(Icons.show_chart_rounded),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: scheme.primary,
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: scheme.primary,
-          unselectedLabelColor: Colors.white54,
-          tabs: const [
-            Tab(text: '🏋️ 날짜별 운동 기록'),
-            Tab(text: '⚖️ 신체 변화'),
-          ],
-        ),
+  void _openDayEditSheet(List<Workout> workoutsOfDay) {
+    if (workoutsOfDay.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: CoachFitColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(CoachFitRadius.large)),
       ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton.extended(
-              onPressed: _openAddWorkoutSheet,
-              icon: const Icon(Icons.add),
-              label: const Text('세트 기록'),
-            )
-          : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // 탭 1: 날짜별 운동 기록
-          _buildWorkoutsTab(scheme),
-
-          // 탭 2: 신체 변화 추이
-          _buildBodyTab(scheme),
-        ],
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(CoachFitSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '운동 기록 관리',
+                    style: TextStyle(
+                      color: CoachFitColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: CoachFitColors.textMuted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: CoachFitSpacing.md),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: workoutsOfDay.length,
+                  separatorBuilder: (_, __) => const Divider(color: CoachFitColors.divider, height: 1),
+                  itemBuilder: (ctx, i) {
+                    final w = workoutsOfDay[i];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        w.exerciseName,
+                        style: const TextStyle(
+                          color: CoachFitColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${w.weight > 0 ? '${w.weight.toInt()}kg · ' : ''}${w.sets}세트 × ${w.reps}회',
+                        style: const TextStyle(color: CoachFitColors.textSecondary, fontSize: 13),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_rounded, color: CoachFitColors.textMuted, size: 20),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _openEditSheet(w);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _confirmDelete(w);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildWorkoutsTab(ColorScheme scheme) {
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: FutureBuilder<List<Workout>>(
-        future: _workoutsFuture,
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.wifi_off, size: 48, color: Colors.white24),
-                    const SizedBox(height: 12),
-                    Text(
-                      '기록을 불러오지 못했습니다.\n${snap.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white60),
-                    ),
-                    const SizedBox(height: 14),
-                    ElevatedButton(onPressed: _refresh, child: const Text('다시 시도')),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final allWorkouts = snap.data ?? [];
-          final selectedDay = DateTime(
-              _selectedDate.year, _selectedDate.month, _selectedDate.day);
-          final workoutsOfDay = allWorkouts.where((w) {
-            final d = DateTime(
-                w.workoutDate.year, w.workoutDate.month, w.workoutDate.day);
-            return d == selectedDay;
-          }).toList();
-
-          // 전체 목록에 대한 검색/필터/메모 적용 (A 담당 G·I 기능)
-          final filteredList = _applyFilters(allWorkouts);
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-            children: [
-              // 1. 주간 캘린더 스트립 + 네비게이션 (A 담당: 과거 주간 조회)
-              _WeekNavRow(
-                selectedDate: _selectedDate,
-                onPrevWeek: () => setState(() =>
-                    _selectedDate = _selectedDate.subtract(const Duration(days: 7))),
-                onNextWeek: () {
-                  final now = DateTime.now();
-                  final todayEnd = DateTime(now.year, now.month, now.day);
-                  final target =
-                      _selectedDate.add(const Duration(days: 7));
-                  if (!target.isAfter(todayEnd)) {
-                    setState(() => _selectedDate = target);
-                  }
-                },
-                onPickDate: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime(2024, 1, 1),
-                    lastDate: DateTime.now(),
-                    builder: (ctx, child) => Theme(
-                      data: Theme.of(ctx).copyWith(
-                        colorScheme: const ColorScheme.dark(
-                          primary: Color(0xFF00E5A0),
-                          onPrimary: Colors.black,
-                          surface: Color(0xFF171B22),
-                          onSurface: Colors.white,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CoachFitColors.background,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: CoachFitColors.orange,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CoachFitRadius.medium),
+        ),
+        elevation: 6,
+        onPressed: _openAddWorkoutSheet,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: CoachFitColors.orange,
+          backgroundColor: CoachFitColors.surface,
+          onRefresh: _refresh,
+          child: FutureBuilder<List<Workout>>(
+            future: _workoutsFuture,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: CoachFitColors.orange),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.wifi_off, size: 48, color: CoachFitColors.textMuted),
+                        const SizedBox(height: 12),
+                        Text(
+                          '기록을 불러오지 못했습니다.\n${snap.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: CoachFitColors.textSecondary),
                         ),
-                      ),
-                      child: child!,
-                    ),
-                  );
-                  if (picked != null) {
-                    setState(() => _selectedDate = picked);
-                  }
-                },
-                onJumpToToday: () =>
-                    setState(() => _selectedDate = DateTime.now()),
-              ),
-              const SizedBox(height: 8),
-              _WeeklyCalendarStrip(
-                selectedDate: _selectedDate,
-                workouts: allWorkouts,
-                onSelectDate: (d) => setState(() => _selectedDate = d),
-              ),
-              const SizedBox(height: 14),
-
-              // 2. 선택한 날짜 요약 카드 (A 담당: 세션 복사 / 빈 날짜 복원 포함)
-              HistoryDayHeader(
-                selectedDate: _selectedDate,
-                workoutsOfDay: workoutsOfDay,
-                allWorkouts: allWorkouts,
-                onCopyToToday: _copySessionToToday,
-              ),
-              const SizedBox(height: 16),
-
-              // 3. 검색 + 부위 필터 + 메모 토글 (A 담당 G·I)
-              HistoryFilterBar(
-                query: _searchQuery,
-                bodyFilter: _bodyFilter,
-                memoOnly: _memoOnly,
-                onQueryChanged: (v) => setState(() => _searchQuery = v),
-                onBodyFilterChanged: (v) =>
-                    setState(() => _bodyFilter = v),
-                onMemoOnlyToggle: () =>
-                    setState(() => _memoOnly = !_memoOnly),
-              ),
-              const SizedBox(height: 12),
-
-              // 4. 필터 결과 또는 선택 날짜 운동 리스트
-              if (filteredList.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Text(
-                      '조건에 맞는 운동 기록이 없습니다.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, height: 1.4),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: _refresh,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: CoachFitColors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('다시 시도'),
+                        ),
+                      ],
                     ),
                   ),
-                )
-              else
-                ...filteredList.map((w) => _WorkoutItemCard(
-                      key: ValueKey('card_${w.id}_${w.exerciseName}'),
-                      workout: w,
-                      onDelete: () => _confirmDelete(w),
-                      onEdit: () => _openEditSheet(w),
-                    )),
-            ],
-          );
-        },
+                );
+              }
+
+              final allWorkouts = snap.data ?? [];
+              final selectedDay = DateTime(
+                _selectedDate.year,
+                _selectedDate.month,
+                _selectedDate.day,
+              );
+              final workoutsOfDay = allWorkouts.where((w) {
+                final d = DateTime(
+                  w.workoutDate.year,
+                  w.workoutDate.month,
+                  w.workoutDate.day,
+                );
+                return d == selectedDay;
+              }).toList();
+
+              // 전체 완료한 고유 운동 날짜 카운트
+              final uniqueDaysCount = allWorkouts
+                  .map((w) => DateTime(w.workoutDate.year, w.workoutDate.month, w.workoutDate.day))
+                  .toSet()
+                  .length;
+
+              final titleText = uniqueDaysCount > 0
+                  ? '꾸준히 쌓인 $uniqueDaysCount번째 운동이에요.'
+                  : '첫 번째 운동을 기록해 보세요.';
+
+              final filteredList = _applyFilters(allWorkouts);
+              final completedDateKeys = allWorkouts
+                  .map((w) => DateFormat('yyyy-MM-dd').format(w.workoutDate))
+                  .toSet();
+
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CoachFitSpacing.lg,
+                  vertical: CoachFitSpacing.md,
+                ),
+                children: [
+                  // 1. WORKOUT LOG 헤더
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'WORKOUT LOG',
+                              style: TextStyle(
+                                color: CoachFitColors.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: CoachFitSpacing.xs),
+                            Text(
+                              titleText,
+                              style: const TextStyle(
+                                color: CoachFitColors.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: '기록 검색 및 필터',
+                            onPressed: () => setState(() => _showFilters = !_showFilters),
+                            icon: Icon(
+                              _showFilters ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+                              color: _showFilters ? CoachFitColors.orange : CoachFitColors.textSecondary,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '종목별 성장 그래프',
+                            onPressed: _openGrowthScreen,
+                            icon: const Icon(
+                              Icons.show_chart_rounded,
+                              color: CoachFitColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 2. 검색 및 필터 바 (토글 가능)
+                  if (_showFilters) ...[
+                    HistoryFilterBar(
+                      query: _searchQuery,
+                      bodyFilter: _bodyFilter,
+                      memoOnly: _memoOnly,
+                      onQueryChanged: (v) => setState(() => _searchQuery = v),
+                      onBodyFilterChanged: (v) => setState(() => _bodyFilter = v),
+                      onMemoOnlyToggle: () => setState(() => _memoOnly = !_memoOnly),
+                    ),
+                    const SizedBox(height: CoachFitSpacing.md),
+                  ],
+
+                  // 3. 주간 캘린더 날짜 스트립 (나의 기록.png)
+                  WorkoutCalendarStrip(
+                    selectedDate: _selectedDate,
+                    completedDateKeys: completedDateKeys,
+                    onDateSelected: (d) => setState(() => _selectedDate = d),
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 4. 운동 요약 스트립 (총 볼륨, 운동 시간, 소모 열량)
+                  WorkoutSummaryStrip.fromWorkouts(
+                    workouts: workoutsOfDay,
+                  ),
+                  const SizedBox(height: CoachFitSpacing.xl),
+
+                  // 5. 검색 중일 경우 필터된 리스트 표시, 아닐 경우 최근 운동 카드 표시
+                  if (_showFilters && (_searchQuery.isNotEmpty || _bodyFilter != null || _memoOnly)) ...[
+                    CoachFitSectionHeader(
+                      title: '검색된 기록',
+                      subtitle: '${filteredList.length}개 항목',
+                    ),
+                    const SizedBox(height: CoachFitSpacing.md),
+                    if (filteredList.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: Text(
+                            '조건에 일치하는 운동 기록이 없습니다.',
+                            style: TextStyle(color: CoachFitColors.textMuted),
+                          ),
+                        ),
+                      )
+                    else
+                      ...filteredList.map((w) => _WorkoutItemCard(
+                            key: ValueKey('card_${w.id}_${w.exerciseName}'),
+                            workout: w,
+                            onDelete: () => _confirmDelete(w),
+                            onEdit: () => _openEditSheet(w),
+                          )),
+                  ] else ...[
+                    // 일반 모드: 선택된 날짜의 최근 운동 카드
+                    RecentWorkoutCard(
+                      workouts: workoutsOfDay,
+                      dateSubtitle: DateFormat('M월 d일 (E)', 'ko_KR').format(_selectedDate),
+                      onEdit: () => _openDayEditSheet(workoutsOfDay),
+                      onRestartRoutine: () => _copySessionToToday(workoutsOfDay),
+                      onDeleteWorkout: _confirmDelete,
+                    ),
+                  ],
+                  const SizedBox(height: CoachFitSpacing.xl),
+
+                  // 6. 게슈탈트 심리학 기반 신체 변화 카드 (체중, 골격근량, 체지방률, 목표치)
+                  GestaltBodyMetricsCard(
+                    latestRecord: _bodyRecords.isNotEmpty ? _bodyRecords.first : null,
+                    profile: _userProfile,
+                    onAddRecord: () async {
+                      await InputBodyRecordSheet.show(context, service: _bodyRecordService);
+                      _loadBodyRecords();
+                    },
+                  ),
+                  const SizedBox(height: 96),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -437,110 +586,6 @@ class _HistoryTabState extends State<HistoryTab> with SingleTickerProviderStateM
       list = list.where((w) => (w.memo ?? '').trim().isNotEmpty);
     }
     return list.toList();
-  }
-
-  Widget _buildBodyTab(ColorScheme scheme) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      children: const [
-        // A 담당: dummy 데이터 교체 → 실제 로컬 저장 입력 섹션
-        BodyMeasurementSection(),
-      ],
-    );
-  }
-
-}
-
-class _WeeklyCalendarStrip extends StatelessWidget {
-  final DateTime selectedDate;
-  final List<Workout> workouts;
-  final ValueChanged<DateTime> onSelectDate;
-
-  const _WeeklyCalendarStrip({
-    required this.selectedDate,
-    required this.workouts,
-    required this.onSelectDate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // selectedDate 가 포함된 주 (일요일 시작)를 보여준다.
-    // A 담당 수정: 과거 주간 조회를 위해 "최근 7일" 하드코딩 제거.
-    final weekStart =
-        selectedDate.subtract(Duration(days: selectedDate.weekday % 7));
-    final days =
-        List.generate(7, (i) => weekStart.add(Duration(days: i)));
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: days.map((d) {
-          final isSelected = d.year == selectedDate.year &&
-              d.month == selectedDate.month &&
-              d.day == selectedDate.day;
-
-          final hasWorkout = workouts.any((w) =>
-              w.workoutDate.year == d.year &&
-              w.workoutDate.month == d.month &&
-              w.workoutDate.day == d.day);
-
-          final dayName = DateFormat('E', 'ko_KR').format(d);
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => onSelectDate(d),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? scheme.primary.withValues(alpha: 0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? scheme.primary : Colors.transparent,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    dayName,
-                    style: TextStyle(
-                      color: isSelected ? scheme.primary : Colors.white54,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${d.day}',
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.white70,
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: hasWorkout ? const Color(0xFF00E5A0) : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
   }
 }
 
@@ -1740,74 +1785,6 @@ class _CopyChip extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-
-class _WeekNavRow extends StatelessWidget {
-  final DateTime selectedDate;
-  final VoidCallback onPrevWeek;
-  final VoidCallback onNextWeek;
-  final VoidCallback onPickDate;
-  final VoidCallback onJumpToToday;
-
-  const _WeekNavRow({
-    required this.selectedDate,
-    required this.onPrevWeek,
-    required this.onNextWeek,
-    required this.onPickDate,
-    required this.onJumpToToday,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final currentWeekStart = now.subtract(Duration(days: now.weekday % 7));
-    final selectedWeekStart = selectedDate.subtract(Duration(days: selectedDate.weekday % 7));
-    final canGoNext = selectedWeekStart.isBefore(DateTime(currentWeekStart.year, currentWeekStart.month, currentWeekStart.day));
-    final isCurrentWeek = selectedWeekStart.year == currentWeekStart.year && selectedWeekStart.month == currentWeekStart.month && selectedWeekStart.day == currentWeekStart.day;
-    final weekEnd = selectedWeekStart.add(const Duration(days: 6));
-    final rangeLabel = selectedWeekStart.month == weekEnd.month
-        ? '${selectedWeekStart.year}년 ${selectedWeekStart.month}월 ${selectedWeekStart.day} ~ ${weekEnd.day}일'
-        : '${selectedWeekStart.year}년 ${selectedWeekStart.month}.${selectedWeekStart.day} ~ ${weekEnd.month}.${weekEnd.day}';
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white70),
-          onPressed: onPrevWeek,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          visualDensity: VisualDensity.compact,
-        ),
-        Expanded(
-          child: InkWell(
-            onTap: onPickDate,
-            borderRadius: BorderRadius.circular(8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.event_rounded, color: Colors.white54, size: 14),
-                const SizedBox(width: 6),
-                Text(rangeLabel, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-        ),
-        IconButton(
-          icon: Icon(Icons.chevron_right, color: canGoNext ? Colors.white70 : Colors.white24),
-          onPressed: canGoNext ? onNextWeek : null,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          visualDensity: VisualDensity.compact,
-        ),
-        if (!isCurrentWeek)
-          TextButton(
-            onPressed: onJumpToToday,
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF00E5A0), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), visualDensity: VisualDensity.compact),
-            child: const Text('오늘', style: TextStyle(fontSize: 11)),
-          ),
-      ],
     );
   }
 }
