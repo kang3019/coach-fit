@@ -49,20 +49,7 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
   }
 
   Future<void> _openInput() async {
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF171B22),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: _InputSheet(service: _service),
-      ),
-    );
+    await InputBodyRecordSheet.show(context, service: _service);
   }
 
   @override
@@ -399,15 +386,32 @@ class _WeightChart extends StatelessWidget {
   }
 }
 
-class _InputSheet extends StatefulWidget {
+class InputBodyRecordSheet extends StatefulWidget {
   final BodyRecordService service;
-  const _InputSheet({required this.service});
+  const InputBodyRecordSheet({super.key, required this.service});
+
+  static Future<void> show(BuildContext context, {required BodyRecordService service}) {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF171B22),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: InputBodyRecordSheet(service: service),
+      ),
+    );
+  }
 
   @override
-  State<_InputSheet> createState() => _InputSheetState();
+  State<InputBodyRecordSheet> createState() => _InputBodyRecordSheetState();
 }
 
-class _InputSheetState extends State<_InputSheet> {
+class _InputBodyRecordSheetState extends State<InputBodyRecordSheet> {
   final _formKey = GlobalKey<FormState>();
   final _weightCtrl = TextEditingController();
   final _muscleCtrl = TextEditingController();
