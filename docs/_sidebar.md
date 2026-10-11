@@ -13,4 +13,5 @@
 
 * **인프라 & AI (AWS)**
   * [☁️ AWS 풀스택 셋업 & 배포 가이드](aws_setup_guide.md)
+  * [🔐 CD 자동 배포 · Nginx · HTTPS · 고정 IP](deployment.md)
   * [🎤 AWS Bedrock 도입 배경 & Q&A 대비](aws-bedrock-ppt-qa.md)
