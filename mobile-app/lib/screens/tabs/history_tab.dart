@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../data/exercise_guide_data.dart';
 import '../../models/exercise_master.dart';
@@ -8,6 +9,8 @@ import '../../models/workout.dart';
 import '../../services/body_record_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/pr_service.dart';
+import '../../services/start_weight_service.dart';
+import '../../services/workout_events.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../../widgets/history/gestalt_body_metrics_card.dart';
@@ -19,6 +22,7 @@ import '../widgets/body_measurement_section.dart';
 import '../widgets/exercise_guide_sheet.dart';
 import '../widgets/exercise_picker_modal.dart';
 import '../widgets/rest_timer.dart';
+import '../widgets/workout_complete_sheet.dart';
 import '../../widgets/common/section_header.dart';
 import 'history_filter_and_edit.dart';
 import 'muscle_map_widget_shim.dart';
@@ -56,6 +60,7 @@ class _HistoryTabState extends State<HistoryTab> {
     _workoutsFuture = _workoutService.fetchWorkouts();
     _bodyRecordService.addListener(_loadBodyRecords);
     _profileService.addListener(_loadProfile);
+    WorkoutEvents.instance.addListener(_onWorkoutsChanged);
     _loadBodyRecords();
     _loadProfile();
   }
@@ -64,6 +69,7 @@ class _HistoryTabState extends State<HistoryTab> {
   void dispose() {
     _bodyRecordService.removeListener(_loadBodyRecords);
     _profileService.removeListener(_loadProfile);
+    WorkoutEvents.instance.removeListener(_onWorkoutsChanged);
     _workoutService.dispose();
     super.dispose();
   }
@@ -78,6 +84,35 @@ class _HistoryTabState extends State<HistoryTab> {
     if (mounted) setState(() => _userProfile = p);
   }
 
+  /// 다른 탭/화면에서 세트가 저장·삭제되면 즉시 다시 불러오고, 필요하면 해당 날짜로 이동.
+  void _onWorkoutsChanged() {
+    if (!mounted) return;
+    final focus = WorkoutEvents.instance.focusDate;
+    setState(() {
+      if (focus != null) _selectedDate = focus;
+      _workoutsFuture = _workoutService.fetchWorkouts();
+    });
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Future<void> _completeToday(List<Workout> all) async {
+    final today = DateTime.now();
+    final todays = all.where((w) => _isSameDay(w.workoutDate, today)).toList();
+    if (todays.isEmpty) return;
+    final earlier = all.where((w) => !_isSameDay(w.workoutDate, today)).toList();
+    final start = WorkoutEvents.instance.sessionStart;
+    HapticFeedback.mediumImpact();
+    await WorkoutCompleteSheet.show(
+      context,
+      todayWorkouts: todays,
+      earlierHistory: earlier,
+      elapsed: start == null ? null : today.difference(start),
+    );
+    WorkoutEvents.instance.endSession();
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _workoutsFuture = _workoutService.fetchWorkouts();
@@ -87,10 +122,13 @@ class _HistoryTabState extends State<HistoryTab> {
 
   Future<void> _openAddWorkoutSheet() async {
     // 최근 운동 기록 상위 5건을 바텀시트에 전달해 "원터치 복사" 칩으로 쓰게 한다.
+    WorkoutEvents.instance.ensureSessionStarted();
     List<Workout> recent = const [];
+    List<Workout> allHistory = const [];
     try {
       final loaded = await _workoutsFuture;
       recent = loaded.take(5).toList();
+      allHistory = loaded;
     } catch (_) {
       // 데이터 로드 실패 시 그냥 빈 리스트 — 복사 칩만 안 보이게 됨
     }
@@ -107,6 +145,7 @@ class _HistoryTabState extends State<HistoryTab> {
         service: _workoutService,
         initialDate: _selectedDate,
         recentWorkouts: recent,
+        history: allHistory,
       ),
     );
 
@@ -548,6 +587,28 @@ class _HistoryTabState extends State<HistoryTab> {
                       onDeleteWorkout: _confirmDelete,
                     ),
                   ],
+                  if (_isSameDay(selectedDay, DateTime.now()) &&
+                      workoutsOfDay.isNotEmpty) ...[
+                    const SizedBox(height: CoachFitSpacing.lg),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: () => _completeToday(allWorkouts),
+                        icon: const Text('🎉', style: TextStyle(fontSize: 18)),
+                        label: const Text(
+                          '오늘 운동 완료',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: CoachFitColors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(CoachFitRadius.medium),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: CoachFitSpacing.xl),
 
                   // 6. 게슈탈트 심리학 기반 신체 변화 카드 (체중, 골격근량, 체지방률, 목표치)
@@ -749,7 +810,10 @@ class _SetRowItem {
   final TextEditingController weightCtrl;
   final TextEditingController repsCtrl;
   bool isCompleted = false;
+  bool edited = false;
   String? prevRecord;
+  double? ghostWeight;
+  int? ghostReps;
 
   _SetRowItem({
     required this.setNumber,
@@ -761,6 +825,9 @@ class _SetRowItem {
         ),
         repsCtrl = TextEditingController(text: reps.toString());
 
+  double? get weightValue => double.tryParse(weightCtrl.text) ?? ghostWeight;
+  int? get repsValue => int.tryParse(repsCtrl.text) ?? ghostReps;
+
   void dispose() {
     weightCtrl.dispose();
     repsCtrl.dispose();
@@ -771,11 +838,13 @@ class _AddWorkoutModal extends StatefulWidget {
   final WorkoutService service;
   final DateTime initialDate;
   final List<Workout> recentWorkouts;
+  final List<Workout> history;
 
   const _AddWorkoutModal({
     required this.service,
     required this.initialDate,
     this.recentWorkouts = const [],
+    this.history = const [],
   });
 
   @override
@@ -791,6 +860,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
   final _memoCtrl = TextEditingController();
   ExerciseMaster? _selectedMaster;
   bool _saving = false;
+  String _ghostName = '';
 
   // 플릭 스타일 세트 테이블 상태
   bool _isTableMode = true; // 기본값: 플릭 스타일 세트별 테이블
@@ -856,7 +926,34 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
         _selectedMaster = picked;
         _nameCtrl.text = picked.name;
       });
+      _applyGhost(picked.name);
     }
+  }
+
+  String _fmtKg(double w) =>
+      w % 1 == 0 ? w.toInt().toString() : w.toStringAsFixed(1);
+
+  /// 종목의 지난 기록을 세트 입력칸의 고스트 플레이스홀더로 보여준다.
+  void _applyGhost(String name) {
+    final key = name.trim();
+    if (key == _ghostName) return;
+    _ghostName = key;
+    final last = StartWeightService.latestRecord(widget.history, key);
+    setState(() {
+      for (final row in _setRows) {
+        row.ghostWeight = last?.weight;
+        row.ghostReps = last?.reps;
+        row.prevRecord = last == null ? null : '${_fmtKg(last.weight)}kg×${last.reps}회';
+        if (row.edited || row.isCompleted) continue;
+        if (last != null) {
+          row.weightCtrl.clear();
+          row.repsCtrl.clear();
+        } else if (row.weightCtrl.text.isEmpty && row.repsCtrl.text.isEmpty) {
+          row.weightCtrl.text = '40';
+          row.repsCtrl.text = '10';
+        }
+      }
+    });
   }
 
   void _addSetRow() {
@@ -866,16 +963,28 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
       int lastReps = 10;
       String? lastPrev;
       if (_setRows.isNotEmpty) {
-        lastWeight = double.tryParse(_setRows.last.weightCtrl.text) ?? 40.0;
-        lastReps = int.tryParse(_setRows.last.repsCtrl.text) ?? 10;
+        lastWeight = _setRows.last.weightValue ?? 40.0;
+        lastReps = _setRows.last.repsValue ?? 10;
         lastPrev = _setRows.last.prevRecord;
       }
-      _setRows.add(_SetRowItem(
+      final blank = _setRows.isNotEmpty &&
+          _setRows.last.weightCtrl.text.isEmpty &&
+          _setRows.last.repsCtrl.text.isEmpty;
+      final newRow = _SetRowItem(
         setNumber: nextNum,
         weight: lastWeight,
         reps: lastReps,
         prevRecord: lastPrev,
-      ));
+      );
+      if (blank) {
+        newRow.weightCtrl.clear();
+        newRow.repsCtrl.clear();
+      }
+      if (_setRows.isNotEmpty) {
+        newRow.ghostWeight = _setRows.last.ghostWeight;
+        newRow.ghostReps = _setRows.last.ghostReps;
+      }
+      _setRows.add(newRow);
       _setsCtrl.text = _setRows.length.toString();
     });
   }
@@ -898,6 +1007,15 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
       item.isCompleted = !item.isCompleted;
 
       if (item.isCompleted) {
+        HapticFeedback.mediumImpact();
+        final ghostWeight = item.ghostWeight;
+        final ghostReps = item.ghostReps;
+        if (item.weightCtrl.text.trim().isEmpty && ghostWeight != null) {
+          item.weightCtrl.text = _fmtKg(ghostWeight);
+        }
+        if (item.repsCtrl.text.trim().isEmpty && ghostReps != null) {
+          item.repsCtrl.text = ghostReps.toString();
+        }
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -934,8 +1052,8 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
   double get _totalTableVolume {
     double total = 0;
     for (final row in _setRows) {
-      final w = double.tryParse(row.weightCtrl.text) ?? 0.0;
-      final r = int.tryParse(row.repsCtrl.text) ?? 0;
+      final w = row.weightValue ?? 0.0;
+      final r = row.repsValue ?? 0;
       total += w * r;
     }
     return total;
@@ -984,16 +1102,16 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
         // 플릭 스타일 세트 테이블 기록
         final setDetailStrings = <String>[];
         for (final row in _setRows) {
-          final w = double.tryParse(row.weightCtrl.text) ?? 40.0;
-          final r = int.tryParse(row.repsCtrl.text) ?? 10;
+          final w = row.weightValue ?? 40.0;
+          final r = row.repsValue ?? 10;
           setDetailStrings.add('${row.setNumber}세트: ${w % 1 == 0 ? w.toInt() : w}kg×$r회');
         }
 
-        final firstW = double.tryParse(_setRows.first.weightCtrl.text) ?? 40.0;
-        final firstR = int.tryParse(_setRows.first.repsCtrl.text) ?? 10;
+        final firstW = _setRows.first.weightValue ?? 40.0;
+        final firstR = _setRows.first.repsValue ?? 10;
         final allSame = _setRows.every((r) {
-          final w = double.tryParse(r.weightCtrl.text) ?? 40.0;
-          final reps = int.tryParse(r.repsCtrl.text) ?? 10;
+          final w = r.weightValue ?? 40.0;
+          final reps = r.repsValue ?? 10;
           return w == firstW && reps == firstR;
         });
 
@@ -1016,8 +1134,8 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
           // 점진적 과부하 등으로 세트별 무게/횟수가 다른 경우:
           // 주간 볼륨 및 통계가 100% 오차 없이 정확히 계산되도록 각 세트를 저장
           for (final row in _setRows) {
-            final w = double.tryParse(row.weightCtrl.text) ?? 40.0;
-            final r = int.tryParse(row.repsCtrl.text) ?? 10;
+            final w = row.weightValue ?? 40.0;
+            final r = row.repsValue ?? 10;
             final workout = Workout(
               userId: 'user_01',
               exerciseName: exerciseName,
@@ -1278,6 +1396,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
               TextFormField(
                 controller: _nameCtrl,
                 style: const TextStyle(color: Colors.white),
+                onChanged: _applyGhost,
                 decoration: InputDecoration(
                   labelText: '운동 종목명 (직접 입력/수정)',
                   hintText: '종목명을 입력하거나 위 사전에서 선택하세요',
@@ -1632,9 +1751,11 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 controller: row.weightCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() => row.edited = true),
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
+                  hintText: row.ghostWeight == null ? null : '지난번 ${_fmtKg(row.ghostWeight!)}kg',
+                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w500),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   filled: true,
                   fillColor: const Color(0xFF1C222D),
@@ -1656,9 +1777,11 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 controller: row.repsCtrl,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() => row.edited = true),
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
+                  hintText: row.ghostReps == null ? null : '지난번 ${row.ghostReps}회',
+                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w500),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   filled: true,
                   fillColor: const Color(0xFF1C222D),
