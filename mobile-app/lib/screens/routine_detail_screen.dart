@@ -3,6 +3,10 @@ import '../data/exercise_guide_data.dart';
 import '../models/coaching_result.dart';
 import '../models/exercise_master.dart';
 import '../models/workout.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart';
+import '../services/start_weight_service.dart';
+import '../services/workout_events.dart';
 import '../services/workout_service.dart';
 import 'widgets/exercise_picker_modal.dart';
 import 'widgets/muscle_map_widget.dart';
@@ -150,18 +154,34 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
 
     try {
       final now = DateTime.now();
+      final userId = await AuthService.instance.getCurrentUserId();
+      final profile = await ProfileService().load();
+      var history = const <Workout>[];
+      try {
+        history = await _workoutService.fetchWorkouts(userId: userId);
+      } catch (_) {
+        // 이력 조회 실패 시 체중 기반 추정치로 시작
+      }
+
+      WorkoutEvents.instance.ensureSessionStarted();
       for (final item in _exercises) {
+        final weight = StartWeightService.recentWeight(history, item.name) ??
+            StartWeightService.fromBodySpec(
+              exerciseName: item.name,
+              profile: profile,
+            );
         final w = Workout(
-          userId: 'user_01',
+          userId: userId,
           exerciseName: item.name,
           sets: item.sets,
           reps: item.reps,
-          weight: 40.0,
+          weight: weight,
           workoutDate: now,
           memo: '루틴 [${widget.title}] - ${item.targetMuscle}',
         );
         await _workoutService.createWorkout(w);
       }
+      WorkoutEvents.instance.notifyChanged(focusDate: now);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

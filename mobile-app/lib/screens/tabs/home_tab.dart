@@ -4,6 +4,7 @@ import '../../models/workout.dart';
 import '../../services/coaching_service.dart';
 import '../../services/goal_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/workout_events.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../../widgets/home/condition_selector.dart';
@@ -50,11 +51,13 @@ class _HomeTabState extends State<HomeTab> {
     _summaryFuture = _loadHomeSummary();
     // 메뉴 탭에서 운동 목표를 바꾸면 자동으로 AI 코칭 재호출
     _goalService.addListener(_onGoalChanged);
+    WorkoutEvents.instance.addListener(_onWorkoutsChanged);
   }
 
   @override
   void dispose() {
     _goalService.removeListener(_onGoalChanged);
+    WorkoutEvents.instance.removeListener(_onWorkoutsChanged);
     _coachingService.dispose();
     _workoutService.dispose();
     super.dispose();
@@ -66,6 +69,14 @@ class _HomeTabState extends State<HomeTab> {
     if (!mounted) return;
     setState(() {
       _coachingFuture = _coachingService.requestCoaching();
+    });
+  }
+
+  /// 세트 저장/삭제 시 홈 요약(3D 근육, 주간 볼륨)만 즉시 갱신.
+  void _onWorkoutsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _summaryFuture = _loadHomeSummary();
     });
   }
 
