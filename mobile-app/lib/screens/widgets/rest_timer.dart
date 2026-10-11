@@ -98,6 +98,14 @@ class _RestTimerSheetState extends State<RestTimerSheet> {
   void _notifyDone() {
     // 모바일: 진동 + 시스템 alert 사운드
     HapticFeedback.heavyImpact();
+    Future<void>.delayed(
+      const Duration(milliseconds: 180),
+      HapticFeedback.heavyImpact,
+    );
+    Future<void>.delayed(
+      const Duration(milliseconds: 360),
+      HapticFeedback.heavyImpact,
+    );
     SystemSound.play(SystemSoundType.alert);
   }
 
