@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "python-ai-backend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy backend to EC2
+    if: ${{ vars.ENABLE_EC2_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy and verify backend on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            cd /home/ubuntu/coach-fit/python-ai-backend
+            bash scripts/deploy.sh
+            for i in 1 2 3 4 5; do
+              if curl -fsS http://127.0.0.1:8000/docs -o /dev/null; then
+                echo "Backend is healthy"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "Backend health check failed"
+            exit 1
