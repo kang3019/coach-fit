@@ -6,6 +6,7 @@ import '../models/coaching_result.dart';
 import '../models/exercise_master.dart';
 import '../models/workout.dart';
 import 'auth_service.dart';
+import 'workout_events.dart';
 
 /// FastAPI 백엔드(8000) 운동 기록 CRUD 및 운동 마스터 REST 호출.
 class WorkoutService {
@@ -80,6 +81,7 @@ class WorkoutService {
       throw Exception('운동 기록 등록 실패 (status=${res.statusCode})');
     }
     final decoded = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    WorkoutEvents.instance.notifyChanged();
     return Workout.fromJson(decoded);
   }
 
@@ -110,6 +112,7 @@ class WorkoutService {
     if (res.statusCode != 200 && res.statusCode != 204) {
       throw Exception('운동 기록 삭제 실패 (status=${res.statusCode})');
     }
+    WorkoutEvents.instance.notifyChanged();
   }
 
   /// AI 추천 루틴의 종목들을 오늘 운동 기록으로 일괄 등록
@@ -134,6 +137,7 @@ class WorkoutService {
       final created = await createWorkout(workout);
       results.add(created);
     }
+    WorkoutEvents.instance.notifyChanged(focusDate: targetDate);
     return results;
   }
 
