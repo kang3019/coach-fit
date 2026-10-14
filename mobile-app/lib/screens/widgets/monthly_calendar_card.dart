@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/workout.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
 import 'muscle_map_widget.dart';
 
 /// 월간 운동 캘린더 카드.
@@ -124,7 +125,7 @@ class _MonthlyCalendarCardState extends State<MonthlyCalendarCard> {
   Future<void> _showDayDetail(DateTime day, List<Workout> items) async {
     await showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF171B22),
+      backgroundColor: CoachFitColors.surfaceRaised,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -134,7 +135,7 @@ class _MonthlyCalendarCardState extends State<MonthlyCalendarCard> {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -258,7 +259,7 @@ class _SummaryRow extends StatelessWidget {
             label: '최장 스트릭',
             value: '$longest',
             suffix: '일',
-            color: const Color(0xFFF59E0B),
+            color: CoachFitColors.orange,
           ),
         ),
         const SizedBox(width: 10),
@@ -267,7 +268,7 @@ class _SummaryRow extends StatelessWidget {
             label: '이달 볼륨',
             value: NumberFormat('#,###').format(monthVolume.round()),
             suffix: 'kg',
-            color: const Color(0xFF60A5FA),
+            color: CoachFitColors.orangeBright,
           ),
         ),
       ],
@@ -292,8 +293,9 @@ class _SummaryTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1116),
+        color: CoachFitColors.surfaceSoft,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,7 +592,7 @@ class _DayDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     final dateLabel =
         DateFormat('yyyy년 M월 d일 (E)', 'ko_KR').format(day);
     final totalVolume =
@@ -750,8 +752,9 @@ class _BodyPartDonut extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1116),
+        color: CoachFitColors.surfaceSoft,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Row(
         children: [
@@ -871,17 +874,17 @@ extension _BodyPartExtension on _BodyPart {
   Color get color {
     switch (this) {
       case _BodyPart.chest:
-        return const Color(0xFF00E5A0);
+        return CoachFitColors.orange;
       case _BodyPart.back:
-        return const Color(0xFF60A5FA);
+        return CoachFitColors.orangeBright;
       case _BodyPart.shoulders:
-        return const Color(0xFFF59E0B);
+        return CoachFitColors.orange;
       case _BodyPart.arms:
-        return const Color(0xFFEF4444);
+        return CoachFitColors.mint;
       case _BodyPart.legs:
-        return const Color(0xFFA855F7);
+        return CoachFitColors.orange;
       case _BodyPart.core:
-        return const Color(0xFFEC4899);
+        return CoachFitColors.mint;
     }
   }
 }
@@ -895,8 +898,9 @@ class _ExerciseRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1116),
+        color: CoachFitColors.surfaceSoft,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

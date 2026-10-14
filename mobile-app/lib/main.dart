@@ -46,7 +46,6 @@ class _CoachFitAppState extends State<CoachFitApp> {
 
   @override
   Widget build(BuildContext context) {
-    final seed = _settings.themeAccent.color;
     final scale = _settings.textScale.factor;
     return MaterialApp(
       title: 'CoachFit',
@@ -59,7 +58,7 @@ class _CoachFitAppState extends State<CoachFitApp> {
           child: child,
         );
       },
-      theme: CoachFitTheme.dark(seed),
+      theme: CoachFitTheme.dark(),
       home: AppLaunchScreen(initialLoggedIn: widget.initialLoggedIn),
     );
   }

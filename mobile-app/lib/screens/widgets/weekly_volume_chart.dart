@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../theme/coachfit_theme.dart';
+
 /// 요일별 누적 운동 볼륨(무게×세트×횟수) 막대그래프.
 /// Java `/api/workouts/weekly-stats` 응답의 `weeklyVolumeByDay` 맵을 그대로 받는다.
 ///
@@ -22,7 +24,6 @@ class WeeklyVolumeChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final values = _dayOrder.map((d) => volumeByDay[d] ?? 0.0).toList();
     final maxValue = values.fold<double>(0, (a, b) => a > b ? a : b);
     final total = values.fold<double>(0, (a, b) => a + b);
@@ -32,8 +33,9 @@ class WeeklyVolumeChart extends StatelessWidget {
       decoration: isFlat
           ? null
           : BoxDecoration(
-              color: const Color(0xFF171B22),
-              borderRadius: BorderRadius.circular(16),
+              color: CoachFitColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: CoachFitColors.line),
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +46,7 @@ class WeeklyVolumeChart extends StatelessWidget {
               const Text(
                 '📈 주간 볼륨',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: CoachFitColors.text,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -53,10 +55,10 @@ class WeeklyVolumeChart extends StatelessWidget {
               RichText(
                 text: TextSpan(
                   text: NumberFormat('#,###').format(total.round()),
-                  style: TextStyle(
-                    color: scheme.primary,
+                  style: const TextStyle(
+                    color: CoachFitColors.orange,
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                   children: const [
                     TextSpan(
@@ -83,13 +85,13 @@ class WeeklyVolumeChart extends StatelessWidget {
                       alignment: BarChartAlignment.spaceAround,
                       barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (_) => const Color(0xFF0E1116),
+                          getTooltipColor: (_) => CoachFitColors.surfaceRaised,
                           tooltipRoundedRadius: 8,
                           getTooltipItem: (group, _, rod, __) {
                             return BarTooltipItem(
                               '${_dayLabel[group.x]} · ${NumberFormat('#,###').format(rod.toY.round())}kg',
                               const TextStyle(
-                                color: Colors.white,
+                                color: CoachFitColors.text,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -123,8 +125,8 @@ class WeeklyVolumeChart extends StatelessWidget {
                                   _dayLabel[i],
                                   style: TextStyle(
                                     color: isWeekend
-                                        ? Colors.white38
-                                        : Colors.white70,
+                                        ? CoachFitColors.textMuted
+                                        : CoachFitColors.textSecondary,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -137,19 +139,27 @@ class WeeklyVolumeChart extends StatelessWidget {
                       gridData: const FlGridData(show: false),
                       borderData: FlBorderData(show: false),
                       barGroups: List.generate(7, (i) {
+                        final hasValue = values[i] > 0;
                         return BarChartGroupData(
                           x: i,
                           barRods: [
                             BarChartRodData(
                               toY: values[i],
-                              width: 16,
+                              width: 18,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(6),
                                 topRight: Radius.circular(6),
+                                bottomLeft: Radius.circular(3),
+                                bottomRight: Radius.circular(3),
                               ),
-                              color: values[i] == 0
-                                  ? Colors.white10
-                                  : scheme.primary,
+                              gradient: hasValue
+                                  ? const LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [CoachFitColors.orange, Color(0xFFFF896D)],
+                                    )
+                                  : null,
+                              color: hasValue ? null : const Color(0xFF29303A),
                             ),
                           ],
                         );

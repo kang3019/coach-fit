@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/user_profile.dart';
 import '../../services/body_record_service.dart';
 import '../../services/profile_service.dart';
+import '../../theme/coachfit_theme.dart';
 
 /// 신체 측정 섹션. 더미 데이터 대신 로컬 저장소 사용.
 /// H: 체중/골격근량/체지방률 입력 + 체중 추이 라인 그래프.
@@ -54,7 +55,7 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     final latest = _records.isEmpty ? null : _records.first;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,8 +89,9 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF171B22),
-              borderRadius: BorderRadius.circular(14),
+              color: CoachFitColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: CoachFitColors.line),
             ),
             alignment: Alignment.center,
             child: const Text(
@@ -101,8 +103,9 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF171B22),
-              borderRadius: BorderRadius.circular(14),
+              color: CoachFitColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: CoachFitColors.line),
             ),
             child: Column(
               children: [
@@ -112,19 +115,19 @@ class _BodyMeasurementSectionState extends State<BodyMeasurementSection> {
                       label: '체중',
                       value: _fmt(latest.weightKg),
                       suffix: 'kg',
-                      color: accent,
+                      color: CoachFitColors.mint,
                     ),
                     _LatestTile(
                       label: '골격근량',
                       value: _fmt(latest.muscleKg),
                       suffix: 'kg',
-                      color: const Color(0xFF60A5FA),
+                      color: CoachFitColors.orange,
                     ),
                     _LatestTile(
                       label: '체지방',
                       value: _fmt(latest.bodyFatPercent),
                       suffix: '%',
-                      color: const Color(0xFFF59E0B),
+                      color: CoachFitColors.orangeBright,
                     ),
                   ],
                 ),
@@ -314,7 +317,7 @@ class _WeightChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     // 날짜 오름차순 + weight 있는 것만
     final sorted = records
         .where((r) => r.weightKg != null)
@@ -333,8 +336,9 @@ class _WeightChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
-        borderRadius: BorderRadius.circular(14),
+        color: CoachFitColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,7 +397,7 @@ class InputBodyRecordSheet extends StatefulWidget {
   static Future<void> show(BuildContext context, {required BodyRecordService service}) {
     return showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF171B22),
+      backgroundColor: CoachFitColors.surfaceRaised,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

@@ -243,7 +243,7 @@ class _StatsRow extends StatelessWidget {
             label: '최고',
             value: NumberFormat('#,###').format(max.round()),
             suffix: metric.unit,
-            color: const Color(0xFFF59E0B),
+            color: CoachFitColors.orange,
           ),
         ),
         const SizedBox(width: 10),
@@ -252,7 +252,7 @@ class _StatsRow extends StatelessWidget {
             label: '최저',
             value: NumberFormat('#,###').format(min.round()),
             suffix: metric.unit,
-            color: const Color(0xFF60A5FA),
+            color: CoachFitColors.textSoft,
           ),
         ),
         const SizedBox(width: 10),
@@ -289,8 +289,9 @@ class _StatBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
+        color: CoachFitColors.surfaceSoft,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

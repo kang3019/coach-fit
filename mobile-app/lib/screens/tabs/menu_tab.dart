@@ -101,20 +101,6 @@ class _MenuTabState extends State<MenuTab> {
     if (picked != null) await _reminder.setTime(picked);
   }
 
-  void _openThemeAccentSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF171B22),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _ThemeAccentSheet(
-        current: _settings.themeAccent,
-        onSelect: _settings.setThemeAccent,
-      ),
-    );
-  }
-
   void _openTextScaleSheet() {
     showModalBottomSheet(
       context: context,
@@ -185,7 +171,6 @@ class _MenuTabState extends State<MenuTab> {
     if (!mounted) return;
     final jsonPreview = {
       'weightUnit': _settings.weightUnit.name,
-      'themeAccent': _settings.themeAccent.name,
       'textScale': _settings.textScale.name,
       'reminderTime': _reminder.display,
       'favorites': favorites,
@@ -223,7 +208,6 @@ class _MenuTabState extends State<MenuTab> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     final latestJournal = _journal.latestOf(DateTime.now());
     return Scaffold(
       body: SafeArea(
@@ -262,14 +246,14 @@ class _MenuTabState extends State<MenuTab> {
           const MenuMonthlySummaryCard(),
           const SizedBox(height: 20),
 
-          // 🏆 성취/탐색 섹션
+          // 🏆 성취 & 탐색 섹션
           _sectionLabel('🏆 성취 & 탐색'),
           Card(
             child: Column(
               children: [
                 _navTile(
                   icon: Icons.emoji_events_outlined,
-                  color: const Color(0xFFF59E0B),
+                  color: CoachFitColors.orange,
                   title: '업적 & 뱃지',
                   subtitle: '13종 뱃지 수집 (스트릭/볼륨/PR)',
                   onTap: () => _push(const AchievementsScreen()),
@@ -277,7 +261,7 @@ class _MenuTabState extends State<MenuTab> {
                 const _MenuDivider(),
                 _navTile(
                   icon: Icons.star_outline_rounded,
-                  color: accent,
+                  color: CoachFitColors.mint,
                   title: '즐겨찾기 운동',
                   subtitle: '${_favorites.count}개 종목 저장됨',
                   onTap: () => _push(const FavoritesScreen()),
@@ -285,7 +269,7 @@ class _MenuTabState extends State<MenuTab> {
                 const _MenuDivider(),
                 _navTile(
                   icon: Icons.auto_stories_outlined,
-                  color: const Color(0xFF60A5FA),
+                  color: CoachFitColors.orangeBright,
                   title: '오늘의 운동 일지',
                   subtitle: latestJournal == null
                       ? '컨디션 별점 + 메모 남기기'
@@ -302,61 +286,40 @@ class _MenuTabState extends State<MenuTab> {
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.timer_outlined,
-                      color: Colors.white70),
-                  title: const Text('기본 세트 간 휴식 시간',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Text('90초',
-                      style: TextStyle(
-                          color: accent,
-                          fontWeight: FontWeight.w700)),
+                _navTile(
+                  icon: Icons.timer_outlined,
+                  color: CoachFitColors.orange,
+                  title: '기본 세트 간 휴식 시간',
+                  subtitle: '90초 (타이머 프리셋)',
+                  trailing: const Text(
+                    '90초',
+                    style: TextStyle(
+                      color: CoachFitColors.orange,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   onTap: _openTimer,
                 ),
                 const _MenuDivider(),
-                ListTile(
-                  leading: const Icon(Icons.fitness_center_rounded,
-                      color: Colors.white70),
-                  title: const Text('무게 단위',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Text(
-                    '${_settings.weightUnit.symbol} (${_settings.weightUnit.label})',
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 13),
-                  ),
+                _navTile(
+                  icon: Icons.fitness_center_rounded,
+                  color: CoachFitColors.mint,
+                  title: '무게 단위',
+                  subtitle: '${_settings.weightUnit.symbol} (${_settings.weightUnit.label})',
                   onTap: _openWeightUnitSheet,
                 ),
                 const _MenuDivider(),
-                ListTile(
-                  leading: Icon(
-                    _reminder.enabled
-                        ? Icons.notifications_active_outlined
-                        : Icons.notifications_off_outlined,
-                    color: Colors.white70,
-                  ),
-                  title: const Text('운동 리마인더 알림',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: Row(
-                    children: [
-                      Switch(
-                        value: _reminder.enabled,
-                        onChanged: _reminder.setEnabled,
-                        activeThumbColor: accent,
-                      ),
-                      Text(
-                        _reminder.enabled ? '사용 중' : '꺼짐',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                  trailing: Text(
-                    _reminder.displayKorean,
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 13),
+                _navTile(
+                  icon: _reminder.enabled
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined,
+                  color: CoachFitColors.orange,
+                  title: '운동 리마인더 알림',
+                  subtitle: '${_reminder.enabled ? '사용 중' : '꺼짐'} · ${_reminder.displayKorean}',
+                  trailing: Switch(
+                    value: _reminder.enabled,
+                    onChanged: _reminder.setEnabled,
+                    activeThumbColor: CoachFitColors.orange,
                   ),
                   onTap: _openReminderPicker,
                 ),
@@ -370,55 +333,30 @@ class _MenuTabState extends State<MenuTab> {
           const _GoalSelector(),
           const SizedBox(height: 20),
 
-          // 🎨 앱 외관 섹션
-          _sectionLabel('🎨 앱 외관'),
+          // 🔤 화면 디스플레이 설정
+          _sectionLabel('🔤 화면 디스플레이'),
           Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading:
-                      Icon(Icons.palette_outlined, color: accent),
-                  title: const Text('포인트 색상',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: accent,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: Colors.white24, width: 1),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _settings.themeAccent.label,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  onTap: _openThemeAccentSheet,
-                ),
-                const _MenuDivider(),
-                ListTile(
-                  leading: const Icon(Icons.text_fields,
-                      color: Colors.white70),
-                  title: const Text('글자 크기',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Text(
+            child: _navTile(
+              icon: Icons.format_size_rounded,
+              color: CoachFitColors.orange,
+              title: '글자 크기',
+              subtitle: '앱 전역 텍스트 비율 (${_settings.textScale.label})',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
                     _settings.textScale.label,
                     style: const TextStyle(
-                        color: Colors.white54, fontSize: 13),
+                      color: CoachFitColors.orange,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
-                  onTap: _openTextScaleSheet,
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, color: CoachFitColors.textMuted, size: 18),
+                ],
+              ),
+              onTap: _openTextScaleSheet,
             ),
           ),
           const SizedBox(height: 20),
@@ -430,7 +368,7 @@ class _MenuTabState extends State<MenuTab> {
               children: [
                 _navTile(
                   icon: Icons.file_download_outlined,
-                  color: const Color(0xFF60A5FA),
+                  color: CoachFitColors.mint,
                   title: '데이터 내보내기',
                   subtitle: 'JSON 미리보기 → 복사해서 백업',
                   onTap: _showDataExportPreview,
@@ -438,7 +376,7 @@ class _MenuTabState extends State<MenuTab> {
                 const _MenuDivider(),
                 _navTile(
                   icon: Icons.replay_rounded,
-                  color: const Color(0xFF60A5FA),
+                  color: CoachFitColors.orange,
                   title: '튜토리얼 다시 보기',
                   subtitle: '다음 홈 방문 시 가이드 재표시',
                   onTap: _resetTutorial,
@@ -461,64 +399,63 @@ class _MenuTabState extends State<MenuTab> {
           Card(
             child: Column(
               children: [
-                const ListTile(
-                  leading: Icon(Icons.dns_outlined,
-                      color: Color(0xFF10B981)),
-                  title: Text('백엔드 서버',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: Text('FastAPI 단일 백엔드 (포트 8000)',
-                      style: TextStyle(
-                          color: Colors.white54, fontSize: 12)),
-                  trailing: Text('온라인 🟢',
-                      style: TextStyle(
-                          color: Color(0xFF10B981),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
+                _navTile(
+                  icon: Icons.dns_outlined,
+                  color: CoachFitColors.mint,
+                  title: '백엔드 서버',
+                  subtitle: 'FastAPI 단일 백엔드 (포트 8000)',
+                  trailing: const Text(
+                    '온라인 🟢',
+                    style: TextStyle(
+                      color: CoachFitColors.mint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onTap: () {},
                 ),
                 const _MenuDivider(),
-                const ListTile(
-                  leading: Icon(Icons.storage_rounded,
-                      color: Color(0xFF60A5FA)),
-                  title: Text('데이터베이스',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: Text('PostgreSQL / SQLite 영속성',
-                      style: TextStyle(
-                          color: Colors.white54, fontSize: 12)),
-                  trailing: Text('연결됨',
-                      style: TextStyle(
-                          color: Colors.white54, fontSize: 12)),
+                _navTile(
+                  icon: Icons.storage_rounded,
+                  color: CoachFitColors.orange,
+                  title: '데이터베이스',
+                  subtitle: 'PostgreSQL / SQLite 영속성',
+                  trailing: const Text(
+                    '연결됨',
+                    style: TextStyle(
+                      color: CoachFitColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () {},
                 ),
                 const _MenuDivider(),
-                const ListTile(
-                  leading: Icon(Icons.auto_awesome,
-                      color: Color(0xFFF59E0B)),
-                  title: Text('AI 코칭 엔진',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: Text('OpenAI GPT-4o-mini & 스마트 룰베이스 하이브리드',
-                      style: TextStyle(
-                          color: Colors.white54, fontSize: 12)),
+                _navTile(
+                  icon: Icons.auto_awesome,
+                  color: CoachFitColors.orangeBright,
+                  title: 'AI 코칭 엔진',
+                  subtitle: 'OpenAI GPT-4o-mini & 스마트 룰베이스 하이브리드',
+                  onTap: () {},
                 ),
                 const _MenuDivider(),
                 _navTile(
                   icon: Icons.info_outline,
-                  color: Colors.white70,
+                  color: CoachFitColors.textSoft,
                   title: '앱 정보',
                   subtitle: '개발팀 / 기술 스택 / 라이선스',
                   onTap: () => _push(const AboutScreen()),
                 ),
                 const _MenuDivider(),
-                const ListTile(
-                  leading:
-                      Icon(Icons.verified_outlined, color: Colors.white70),
-                  title: Text('앱 버전',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  trailing: Text('v2.1.0 (JWT Auth)',
-                      style: TextStyle(
-                          color: Colors.white38, fontSize: 12)),
+                _navTile(
+                  icon: Icons.verified_outlined,
+                  color: CoachFitColors.textMuted,
+                  title: '앱 버전',
+                  subtitle: 'v2.1.0 (JWT Auth)',
+                  trailing: const Text(
+                    '최신',
+                    style: TextStyle(color: CoachFitColors.textMuted, fontSize: 12),
+                  ),
+                  onTap: () {},
                 ),
               ],
             ),
@@ -613,6 +550,7 @@ class _MenuTabState extends State<MenuTab> {
     required Color color,
     required String title,
     required String subtitle,
+    Widget? trailing,
     required VoidCallback onTap,
   }) =>
       ListTile(
@@ -643,11 +581,12 @@ class _MenuTabState extends State<MenuTab> {
             fontSize: 11,
           ),
         ),
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: CoachFitColors.textMuted,
-          size: 18,
-        ),
+        trailing: trailing ??
+            const Icon(
+              Icons.chevron_right,
+              color: CoachFitColors.textMuted,
+              size: 18,
+            ),
         onTap: onTap,
       );
 }
@@ -725,111 +664,6 @@ class _EnumPickerSheet<T extends Enum> extends StatelessWidget {
                   Navigator.pop(context);
                 },
               ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ===== 테마 색상 선택 시트 =====
-
-class _ThemeAccentSheet extends StatelessWidget {
-  final ThemeAccent current;
-  final ValueChanged<ThemeAccent> onSelect;
-  const _ThemeAccentSheet({required this.current, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const Text(
-              '포인트 색상',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '앱 전체 포인트 색상이 즉시 반영됩니다.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final v in ThemeAccent.values)
-                  InkWell(
-                    onTap: () {
-                      onSelect(v);
-                      Navigator.pop(context);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 72,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E232C),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: current == v ? v.color : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: v.color,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: v.color.withValues(alpha: 0.4),
-                                  blurRadius: 8,
-                                ),
-                              ],
-                            ),
-                            child: current == v
-                                ? const Icon(Icons.check,
-                                    color: Colors.white, size: 20)
-                                : null,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            v.label,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
           ],
         ),
       ),
@@ -1088,7 +922,6 @@ class _GoalSelectorState extends State<_GoalSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return Card(
       child: Column(
         children: WorkoutGoal.values.map((goal) {
@@ -1099,12 +932,12 @@ class _GoalSelectorState extends State<_GoalSelector> {
               ListTile(
                 leading: Icon(
                   _iconFor(goal),
-                  color: isSelected ? accent : Colors.white70,
+                  color: isSelected ? CoachFitColors.orange : CoachFitColors.textMuted,
                 ),
                 title: Text(
                   goal.label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
+                    color: isSelected ? Colors.white : CoachFitColors.textSecondary,
                     fontSize: 14,
                     fontWeight:
                         isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -1112,18 +945,18 @@ class _GoalSelectorState extends State<_GoalSelector> {
                 ),
                 subtitle: Text(
                   goal.aiPromptPhrase,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: CoachFitColors.textMuted, fontSize: 11),
                 ),
                 trailing: Icon(
                   isSelected
                       ? Icons.radio_button_checked
                       : Icons.radio_button_unchecked,
-                  color: isSelected ? accent : Colors.white24,
+                  color: isSelected ? CoachFitColors.orange : CoachFitColors.lineStrong,
                   size: 20,
                 ),
                 onTap: () => _select(goal),
               ),
-              if (!isLast) const Divider(height: 1, color: Colors.white10),
+              if (!isLast) const _MenuDivider(),
             ],
           );
         }).toList(),
@@ -1188,20 +1021,46 @@ class _ProfileCardState extends State<_ProfileCard> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final profile = _profile ?? UserProfile.defaultProfile();
     return Card(
       child: InkWell(
         onTap: _openEdit,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(19),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: scheme.primary.withValues(alpha: 0.2),
-                child: const Text('💪', style: TextStyle(fontSize: 28)),
+              // Figma .profile-avatar (62x62, rounded 22px vibrant gradient)
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF7958), Color(0xFFC93013)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: CoachFitColors.orange.withValues(alpha: 0.28),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    profile.nickname.isNotEmpty
+                        ? profile.nickname[0].toUpperCase()
+                        : 'C',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1212,42 +1071,55 @@ class _ProfileCardState extends State<_ProfileCard> {
                       children: [
                         Flexible(
                           child: Text(
-                            '${profile.nickname} 회원님',
+                            profile.nickname,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: CoachFitColors.text,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          profile.experience.label.toUpperCase(),
-                          style: TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: CoachFitColors.orangeSoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            profile.experience.label.toUpperCase(),
+                            style: const TextStyle(
+                              color: CoachFitColors.orange,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
                       AuthService.instance.currentUser?.email.isNotEmpty == true
                           ? '${AuthService.instance.currentUser!.email} · ${profile.gender.label}'
                           : '${profile.gender.label} · ${profile.experience.description}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 13),
+                      style: const TextStyle(color: CoachFitColors.textMuted, fontSize: 12),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     const Text(
-                      '프로필 편집하려면 탭',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
+                      '프로필 수정하기',
+                      style: TextStyle(
+                        color: CoachFitColors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.white24),
+              const Icon(Icons.chevron_right, color: CoachFitColors.textMuted, size: 20),
             ],
           ),
         ),
@@ -1294,18 +1166,21 @@ class _ProfileSpecGridState extends State<_ProfileSpecGrid> {
   Widget build(BuildContext context) {
     final profile = _profile ?? UserProfile.defaultProfile();
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
-        borderRadius: BorderRadius.circular(16),
+        color: CoachFitColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: CoachFitColors.line),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _SpecColumn(label: '키', value: _fmt(profile.heightCm, 'cm')),
-          _SpecColumn(label: '체중', value: _fmt(profile.weightKg, 'kg')),
-          _SpecColumn(label: '목표', value: _fmt(profile.targetWeightKg, 'kg')),
-          _SpecColumn(label: '경력', value: profile.experience.label),
+          Expanded(child: _SpecColumn(label: '키', value: _fmt(profile.heightCm, 'cm'))),
+          Container(width: 1, height: 28, color: CoachFitColors.line),
+          Expanded(child: _SpecColumn(label: '체중', value: _fmt(profile.weightKg, 'kg'))),
+          Container(width: 1, height: 28, color: CoachFitColors.line),
+          Expanded(child: _SpecColumn(label: '목표', value: _fmt(profile.targetWeightKg, 'kg'))),
+          Container(width: 1, height: 28, color: CoachFitColors.line),
+          Expanded(child: _SpecColumn(label: '경력', value: profile.experience.label)),
         ],
       ),
     );
@@ -1321,14 +1196,22 @@ class _SpecColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: CoachFitColors.textMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 5),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: CoachFitColors.text,
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
           ),
         ),
       ],
