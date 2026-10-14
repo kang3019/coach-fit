@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/workout.dart';
 import '../services/workout_service.dart';
+import '../theme/coachfit_theme.dart';
 import 'widgets/common/empty_state_view.dart';
 
 /// 선택한 운동 종목의 과거 기록을 라인 차트로 시각화.
@@ -179,7 +180,7 @@ class _MetricToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return Row(
       children: _Metric.values.map((m) {
         final selected = m == metric;
@@ -262,7 +263,7 @@ class _StatsRow extends StatelessWidget {
                 '${gainPercent >= 0 ? '+' : ''}${gainPercent.toStringAsFixed(0)}',
             suffix: '%',
             color: gainPercent >= 0
-                ? const Color(0xFF00E5A0)
+                ? CoachFitColors.mint
                 : const Color(0xFFEF4444),
           ),
         ),
@@ -332,13 +333,13 @@ class _GrowthChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     if (workouts.length < 2) {
       return Container(
         height: 240,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF171B22),
+          color: CoachFitColors.surface,
           borderRadius: BorderRadius.circular(14),
         ),
         alignment: Alignment.center,
@@ -362,7 +363,7 @@ class _GrowthChartCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 14, 14, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
+        color: CoachFitColors.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -438,7 +439,7 @@ class _GrowthChartCard extends StatelessWidget {
                 ),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => const Color(0xFF0E1116),
+                    getTooltipColor: (_) => CoachFitColors.background,
                     getTooltipItems: (spots) => spots.map((s) {
                       final w = workouts[s.x.toInt()];
                       final date =

@@ -30,33 +30,31 @@ class ConditionSelector extends StatelessWidget {
         children: [
           const Text(
             '운동 전 체크인',
-            style: TextStyle(
-              color: CoachFitColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
+            style: CoachFitTypography.sectionTitle,
           ),
           const SizedBox(height: 3),
           const Text(
             '선택하면 루틴 강도를 바로 맞춰드려요',
-            style: TextStyle(
-              color: CoachFitColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: CoachFitTypography.caption,
           ),
           const SizedBox(height: CoachFitSpacing.md),
-          Row(
-            children: _options.map((opt) {
-              final isSelected = selectedCondition.contains(opt.label);
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: _buildItem(context, opt, isSelected),
-                ),
-              );
-            }).toList(),
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0C0F13),
+              borderRadius: BorderRadius.circular(CoachFitRadius.medium),
+            ),
+            child: Row(
+              children: _options.map((opt) {
+                final isSelected = selectedCondition.contains(opt.label);
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                    child: _buildItem(context, opt, isSelected),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
@@ -73,33 +71,53 @@ class ConditionSelector extends StatelessWidget {
         borderRadius: BorderRadius.circular(CoachFitRadius.small),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: CoachFitSpacing.md),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? CoachFitColors.surfaceRaised : Colors.transparent,
+            gradient: isSelected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF252D37), CoachFitColors.surfaceSoft],
+                  )
+                : null,
+            color: isSelected ? null : Colors.transparent,
             borderRadius: BorderRadius.circular(CoachFitRadius.small),
             border: Border.all(
-              color: isSelected ? CoachFitColors.mint.withValues(alpha: 0.3) : Colors.transparent,
+              color: isSelected
+                  ? CoachFitColors.mint.withValues(alpha: 0.12)
+                  : Colors.transparent,
               width: 1,
             ),
+            boxShadow: isSelected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x38000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 5),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 14,
-                height: 3,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: isSelected ? CoachFitColors.mint : CoachFitColors.textMuted.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(2),
+                  color: isSelected
+                      ? CoachFitColors.mint
+                      : CoachFitColors.textMuted.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(CoachFitRadius.pill),
                 ),
               ),
-              const SizedBox(height: CoachFitSpacing.sm),
+              const SizedBox(height: 7),
               Text(
                 opt.label,
                 style: TextStyle(
-                  color: isSelected ? CoachFitColors.textPrimary : CoachFitColors.textMuted,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  color: isSelected ? CoachFitColors.text : CoachFitColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   letterSpacing: -0.2,
                 ),
                 maxLines: 1,

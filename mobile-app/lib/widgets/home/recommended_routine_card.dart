@@ -84,17 +84,33 @@ class RecommendedRoutineCard extends StatelessWidget {
         const SizedBox(height: CoachFitSpacing.md),
         CoachFitCard(
           padding: EdgeInsets.zero,
+          borderColor: CoachFitColors.orange.withValues(alpha: 0.22),
+          borderRadius: CoachFitRadius.hero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. API 연동 인터랙티브 벡터 인체 해부도 (앞면/뒷면)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(CoachFitRadius.large),
+                  top: Radius.circular(CoachFitRadius.hero),
                 ),
                 child: Container(
                   width: double.infinity,
-                  color: const Color(0xFF0A0C10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0C0F13),
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0x12FF5A31),
+                        Colors.transparent,
+                      ],
+                      stops: [0.0, 0.45],
+                    ),
+                    border: Border(
+                      bottom: BorderSide(color: CoachFitColors.line),
+                    ),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   child: Stack(
                     alignment: Alignment.center,

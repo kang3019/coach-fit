@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../services/community_service.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
 import '../community_post_detail_screen.dart';
 import '../widgets/community_comment_sheet.dart';
 import '../widgets/muscle_map_widget.dart';
@@ -139,19 +140,19 @@ class _CommunityTabState extends State<CommunityTab> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00E5A0).withValues(alpha: 0.1),
+                  color: CoachFitColors.mint.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.auto_awesome,
-                        size: 14, color: Color(0xFF00E5A0)),
+                        size: 14, color: CoachFitColors.mint),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         '오늘 운동 자동 요약: $autoBadge',
                         style: const TextStyle(
-                            color: Color(0xFF00E5A0), fontSize: 11),
+                            color: CoachFitColors.mint, fontSize: 11),
                       ),
                     ),
                   ],
@@ -231,32 +232,53 @@ class _CommunityTabState extends State<CommunityTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '오운완 커뮤니티',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreatePostModal,
+        backgroundColor: CoachFitColors.orange,
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.camera_alt_outlined),
-        label: const Text('오운완 인증'),
+        label: const Text(
+          '오운완 인증',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
-      body: FutureBuilder<List<CommunityPost>>(
-        future: _community.loadAll(),
-        builder: (ctx, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final posts = _applyFilter(snap.data!);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            children: [
-              _FilterChipsRow(
-                current: _filter,
-                onChanged: (f) => setState(() => _filter = f),
-              ),
-              const SizedBox(height: 12),
+      body: SafeArea(
+        child: FutureBuilder<List<CommunityPost>>(
+          future: _community.loadAll(),
+          builder: (ctx, snap) {
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final posts = _applyFilter(snap.data!);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+              children: [
+                // 1. COMMUNITY FEED 헤더 (Figma 게슈탈트 3단 위계)
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'COMMUNITY FEED',
+                      style: CoachFitTypography.kicker,
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      '오운완 커뮤니티',
+                      style: CoachFitTypography.pageTitle,
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      '오늘도 함께 땀 흘린 러너·리프터들의 실시간 인증',
+                      style: CoachFitTypography.pageCaption,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _FilterChipsRow(
+                  current: _filter,
+                  onChanged: (f) => setState(() => _filter = f),
+                ),
+                const SizedBox(height: 14),
               if (posts.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
@@ -284,7 +306,8 @@ class _CommunityTabState extends State<CommunityTab> {
           );
         },
       ),
-    );
+    ),
+  );
   }
 
   String _emptyMessage(_Filter f) {
@@ -346,26 +369,35 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      borderRadius: BorderRadius.circular(CoachFitRadius.small),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.2) : Colors.white10,
-          borderRadius: BorderRadius.circular(999),
+          color: selected ? CoachFitColors.surfaceSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(CoachFitRadius.small),
           border: Border.all(
-            color: selected ? accent : Colors.transparent,
-            width: 1.3,
+            color: selected ? CoachFitColors.lineStrong : CoachFitColors.line,
+            width: 1,
           ),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x2E000000),
+                    blurRadius: 14,
+                    offset: Offset(0, 5),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? accent : Colors.white70,
+            color: selected ? CoachFitColors.text : CoachFitColors.textMuted,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),
@@ -390,7 +422,7 @@ class _CommunityFeedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -570,7 +602,7 @@ class _ReactionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),

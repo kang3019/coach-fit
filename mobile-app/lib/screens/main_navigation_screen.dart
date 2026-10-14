@@ -69,13 +69,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: IndexedStack(index: _currentIndex, children: _tabs),
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
-          color: CoachFitColors.surface,
-          border: Border(top: BorderSide(color: CoachFitColors.divider)),
+          color: Color(0xF50D1015),
+          border: Border(top: BorderSide(color: CoachFitColors.line)),
         ),
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 70,
+            height: 76,
             child: Row(
               children: [
                 _NavItem(

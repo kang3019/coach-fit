@@ -479,32 +479,17 @@ class _StepIntro extends StatelessWidget {
       children: [
         Text(
           eyebrow,
-          style: const TextStyle(
-            color: CoachFitColors.orange,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
+          style: CoachFitTypography.kicker,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           title,
-          style: const TextStyle(
-            color: CoachFitColors.text,
-            fontSize: 31,
-            height: 1.22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.2,
-          ),
+          style: CoachFitTypography.pageTitle,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Text(
           caption,
-          style: const TextStyle(
-            color: CoachFitColors.textMuted,
-            fontSize: 12,
-            height: 1.5,
-          ),
+          style: CoachFitTypography.pageCaption,
         ),
       ],
     );

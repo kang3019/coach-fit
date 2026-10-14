@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/coaching_result.dart';
 import '../services/coaching_service.dart';
+import '../theme/coachfit_theme.dart';
 
 class CoachingScreen extends StatefulWidget {
   const CoachingScreen({super.key});
@@ -189,7 +190,7 @@ class _RoutineCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF0E1116),
+                color: CoachFitColors.background,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/workout.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
 
 /// 마지막 운동 복습 + progressive overload (+2.5kg) 추천 카드.
 /// A 담당: WBS Could — 홈 "복습 & 도전" 섹션.
@@ -35,7 +36,7 @@ class _LastWorkoutCardState extends State<LastWorkoutCard> {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return FutureBuilder<List<Workout>>(
       future: _future,
       builder: (ctx, snap) {
@@ -90,7 +91,7 @@ class _LastWorkoutCardState extends State<LastWorkoutCard> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0E1116),
+                    color: CoachFitColors.background,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(

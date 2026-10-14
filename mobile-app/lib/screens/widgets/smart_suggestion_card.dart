@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/workout.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
 
 /// 상황 기반 스마트 추천 로테이션 카드.
 /// A 담당: WBS Could — 홈 "조언 & 영감" 섹션.
@@ -127,7 +128,7 @@ class _SmartSuggestionCardState extends State<SmartSuggestionCard> {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF00E5A0);
+    const accent = CoachFitColors.mint;
     return FutureBuilder<List<Workout>>(
       future: _future,
       builder: (ctx, snap) {

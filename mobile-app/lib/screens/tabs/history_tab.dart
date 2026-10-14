@@ -481,31 +481,17 @@ class _HistoryTabState extends State<HistoryTab> {
                           children: [
                             const Text(
                               'WORKOUT LOG',
-                              style: TextStyle(
-                                color: CoachFitColors.textMuted,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5,
-                              ),
+                              style: CoachFitTypography.kicker,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             const Text(
                               '나의 기록',
-                              style: TextStyle(
-                                color: CoachFitColors.textPrimary,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.6,
-                              ),
+                              style: CoachFitTypography.pageTitle,
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 5),
                             Text(
                               titleText,
-                              style: const TextStyle(
-                                color: CoachFitColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: CoachFitTypography.pageCaption,
                             ),
                           ],
                         ),

@@ -133,14 +133,27 @@ class _HomeTabState extends State<HomeTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 64,
+        backgroundColor: const Color(0xF0090B0F),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: CoachFitColors.line),
+        ),
         title: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: CoachFitColors.orange,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x42FF5A31),
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
               child: const Icon(Icons.bolt, color: Colors.white, size: 22),
             ),
@@ -150,7 +163,7 @@ class _HomeTabState extends State<HomeTab> {
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 20,
-                letterSpacing: -0.5,
+                letterSpacing: -0.8,
               ),
             ),
           ],
@@ -161,14 +174,14 @@ class _HomeTabState extends State<HomeTab> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: CoachFitColors.surfaceRaised,
-              shape: BoxShape.circle,
-              border: Border.all(color: CoachFitColors.border),
+              color: CoachFitColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CoachFitColors.line),
             ),
             child: IconButton(
               icon: const Icon(
                 Icons.notifications_none_rounded,
-                color: CoachFitColors.textPrimary,
+                color: CoachFitColors.textSoft,
                 size: 20,
               ),
               onPressed: () {

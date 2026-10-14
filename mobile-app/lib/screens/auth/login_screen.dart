@@ -109,31 +109,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 40),
                         const Text(
                           'WELCOME BACK',
-                          style: TextStyle(
-                            color: CoachFitColors.orange,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.4,
-                          ),
+                          style: CoachFitTypography.kicker,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         const Text(
                           '다시 운동을\n이어가 볼까요?',
-                          style: TextStyle(
-                            color: CoachFitColors.text,
-                            fontSize: 32,
-                            height: 1.2,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.2,
-                          ),
+                          style: CoachFitTypography.pageTitle,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         const Text(
                           '저장된 기록과 오늘의 맞춤 루틴을 불러올게요.',
-                          style: TextStyle(
-                            color: CoachFitColors.textMuted,
-                            fontSize: 13,
-                          ),
+                          style: CoachFitTypography.pageCaption,
                         ),
                         const SizedBox(height: 40),
                         const _FieldLabel('이메일'),

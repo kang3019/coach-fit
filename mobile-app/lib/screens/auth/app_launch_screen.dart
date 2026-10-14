@@ -143,32 +143,17 @@ class _WelcomeView extends StatelessWidget {
                   const SizedBox(height: 64),
                   const Text(
                     'START YOUR JOURNEY',
-                    style: TextStyle(
-                      color: CoachFitColors.orange,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                    ),
+                    style: CoachFitTypography.kicker,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   const Text(
                     '나에게 맞는 운동,\n오늘부터 시작해요.',
-                    style: TextStyle(
-                      color: CoachFitColors.text,
-                      fontSize: 34,
-                      height: 1.16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.3,
-                    ),
+                    style: CoachFitTypography.pageTitle,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   const Text(
                     '목표와 운동 경험을 알려주면\nAI 코치가 첫 루틴부터 함께 준비해 드려요.',
-                    style: TextStyle(
-                      color: CoachFitColors.textSoft,
-                      fontSize: 13,
-                      height: 1.6,
-                    ),
+                    style: CoachFitTypography.pageCaption,
                   ),
                   const SizedBox(height: 30),
                   const _FeaturePanel(),
