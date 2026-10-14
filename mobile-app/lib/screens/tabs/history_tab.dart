@@ -470,7 +470,7 @@ class _HistoryTabState extends State<HistoryTab> {
                   vertical: CoachFitSpacing.md,
                 ),
                 children: [
-                  // 1. WORKOUT LOG 헤더
+                  // 1. WORKOUT LOG 헤더 (Figma 게슈탈트 3단 위계: Eyebrow -> Title -> Caption)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,17 +485,26 @@ class _HistoryTabState extends State<HistoryTab> {
                                 color: CoachFitColors.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 1.2,
+                                letterSpacing: 1.5,
                               ),
                             ),
-                            const SizedBox(height: CoachFitSpacing.xs),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '나의 기록',
+                              style: TextStyle(
+                                color: CoachFitColors.textPrimary,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.6,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
                             Text(
                               titleText,
                               style: const TextStyle(
-                                color: CoachFitColors.textPrimary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
+                                color: CoachFitColors.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],

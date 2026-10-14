@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/workout.dart';
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
+import '../../widgets/common/coachfit_card.dart';
+import '../../widgets/common/section_header.dart';
 import '../widgets/monthly_calendar_card.dart';
 import '../widgets/muscle_map_widget.dart';
 import '../widgets/weekly_volume_chart.dart';
@@ -13,9 +16,10 @@ typedef _StatsData = ({
 });
 
 /// 3. 통계 탭 (Statistics Tab)
+/// - 피그마 게슈탈트 시각 위계 기반 성장 통계 UI
 /// - 주간 누적 볼륨 바 차트 (fl_chart)
 /// - 운동 부위별 비율 분석 (가슴, 등, 하체 등)
-/// - 주간 목표 달성 게이지
+/// - 코치핏 인사이트 카드 및 월간 잔디 스트릭
 class StatsTab extends StatefulWidget {
   const StatsTab({super.key});
 
@@ -26,6 +30,7 @@ class StatsTab extends StatefulWidget {
 class _StatsTabState extends State<StatsTab> {
   final WorkoutService _workoutService = WorkoutService();
   late Future<_StatsData> _future;
+  String _selectedPeriod = '주간';
 
   @override
   void initState() {
@@ -98,179 +103,382 @@ class _StatsTabState extends State<StatsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '운동 통계 & 볼륨 분석',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: FutureBuilder<_StatsData>(
-          future: _future,
-          builder: (ctx, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snap.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.amber),
-                      const SizedBox(height: 12),
-                      Text(
-                        '통계를 불러오지 못했습니다.\n${snap.error}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      const SizedBox(height: 14),
-                      ElevatedButton(onPressed: _refresh, child: const Text('다시 시도')),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            final data = snap.data;
-            final volumeMap = data?.weekly ?? const <String, double>{};
-            final totalWeeklyVolume = volumeMap.values.fold<double>(0.0, (a, b) => a + b);
-            final bodyVolumes = data?.byBody ?? const <_BodyGroup, double>{};
-            final totalBodyVolume = bodyVolumes.values.fold<double>(0.0, (a, b) => a + b);
-
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                // 1. 이번 주 요약 대시보드 타일
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatsSummaryCard(
-                        title: '이번 주 총 볼륨',
-                        value: NumberFormat('#,###').format(totalWeeklyVolume.round()),
-                        suffix: 'kg',
-                        color: scheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: _StatsSummaryCard(
-                        title: '운동 세션',
-                        value: '4',
-                        suffix: '회',
-                        color: Color(0xFF60A5FA),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // 2. 주간 볼륨 차트 카드
-                Card(
+      backgroundColor: CoachFitColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: CoachFitColors.orange,
+          backgroundColor: CoachFitColors.surface,
+          onRefresh: _refresh,
+          child: FutureBuilder<_StatsData>(
+            future: _future,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: CoachFitColors.orange),
+                );
+              }
+              if (snap.hasError) {
+                return Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.bar_chart_rounded, color: Color(0xFF00E5A0), size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              '요일별 총 볼륨 (Weight × Sets × Reps)',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                        const Icon(Icons.error_outline, size: 48, color: Colors.amber),
+                        const SizedBox(height: 12),
+                        Text(
+                          '통계를 불러오지 못했습니다.\n${snap.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: CoachFitColors.textSecondary),
                         ),
                         const SizedBox(height: 14),
-                        WeeklyVolumeChart(volumeByDay: volumeMap),
+                        ElevatedButton(
+                          onPressed: _refresh,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: CoachFitColors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('다시 시도'),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                );
+              }
 
-                // 3. 주간 운동 목표 달성 게이지
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
+              final data = snap.data;
+              final volumeMap = data?.weekly ?? const <String, double>{};
+              final totalWeeklyVolume = volumeMap.values.fold<double>(0.0, (a, b) => a + b);
+              final bodyVolumes = data?.byBody ?? const <_BodyGroup, double>{};
+              final totalBodyVolume = bodyVolumes.values.fold<double>(0.0, (a, b) => a + b);
+
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CoachFitSpacing.lg,
+                  vertical: CoachFitSpacing.md,
+                ),
+                children: [
+                  // 1. MY PROGRESS 헤더 (Figma 게슈탈트 3단 위계)
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MY PROGRESS',
+                        style: TextStyle(
+                          color: CoachFitColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '성장 통계',
+                        style: TextStyle(
+                          color: CoachFitColors.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        '지난주보다 총 볼륨이 18.2% 늘었어요.',
+                        style: TextStyle(
+                          color: CoachFitColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 2. 기간 컨트롤러 (주간 / 월간 / 3개월)
+                  Row(
+                    children: ['주간', '월간', '3개월'].map((p) {
+                      final isSelected = p == _selectedPeriod;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: () => setState(() => _selectedPeriod = p),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? CoachFitColors.orange : const Color(0xFF171B22),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? CoachFitColors.orange
+                                    : Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            child: Text(
+                              p,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : CoachFitColors.textSecondary,
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 3. 주간 총 볼륨 카드 (Figma surface-card volume-card)
+                  CoachFitCard(
+                    padding: const EdgeInsets.all(CoachFitSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              '주간 목표 달성률',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '주간 총 볼륨',
+                                  style: TextStyle(
+                                    color: CoachFitColors.textMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                RichText(
+                                  text: TextSpan(
+                                    text: NumberFormat('#,###').format(totalWeeklyVolume.round()),
+                                    style: const TextStyle(
+                                      color: CoachFitColors.textPrimary,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    children: const [
+                                      TextSpan(
+                                        text: ' kg',
+                                        style: TextStyle(
+                                          color: CoachFitColors.textMuted,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              '75% 달성 (3 / 4회)',
-                              style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w700),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: CoachFitColors.mint.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: CoachFitColors.mint.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.trending_up_rounded, color: CoachFitColors.mint, size: 16),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '+18.2%',
+                                    style: TextStyle(
+                                      color: CoachFitColors.mint,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: 0.75,
-                            minHeight: 10,
-                            backgroundColor: Colors.white10,
-                            valueColor: AlwaysStoppedAnimation(scheme.primary),
+                        const SizedBox(height: CoachFitSpacing.lg),
+                        WeeklyVolumeChart(volumeByDay: volumeMap, isFlat: true),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 4. 2단 메트릭 카드 (현재 체중 & 이번 달 운동)
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: CoachFitCard(
+                          padding: EdgeInsets.all(CoachFitSpacing.md),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Icon(Icons.fitness_center_rounded, color: CoachFitColors.mint, size: 20),
+                                  Text(
+                                    '-0.8 kg',
+                                    style: TextStyle(
+                                      color: CoachFitColors.mint,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                '현재 체중',
+                                style: TextStyle(
+                                  color: CoachFitColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '71.2 kg',
+                                style: TextStyle(
+                                  color: CoachFitColors.textPrimary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          '목표까지 단 1회 남았습니다! 이번 주도 꾸준히 달리고 있어요 💪',
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      SizedBox(width: CoachFitSpacing.md),
+                      Expanded(
+                        child: CoachFitCard(
+                          padding: EdgeInsets.all(CoachFitSpacing.md),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Icon(Icons.emoji_events_rounded, color: CoachFitColors.orange, size: 20),
+                                  Text(
+                                    '목표 16회',
+                                    style: TextStyle(
+                                      color: CoachFitColors.orange,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                '이번 달 운동',
+                                style: TextStyle(
+                                  color: CoachFitColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '14 회',
+                                style: TextStyle(
+                                  color: CoachFitColors.textPrimary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: CoachFitSpacing.xl),
 
-                // 4. 부위별 볼륨 비율 분석 (A 담당: WBS 2.2.4 — 실데이터 집계)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
+                  // 5. 부위별 균형 (Figma balance-card)
+                  CoachFitSectionHeader(
+                    categoryTag: 'BALANCE',
+                    title: '부위별 균형',
+                    subtitle: totalBodyVolume > 0
+                        ? '전체 운동 기록 기준 · 종목명 자동 분류'
+                        : '아직 분류 가능한 운동 기록이 없습니다',
+                  ),
+                  const SizedBox(height: CoachFitSpacing.md),
+                  CoachFitCard(
+                    padding: const EdgeInsets.all(CoachFitSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _buildBodyBars(bodyVolumes, totalBodyVolume),
+                    ),
+                  ),
+                  const SizedBox(height: CoachFitSpacing.lg),
+
+                  // 6. 코치핏 인사이트 카드 (Figma insight-card)
+                  CoachFitCard(
+                    padding: const EdgeInsets.all(CoachFitSpacing.md),
+                    child: Row(
                       children: [
-                        const Text(
-                          '부위별 볼륨 배분 비율',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: CoachFitColors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.bolt_rounded,
+                            color: CoachFitColors.orange,
+                            size: 22,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          totalBodyVolume > 0
-                              ? '전체 운동 기록 기준 · 종목명 자동 분류'
-                              : '아직 분류 가능한 운동 기록이 없습니다',
-                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '코치핏 인사이트',
+                                style: TextStyle(
+                                  color: CoachFitColors.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '등 운동 비중을 10% 높이면 상체 균형이 더 좋아져요.',
+                                style: TextStyle(
+                                  color: CoachFitColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 14),
-                        ..._buildBodyBars(bodyVolumes, totalBodyVolume),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: CoachFitColors.textMuted,
+                          size: 18,
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: CoachFitSpacing.xl),
 
-                // 5. 월간 운동 캘린더 (A 담당: WBS Could — 스트릭 & 잔디)
-                const MonthlyCalendarCard(),
-              ],
-            );
-          },
+                  // 7. 월간 캘린더 (잔디 스트릭)
+                  const MonthlyCalendarCard(),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -284,11 +492,11 @@ class _StatsTabState extends State<StatsTab> {
   ) {
     if (totalVolume <= 0) {
       return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
           child: Text(
             '종목명에서 부위를 인식할 수 있는 기록을 추가해보세요.',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: CoachFitColors.textMuted, fontSize: 12),
           ),
         ),
       ];
@@ -303,9 +511,10 @@ class _StatsTabState extends State<StatsTab> {
       final e = sorted[i];
       final percentage = ((e.value / totalVolume) * 100).round();
       if (percentage == 0) continue;
-      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 10));
+      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 12));
       widgets.add(_MuscleRatioBar(
         label: e.key.label,
+        amount: '${NumberFormat('#,###').format(e.value.round())}kg',
         percentage: percentage,
         color: e.key.color,
       ));
@@ -353,62 +562,16 @@ extension _BodyGroupExtension on _BodyGroup {
   }
 }
 
-class _StatsSummaryCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String suffix;
-  final Color color;
-
-  const _StatsSummaryCard({
-    required this.title,
-    required this.value,
-    required this.suffix,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-          const SizedBox(height: 6),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(suffix, style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _MuscleRatioBar extends StatelessWidget {
   final String label;
+  final String amount;
   final int percentage;
   final Color color;
 
   const _MuscleRatioBar({
     required this.label,
+    required this.amount,
     required this.percentage,
     required this.color,
   });
@@ -421,17 +584,44 @@ class _MuscleRatioBar extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            Text('$percentage%', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: CoachFitColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Row(
+              children: [
+                Text(
+                  amount,
+                  style: const TextStyle(
+                    color: CoachFitColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$percentage%',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: percentage / 100.0,
-            minHeight: 6,
-            backgroundColor: Colors.white10,
+            minHeight: 7,
+            backgroundColor: Colors.white.withValues(alpha: 0.08),
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),

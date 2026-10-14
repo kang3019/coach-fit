@@ -8,7 +8,12 @@ import 'package:intl/intl.dart';
 /// 서버는 데이터가 있는 요일만 반환하므로, 없는 요일은 0으로 채워 항상 7일 표시.
 class WeeklyVolumeChart extends StatelessWidget {
   final Map<String, double> volumeByDay;
-  const WeeklyVolumeChart({super.key, required this.volumeByDay});
+  final bool isFlat;
+  const WeeklyVolumeChart({
+    super.key,
+    required this.volumeByDay,
+    this.isFlat = false,
+  });
 
   static const List<String> _dayOrder = [
     'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN',
@@ -23,11 +28,13 @@ class WeeklyVolumeChart extends StatelessWidget {
     final total = values.fold<double>(0, (a, b) => a + b);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF171B22),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      padding: isFlat ? EdgeInsets.zero : const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: isFlat
+          ? null
+          : BoxDecoration(
+              color: const Color(0xFF171B22),
+              borderRadius: BorderRadius.circular(16),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
