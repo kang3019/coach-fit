@@ -1,0 +1,4 @@
+# GitHub Linguist language overrides
+# Flutter Web 컴파일 산출물을 언어 통계(JavaScript)에서 제외하여 순수 Dart & Python으로 표시
+python-ai-backend/static/** linguist-vendored
+python-ai-backend/static/** linguist-generated
