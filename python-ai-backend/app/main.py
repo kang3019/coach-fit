@@ -2,6 +2,8 @@ import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
@@ -117,11 +119,14 @@ handler = Mangum(app) if Mangum else None
 
 
 # ==========================================
-# 0. 헬스체크 및 루트 엔드포인트
+# 0. 헬스체크 및 서비스 상태 엔드포인트
 # ==========================================
 
-@app.get("/")
-def read_root():
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+
+
+@app.get("/api/status", summary="백엔드 서비스 상태 확인")
+def read_service_status():
     return {
         "service": "CoachFit Unified Backend",
         "stack": "FastAPI + PostgreSQL (SQLAlchemy) + JWT Auth",
@@ -488,6 +493,17 @@ def api_update_profile(
     if current_user:
         profile.user_id = current_user.user_id
     return update_user_profile(db, profile)
+
+
+# ==========================================
+# 11. Flutter Web SPA 정적 파일 서빙 (EC2 원터치 웹 서빙)
+# ==========================================
+if os.path.exists(STATIC_DIR) and os.path.exists(os.path.join(STATIC_DIR, "index.html")):
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+else:
+    @app.get("/")
+    def read_root_fallback():
+        return read_service_status()
 
 
 if __name__ == "__main__":
