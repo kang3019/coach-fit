@@ -26,10 +26,10 @@ gantt
     대화형 온보딩 애니메이션 UI     :done, dev5_1, 2026-10-05, 2026-10-06
     1차 스프린트 점검 (E2E 프로토타입) :milestone, m1, 2026-10-10, 0d
     section 3단계: AWS 정석 풀스택 인프라 & AI
-    AWS Bedrock AI 코칭 엔진 연동   :active, dev6_1, 2026-10-07, 2026-10-10
-    AWS RDS PostgreSQL DB 연동      :active, dev6_2, 2026-10-08, 2026-10-11
-    AWS EC2 배포 및 pem키 자동화    :dev6_3, 2026-10-10, 2026-10-15
-    실기기 테스트 및 네트워크 스위칭 :dev6, 2026-10-16, 2026-10-24
+    AWS Bedrock AI 코칭 엔진 연동   :done, dev6_1, 2026-10-07, 2026-10-10
+    AWS RDS PostgreSQL DB 연동      :done, dev6_2, 2026-10-08, 2026-10-11
+    AWS EC2 배포 및 pem키 자동화    :done, dev6_3, 2026-10-10, 2026-10-14
+    실기기 테스트 및 네트워크 스위칭 :active, dev6, 2026-10-14, 2026-10-24
     2차 스프린트 점검 (AWS 통합 데모) :milestone, m2, 2026-10-25, 0d
     section 4단계: 발표 준비 및 리허설
     오프라인 데모 환경 및 백업영상    :doc1, 2026-11-08, 2026-11-14
@@ -172,6 +172,8 @@ gantt
   - [x] 4.1.4 [교수님 권고] AWS EC2 인스턴스 구축, pem 키 SSH 보안 접속 및 배포 파이프라인(`deploy.sh` & Systemd 24/7 상시 가동) (2d) - *완료 (43.200.179.25)*
   - [x] 4.1.5 플러터 웹 데모 로딩 스플래시 추가 (로고/스피너/페이드아웃 + 두부 글리프 가림) (1d) - *PR #26 ~ #27 완료*
   - [x] 4.1.6 AWS 풀스택(EC2 + RDS + Bedrock) 환경 구축 및 pem 키 배포 가이드 문서화 (`docs/aws_setup_guide.md`, CDK 서울 리전 반영) (1d) - *완료*
+  - [x] 4.1.7 EC2 SSH 보안 인증(coachfit-key.pem) 및 인스턴스 직접 접속 검증 (1d) - *SSH/SCP 접속 및 24/7 Systemd 서비스 헬스체크 정상 확인*
+  - [x] 4.1.8 GitHub Actions CI/CD 무중단 자동 배포 파이프라인(`.github/workflows/deploy.yml`) 및 Repository Secrets 연동 체계 구축 (1d) - *Secrets/Variables 설정 가이드 및 배포 워크플로우 완비*
 - **4.2 품질 관리**
   - [ ] 4.2.1 모바일 폼 유효성 검사 (음수 무게 입력 방지 등) (1d)
   - [x] 4.2.2 서버 헬스체크 및 예외 처리 고도화 (1d) - *완료*
