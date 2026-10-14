@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/workout_service.dart';
+import '../../theme/coachfit_theme.dart';
 
 /// (D) 메뉴 상단에 보여줄 이번 달 운동 요약 미니 카드.
 /// 운동 횟수 / 총 볼륨 / 가장 많이 한 종목 top 1.
@@ -139,13 +140,13 @@ class _MenuMonthlySummaryCardState extends State<MenuMonthlySummaryCard> {
                     child: Row(
                       children: [
                         const Icon(Icons.local_fire_department,
-                            size: 14, color: Color(0xFFF59E0B)),
+                            size: 14, color: CoachFitColors.orange),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             '최다 수행: $_topExercise',
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: CoachFitColors.textSecondary,
                               fontSize: 11,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -177,14 +178,15 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFF171B22),
+          color: CoachFitColors.surfaceSoft,
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: CoachFitColors.line),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                style: const TextStyle(color: CoachFitColors.textMuted, fontSize: 10)),
             const SizedBox(height: 4),
             RichText(
               text: TextSpan(

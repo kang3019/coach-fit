@@ -194,12 +194,12 @@ class _StatsTabState extends State<StatsTab> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: isSelected ? CoachFitColors.orange : const Color(0xFF171B22),
+                              color: isSelected ? CoachFitColors.orange : CoachFitColors.surface,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isSelected
                                     ? CoachFitColors.orange
-                                    : Colors.white.withValues(alpha: 0.08),
+                                    : CoachFitColors.line,
                               ),
                             ),
                             child: Text(
@@ -265,8 +265,8 @@ class _StatsTabState extends State<StatsTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: CoachFitColors.mint.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
+                                color: CoachFitColors.mintSoft,
+                                borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
                                   color: CoachFitColors.mint.withValues(alpha: 0.3),
                                 ),
@@ -274,13 +274,13 @@ class _StatsTabState extends State<StatsTab> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.trending_up_rounded, color: CoachFitColors.mint, size: 16),
+                                  Icon(Icons.trending_up_rounded, color: CoachFitColors.mint, size: 15),
                                   SizedBox(width: 4),
                                   Text(
                                     '+18.2%',
                                     style: TextStyle(
                                       color: CoachFitColors.mint,
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -407,21 +407,30 @@ class _StatsTabState extends State<StatsTab> {
                   const SizedBox(height: CoachFitSpacing.lg),
 
                   // 6. 코치핏 인사이트 카드 (Figma insight-card)
-                  CoachFitCard(
-                    padding: const EdgeInsets.all(CoachFitSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: CoachFitColors.orangeSoft,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: CoachFitColors.orange.withValues(alpha: 0.22),
+                      ),
+                    ),
                     child: Row(
                       children: [
                         Container(
-                          width: 36,
-                          height: 36,
+                          width: 38,
+                          height: 38,
                           decoration: BoxDecoration(
-                            color: CoachFitColors.orange.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
+                            color: CoachFitColors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(11),
                           ),
-                          child: const Icon(
-                            Icons.bolt_rounded,
-                            color: CoachFitColors.orange,
-                            size: 22,
+                          child: const Center(
+                            child: Icon(
+                              Icons.bolt_rounded,
+                              color: CoachFitColors.orange,
+                              size: 22,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -497,12 +506,12 @@ class _StatsTabState extends State<StatsTab> {
       final e = sorted[i];
       final percentage = ((e.value / totalVolume) * 100).round();
       if (percentage == 0) continue;
-      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 12));
+      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 14));
       widgets.add(_MuscleRatioBar(
         label: e.key.label,
         amount: '${NumberFormat('#,###').format(e.value.round())}kg',
         percentage: percentage,
-        color: e.key.color,
+        isTop: i == 0,
       ));
     }
     return widgets;
@@ -529,37 +538,19 @@ extension _BodyGroupExtension on _BodyGroup {
         return '코어 (Core)';
     }
   }
-
-  Color get color {
-    switch (this) {
-      case _BodyGroup.chest:
-        return const Color(0xFF00E5A0);
-      case _BodyGroup.back:
-        return const Color(0xFF60A5FA);
-      case _BodyGroup.shoulders:
-        return const Color(0xFFF59E0B);
-      case _BodyGroup.arms:
-        return const Color(0xFFEF4444);
-      case _BodyGroup.legs:
-        return const Color(0xFFA855F7);
-      case _BodyGroup.core:
-        return const Color(0xFFEC4899);
-    }
-  }
 }
-
 
 class _MuscleRatioBar extends StatelessWidget {
   final String label;
   final String amount;
   final int percentage;
-  final Color color;
+  final bool isTop;
 
   const _MuscleRatioBar({
     required this.label,
     required this.amount,
     required this.percentage,
-    required this.color,
+    this.isTop = false,
   });
 
   @override
@@ -575,7 +566,7 @@ class _MuscleRatioBar extends StatelessWidget {
               style: const TextStyle(
                 color: CoachFitColors.textPrimary,
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Row(
@@ -583,16 +574,16 @@ class _MuscleRatioBar extends StatelessWidget {
                 Text(
                   amount,
                   style: const TextStyle(
-                    color: CoachFitColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    color: CoachFitColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
                   '$percentage%',
                   style: TextStyle(
-                    color: color,
+                    color: isTop ? CoachFitColors.orange : CoachFitColors.textSecondary,
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                   ),
@@ -601,14 +592,46 @@ class _MuscleRatioBar extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: percentage / 100.0,
-            minHeight: 7,
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
-            valueColor: AlwaysStoppedAnimation(color),
+        const SizedBox(height: 7),
+        // Figma .balance-track: surfaceSoft track, orange gradient fill, pill radius
+        Container(
+          height: 6,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: CoachFitColors.surfaceSoft,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: LayoutBuilder(
+            builder: (ctx, constraints) {
+              final fillWidth = (constraints.maxWidth * (percentage / 100.0))
+                  .clamp(6.0, constraints.maxWidth);
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: fillWidth,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isTop
+                          ? const [CoachFitColors.orange, Color(0xFFFF8D72)]
+                          : [
+                              CoachFitColors.orange.withValues(alpha: 0.85),
+                              const Color(0xFFFF8D72).withValues(alpha: 0.85),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: isTop
+                        ? [
+                            BoxShadow(
+                              color: CoachFitColors.orange.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                            ),
+                          ]
+                        : null,
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

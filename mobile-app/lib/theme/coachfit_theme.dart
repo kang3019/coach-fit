@@ -110,11 +110,14 @@ abstract final class CoachFitTypography {
 }
 
 abstract final class CoachFitTheme {
-  static ThemeData dark(Color accent) {
+  static ThemeData dark([Color accent = CoachFitColors.orange]) {
     final scheme = ColorScheme.fromSeed(
       seedColor: accent,
       brightness: Brightness.dark,
       surface: CoachFitColors.surface,
+      primary: CoachFitColors.orange,
+      secondary: CoachFitColors.mint,
+      error: const Color(0xFFEF4444),
     );
 
     return ThemeData(
@@ -136,7 +139,7 @@ abstract final class CoachFitTheme {
         elevation: 0,
         margin: const EdgeInsets.symmetric(vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(CoachFitRadius.large),
+          borderRadius: BorderRadius.circular(19),
           side: const BorderSide(color: CoachFitColors.line),
         ),
       ),
