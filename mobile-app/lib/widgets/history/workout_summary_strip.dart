@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../theme/coachfit_theme.dart';
 import '../common/coachfit_card.dart';
 
@@ -46,9 +47,7 @@ class WorkoutSummaryStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final volumeText = totalVolumeKg >= 1000
-        ? '${(totalVolumeKg / 1000).toStringAsFixed(1)}t'
-        : '${totalVolumeKg.toInt()} kg';
+    final volumeText = '${NumberFormat('#,###').format(totalVolumeKg.toInt())} kg';
 
     return CoachFitCard(
       padding: const EdgeInsets.symmetric(
@@ -61,6 +60,7 @@ class WorkoutSummaryStrip extends StatelessWidget {
           Expanded(
             child: _buildItem(
               icon: Icons.fitness_center_rounded,
+              iconColor: CoachFitColors.orange,
               label: '총 볼륨',
               value: totalVolumeKg > 0 ? volumeText : '0 kg',
             ),
@@ -76,6 +76,7 @@ class WorkoutSummaryStrip extends StatelessWidget {
           Expanded(
             child: _buildItem(
               icon: Icons.access_time_rounded,
+              iconColor: CoachFitColors.mint,
               label: '운동 시간',
               value: durationMinutes > 0 ? '$durationMinutes분' : '0분',
             ),
@@ -91,6 +92,7 @@ class WorkoutSummaryStrip extends StatelessWidget {
           Expanded(
             child: _buildItem(
               icon: Icons.local_fire_department_rounded,
+              iconColor: CoachFitColors.orange,
               label: '소모 열량',
               value: caloriesKcal > 0 ? '$caloriesKcal kcal' : '0 kcal',
             ),
@@ -102,13 +104,22 @@ class WorkoutSummaryStrip extends StatelessWidget {
 
   Widget _buildItem({
     required IconData icon,
+    required Color iconColor,
     required String label,
     required String value,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: CoachFitColors.orange, size: 20),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 18),
+        ),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,

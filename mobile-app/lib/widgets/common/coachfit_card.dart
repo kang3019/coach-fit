@@ -9,7 +9,9 @@ class CoachFitCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double? borderRadius;
   final Color? backgroundColor;
+  final Gradient? gradient;
   final Color? borderColor;
+  final List<BoxShadow>? boxShadow;
   final VoidCallback? onTap;
 
   const CoachFitCard({
@@ -18,7 +20,9 @@ class CoachFitCard extends StatelessWidget {
     this.padding,
     this.borderRadius,
     this.backgroundColor,
+    this.gradient,
     this.borderColor,
+    this.boxShadow,
     this.onTap,
   });
 
@@ -30,12 +34,33 @@ class CoachFitCard extends StatelessWidget {
 
     final card = Container(
       decoration: BoxDecoration(
-        color: backgroundColor ?? CoachFitColors.surface,
+        color: (gradient == null && backgroundColor != null) ? backgroundColor : null,
+        gradient: gradient ??
+            (backgroundColor == null
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1A1F2B),
+                      Color(0xFF141822),
+                      Color(0xFF10131B),
+                    ],
+                    stops: [0.0, 0.6, 1.0],
+                  )
+                : null),
         borderRadius: effectiveRadius,
         border: Border.all(
-          color: borderColor ?? CoachFitColors.border,
+          color: borderColor ?? Colors.white.withValues(alpha: 0.08),
           width: 1,
         ),
+        boxShadow: boxShadow ??
+            [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
       ),
       child: Material(
         color: Colors.transparent,
