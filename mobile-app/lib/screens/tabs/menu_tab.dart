@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/user_profile.dart';
+import '../../theme/coachfit_theme.dart';
 import '../../services/app_settings_service.dart';
 import '../../services/favorite_exercises_service.dart';
 import '../../services/goal_service.dart';
@@ -225,17 +226,34 @@ class _MenuTabState extends State<MenuTab> {
     final accent = Theme.of(context).colorScheme.primary;
     final latestJournal = _journal.latestOf(DateTime.now());
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '메뉴 & 마이페이지',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-        children: [
-          // 프로필 카드 + 스펙 그리드 (기존 유지)
-          const _ProfileCard(),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+          children: [
+            // 1. MY SETTINGS 헤더 (Figma 게슈탈트 3단 위계)
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MY SETTINGS',
+                  style: CoachFitTypography.kicker,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  '메뉴 & 설정',
+                  style: CoachFitTypography.pageTitle,
+                ),
+                SizedBox(height: 5),
+                Text(
+                  '프로필 관리, 운동 환경 및 데이터 동기화 설정',
+                  style: CoachFitTypography.pageCaption,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // 프로필 카드 + 스펙 그리드 (기존 유지)
+            const _ProfileCard(),
           const SizedBox(height: 14),
           const _ProfileSpecGrid(),
           const SizedBox(height: 14),
@@ -527,14 +545,15 @@ class _MenuTabState extends State<MenuTab> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF151922),
+        backgroundColor: CoachFitColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('로그아웃', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
@@ -582,7 +601,7 @@ class _MenuTabState extends State<MenuTab> {
         child: Text(
           text,
           style: const TextStyle(
-            color: Colors.white70,
+            color: CoachFitColors.textSoft,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -597,15 +616,38 @@ class _MenuTabState extends State<MenuTab> {
     required VoidCallback onTap,
   }) =>
       ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(title,
-            style:
-                const TextStyle(color: Colors.white, fontSize: 14)),
-        subtitle: Text(subtitle,
-            style:
-                const TextStyle(color: Colors.white54, fontSize: 11)),
-        trailing: const Icon(Icons.chevron_right,
-            color: Colors.white24, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Center(
+            child: Icon(icon, color: color, size: 18),
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: CoachFitColors.text,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: CoachFitColors.textMuted,
+            fontSize: 11,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: CoachFitColors.textMuted,
+          size: 18,
+        ),
         onTap: onTap,
       );
 }
@@ -614,7 +656,7 @@ class _MenuDivider extends StatelessWidget {
   const _MenuDivider();
   @override
   Widget build(BuildContext context) =>
-      const Divider(height: 1, color: Colors.white10);
+      const Divider(height: 1, color: CoachFitColors.line);
 }
 
 // ===== 공용 Enum Picker Sheet =====

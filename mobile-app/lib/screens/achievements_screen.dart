@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/workout.dart';
 import '../services/achievement_service.dart';
 import '../services/workout_service.dart';
+import '../theme/coachfit_theme.dart';
 
 /// (E) 업적/뱃지 전체 화면 — 카테고리 탭 스타일.
 ///
@@ -528,7 +529,7 @@ class _AchievementDetailSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0E1116),
+              color: CoachFitColors.background,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(

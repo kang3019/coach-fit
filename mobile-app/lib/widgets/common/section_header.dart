@@ -25,12 +25,7 @@ class CoachFitSectionHeader extends StatelessWidget {
         if (categoryTag != null) ...[
           Text(
             categoryTag!.toUpperCase(),
-            style: const TextStyle(
-              color: CoachFitColors.orange,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-            ),
+            style: CoachFitTypography.kicker,
           ),
           const SizedBox(height: CoachFitSpacing.xs),
         ],
@@ -43,22 +38,13 @@ class CoachFitSectionHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: CoachFitColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
+                    style: CoachFitTypography.sectionTitle,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 3),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
-                        color: CoachFitColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: CoachFitTypography.caption,
                     ),
                   ],
                 ],

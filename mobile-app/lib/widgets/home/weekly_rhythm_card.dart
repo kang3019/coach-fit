@@ -33,12 +33,7 @@ class WeeklyRhythmCard extends StatelessWidget {
             children: [
               const Text(
                 '이번 주 리듬',
-                style: TextStyle(
-                  color: CoachFitColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
+                style: CoachFitTypography.sectionTitle,
               ),
               InkWell(
                 onTap: onTapStats,
@@ -119,7 +114,7 @@ class WeeklyRhythmCard extends StatelessWidget {
         ),
         child: const Icon(
           Icons.check_rounded,
-          color: Color(0xFF0E1116),
+          color: CoachFitColors.background,
           size: 18,
         ),
       );

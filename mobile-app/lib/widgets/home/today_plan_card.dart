@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/coachfit_theme.dart';
+import '../common/badge_icon.dart';
 import 'weekly_goal_ring.dart';
 
 /// 홈 화면 최상단 '오늘의 플랜' 요약 카드 (Gestalt 공통영역)
@@ -37,18 +38,18 @@ class TodayPlanCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(CoachFitRadius.hero),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: CoachFitColors.lineStrong,
           width: 1,
         ),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1C222E),
-            Color(0xFF13171F),
-            Color(0xFF0F131A),
+            CoachFitColors.surfaceRaised,
+            CoachFitColors.surface,
+            const Color(0xFF0C0F14),
           ],
-          stops: [0.0, 0.55, 1.0],
+          stops: const [0.0, 0.55, 1.0],
         ),
         boxShadow: [
           BoxShadow(
@@ -114,13 +115,8 @@ class TodayPlanCard extends StatelessWidget {
                       Row(
                         children: [
                           const Text(
-                            '오늘의 플랜',
-                            style: TextStyle(
-                              color: CoachFitColors.orange,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
-                            ),
+                            'TODAY\'S PLAN',
+                            style: CoachFitTypography.kicker,
                           ),
                           const SizedBox(width: CoachFitSpacing.sm),
                           Container(
@@ -129,8 +125,9 @@ class TodayPlanCard extends StatelessWidget {
                               vertical: 3.5,
                             ),
                             decoration: BoxDecoration(
-                              color: (isRecovered ? CoachFitColors.mint : CoachFitColors.orange)
-                                  .withValues(alpha: 0.14),
+                              color: isRecovered
+                                  ? CoachFitColors.mintSoft
+                                  : CoachFitColors.orangeSoft,
                               borderRadius: BorderRadius.circular(CoachFitRadius.small),
                             ),
                             child: Row(
@@ -170,12 +167,8 @@ class TodayPlanCard extends StatelessWidget {
                               children: [
                                 Text(
                                   '$userName님, 오늘은\n$focusMuscle에 집중해요.',
-                                  style: const TextStyle(
-                                    color: CoachFitColors.textPrimary,
-                                    fontSize: 23,
-                                    fontWeight: FontWeight.w900,
+                                  style: CoachFitTypography.heroDisplay.copyWith(
                                     height: 1.25,
-                                    letterSpacing: -0.6,
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -206,7 +199,7 @@ class TodayPlanCard extends StatelessWidget {
                 // 중간 구분선
                 Container(
                   height: 1,
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: CoachFitColors.line,
                 ),
 
                 // 2. 하단 서브 지표 2분할 영역 (스크린샷 191235 디자인)
@@ -223,22 +216,10 @@ class TodayPlanCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF281C1B),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: CoachFitColors.orange.withValues(alpha: 0.25),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.local_fire_department_rounded,
-                                    color: CoachFitColors.orange,
-                                    size: 22,
-                                  ),
+                                const CoachFitBadgeIcon.orange(
+                                  icon: Icons.local_fire_department_rounded,
+                                  size: 38,
+                                  iconSize: 20,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -275,7 +256,7 @@ class TodayPlanCard extends StatelessWidget {
                       Container(
                         width: 1,
                         height: 38,
-                        color: Colors.white.withValues(alpha: 0.06),
+                        color: CoachFitColors.line,
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                       ),
 
@@ -288,22 +269,10 @@ class TodayPlanCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF142924),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: CoachFitColors.mint.withValues(alpha: 0.25),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.trending_up_rounded,
-                                    color: CoachFitColors.mint,
-                                    size: 22,
-                                  ),
+                                const CoachFitBadgeIcon.mint(
+                                  icon: Icons.trending_up_rounded,
+                                  size: 38,
+                                  iconSize: 20,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

@@ -166,31 +166,17 @@ class _StatsTabState extends State<StatsTab> {
                     children: [
                       Text(
                         'MY PROGRESS',
-                        style: TextStyle(
-                          color: CoachFitColors.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                        ),
+                        style: CoachFitTypography.kicker,
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: 6),
                       Text(
                         '성장 통계',
-                        style: TextStyle(
-                          color: CoachFitColors.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.6,
-                        ),
+                        style: CoachFitTypography.pageTitle,
                       ),
-                      SizedBox(height: 2),
+                      SizedBox(height: 5),
                       Text(
                         '지난주보다 총 볼륨이 18.2% 늘었어요.',
-                        style: TextStyle(
-                          color: CoachFitColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: CoachFitTypography.pageCaption,
                       ),
                     ],
                   ),

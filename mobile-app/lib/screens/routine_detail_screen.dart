@@ -8,6 +8,7 @@ import '../services/profile_service.dart';
 import '../services/start_weight_service.dart';
 import '../services/workout_events.dart';
 import '../services/workout_service.dart';
+import '../theme/coachfit_theme.dart';
 import 'widgets/exercise_picker_modal.dart';
 import 'widgets/muscle_map_widget.dart';
 
@@ -212,9 +213,9 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     final activeMuscles = _calculateActiveMuscles();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1116),
+      backgroundColor: CoachFitColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0E1116),
+        backgroundColor: CoachFitColors.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
@@ -323,7 +324,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _starting ? null : _startWorkout,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF4820),
+                      backgroundColor: CoachFitColors.orange,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       elevation: 4,
@@ -356,14 +357,14 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                     onPressed: _addExercise,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0E1116),
+                      foregroundColor: CoachFitColors.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF0E1116)),
+                    icon: const Icon(Icons.add_rounded, size: 22, color: CoachFitColors.background),
                     label: const Text(
                       '운동 추가',
                       style: TextStyle(
@@ -403,16 +404,16 @@ class _RoutineExerciseTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFF221719) : const Color(0xFF151922),
+        color: isHighlighted ? const Color(0xFF221719) : CoachFitColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isHighlighted ? const Color(0xFFFF4820) : Colors.white.withValues(alpha: 0.05),
+          color: isHighlighted ? CoachFitColors.orange : CoachFitColors.line,
           width: isHighlighted ? 1.5 : 1.0,
         ),
         boxShadow: isHighlighted
             ? [
                 BoxShadow(
-                  color: const Color(0xFFFF4820).withValues(alpha: 0.25),
+                  color: CoachFitColors.orange.withValues(alpha: 0.25),
                   blurRadius: 14,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
@@ -427,10 +428,10 @@ class _RoutineExerciseTile extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: isHighlighted ? const Color(0xFF2E1C20) : const Color(0xFF1E2430),
+              color: isHighlighted ? const Color(0xFF2E1C20) : CoachFitColors.surfaceSoft,
               borderRadius: BorderRadius.circular(12),
               border: isHighlighted
-                  ? Border.all(color: const Color(0xFFFF4820).withValues(alpha: 0.4))
+                  ? Border.all(color: CoachFitColors.orange.withValues(alpha: 0.4))
                   : null,
             ),
             child: ClipRRect(
@@ -479,7 +480,7 @@ class _RoutineExerciseTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF4820),
+                          color: CoachFitColors.orange,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
