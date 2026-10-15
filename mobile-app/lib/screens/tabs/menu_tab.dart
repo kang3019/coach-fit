@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/user_profile.dart';
 import '../../theme/coachfit_theme.dart';
+import '../../widgets/common/coachfit_app_bar.dart';
 import '../../services/app_settings_service.dart';
 import '../../services/favorite_exercises_service.dart';
 import '../../services/goal_service.dart';
@@ -210,6 +211,8 @@ class _MenuTabState extends State<MenuTab> {
   Widget build(BuildContext context) {
     final latestJournal = _journal.latestOf(DateTime.now());
     return Scaffold(
+      backgroundColor: CoachFitColors.background,
+      appBar: const CoachFitAppBar(tabTitle: '마이'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
@@ -434,7 +437,15 @@ class _MenuTabState extends State<MenuTab> {
                   icon: Icons.auto_awesome,
                   color: CoachFitColors.orangeBright,
                   title: 'AI 코칭 엔진',
-                  subtitle: 'OpenAI GPT-4o-mini & 스마트 룰베이스 하이브리드',
+                  subtitle: 'AWS Bedrock (Claude 3.5 Sonnet) & 스마트 하이브리드',
+                  trailing: const Text(
+                    '연결됨 🟢',
+                    style: TextStyle(
+                      color: CoachFitColors.mint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   onTap: () {},
                 ),
                 const _MenuDivider(),
@@ -460,26 +471,29 @@ class _MenuTabState extends State<MenuTab> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // 🚪 로그아웃 버튼
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFEF4444),
-                side: BorderSide(color: const Color(0xFFEF4444).withValues(alpha: 0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              icon: const Icon(Icons.logout_rounded, size: 20),
-              label: const Text(
-                '로그아웃',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-              onPressed: _confirmLogout,
+          // 👤 계정 및 인증 섹션
+          _sectionLabel('👤 계정 및 인증'),
+          Card(
+            child: Column(
+              children: [
+                _navTile(
+                  icon: Icons.logout_rounded,
+                  color: const Color(0xFFEF4444),
+                  title: '로그아웃',
+                  subtitle: '현재 계정에서 안전하게 로그아웃하고 로그인 화면으로 이동',
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: CoachFitColors.textMuted,
+                    size: 18,
+                  ),
+                  onTap: _confirmLogout,
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     ),
@@ -490,26 +504,58 @@ class _MenuTabState extends State<MenuTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: CoachFitColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('로그아웃', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF151922),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: CoachFitColors.line),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              '로그아웃',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
+            ),
+          ],
+        ),
         content: const Text(
-          '정말 로그아웃하시겠습니까?\n로그아웃 시 로그인 화면으로 이동합니다.',
-          style: TextStyle(color: Colors.white70),
+          '정말 로그아웃하시겠습니까?\n로그아웃하면 로그인 화면으로 이동하며, 기록 데이터는 안전하게 보존됩니다.',
+          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white54,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소', style: TextStyle(color: Colors.white54)),
+            child: const Text('취소', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              elevation: 0,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('로그아웃'),
+            child: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

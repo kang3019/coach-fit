@@ -26,6 +26,8 @@ import '../widgets/workout_complete_sheet.dart';
 import '../../widgets/common/section_header.dart';
 import 'history_filter_and_edit.dart';
 import 'muscle_map_widget_shim.dart';
+import '../../widgets/common/coachfit_app_bar.dart';
+import '../../widgets/home/routine_start_modal.dart';
 
 /// 2. 기록 탭 (History & Body Measurement Tab)
 /// - 날짜별 운동 세트 기록 (조회/추가/삭제)
@@ -247,6 +249,50 @@ class _HistoryTabState extends State<HistoryTab> {
     }
   }
 
+  Future<void> _handleRestartRoutine(List<Workout> workouts) async {
+    if (workouts.isEmpty) return;
+
+    final bool isAi = workouts.any((w) => w.memo?.contains('AI 추천') == true);
+    final parts = <MuscleGroup>{};
+    for (final w in workouts) {
+      parts.addAll(MuscleGroupExtension.parseFromText(w.exerciseName));
+    }
+    final title = parts.isNotEmpty
+        ? '${parts.map((p) => p.koreanName).take(2).join(' & ')} 집중 루틴'
+        : (workouts.length > 1
+            ? '${workouts.first.exerciseName} 외 ${workouts.length - 1}개 종목'
+            : workouts.first.exerciseName);
+
+    await RoutineStartModal.show(
+      context: context,
+      title: '$title 다시 시작',
+      subtitle: '${DateFormat('M월 d일 (E)', 'ko_KR').format(_selectedDate)} 운동 세션',
+      tag: isAi ? 'AI 추천 루틴 복사' : '최근 운동 세션 복사',
+      tagColor: isAi ? CoachFitColors.orange : CoachFitColors.mint,
+      items: workouts.map((w) => RoutinePreviewItem.fromWorkout(w)).toList(),
+      onConfirm: (timerSec) async {
+        await _copySessionToToday(workouts);
+        WorkoutEvents.instance.ensureSessionStarted();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: CoachFitColors.mint, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('$title ${workouts.length}개 세트가 오늘 기록에 복사되었습니다! (휴식 $timerSec초)'),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF151922),
+            ),
+          );
+        }
+      },
+    );
+  }
+
   /// A 담당 추가: 기존 운동 기록을 수정 (DELETE + CREATE 패턴).
   /// 백엔드 PUT API 를 신설하지 않고 클라이언트에서 처리.
   Future<void> _openEditSheet(Workout original) async {
@@ -382,6 +428,7 @@ class _HistoryTabState extends State<HistoryTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CoachFitColors.background,
+      appBar: const CoachFitAppBar(tabTitle: '기록'),
       floatingActionButton: FloatingActionButton(
         backgroundColor: CoachFitColors.orange,
         shape: RoundedRectangleBorder(
@@ -578,7 +625,7 @@ class _HistoryTabState extends State<HistoryTab> {
                       workouts: workoutsOfDay,
                       dateSubtitle: DateFormat('M월 d일 (E)', 'ko_KR').format(_selectedDate),
                       onEdit: () => _openDayEditSheet(workoutsOfDay),
-                      onRestartRoutine: () => _copySessionToToday(workoutsOfDay),
+                      onRestartRoutine: () => _handleRestartRoutine(workoutsOfDay),
                       onDeleteWorkout: _confirmDelete,
                     ),
                   ],

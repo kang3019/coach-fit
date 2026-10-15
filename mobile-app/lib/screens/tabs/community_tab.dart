@@ -7,6 +7,7 @@ import '../../theme/coachfit_theme.dart';
 import '../community_post_detail_screen.dart';
 import '../widgets/community_comment_sheet.dart';
 import '../widgets/muscle_map_widget.dart';
+import '../../widgets/common/coachfit_app_bar.dart';
 
 /// 4. 커뮤니티 탭 (Community Tab)
 /// - 오운완 인증 피드 + 리액션/댓글/북마크 영속화
@@ -97,114 +98,251 @@ class _CommunityTabState extends State<CommunityTab> {
   Future<void> _openCreatePostModal() async {
     final autoBadge = await _buildAutoBadge();
     if (!mounted) return;
+
+    final categories = [
+      (label: '오운완', icon: '💪', defaultBadge: autoBadge ?? '오늘의 운동 인증', hint: '오늘 운동 완료 소감과 자극받은 부위를 공유해 보세요! 💪'),
+      (label: '자유', icon: '💬', defaultBadge: '자유 토크', hint: '자유롭게 회원들과 나누고 싶은 이야기를 적어보세요 ☕'),
+      (label: '질문', icon: '❓', defaultBadge: '운동 질문', hint: '궁금한 운동 자세, 자극 부위, 루틴 등에 대해 질문해 보세요 ❓'),
+      (label: '루틴/팁', icon: '💡', defaultBadge: '운동 꿀팁', hint: '자신만의 효과적인 운동법이나 꿀팁을 공유해 주세요 💡'),
+      (label: '식단', icon: '🥗', defaultBadge: '식단 인증', hint: '오늘 먹은 단백질 식단이나 다이어트 식단을 공유해 보세요 🥗'),
+    ];
+
+    int selectedCatIndex = 0;
     final textCtrl = TextEditingController();
-    final badgeCtrl =
-        TextEditingController(text: autoBadge ?? '오늘의 운동 인증');
+    final badgeCtrl = TextEditingController(text: categories[0].defaultBadge);
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF171B22),
+      backgroundColor: const Color(0xFF131720),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '오운완 인증 작성',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close, color: Colors.white54),
-                ),
-              ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final currentCat = categories[selectedCatIndex];
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
             ),
-            if (autoBadge != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: CoachFitColors.mint.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.auto_awesome,
-                        size: 14, color: CoachFitColors.mint),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '오늘 운동 자동 요약: $autoBadge',
-                        style: const TextStyle(
-                            color: CoachFitColors.mint, fontSize: 11),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            TextField(
-              controller: badgeCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-              decoration: const InputDecoration(
-                labelText: '뱃지 (수정 가능)',
-                labelStyle: TextStyle(color: Colors.white54),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: textCtrl,
-              maxLines: 4,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: '오늘 운동 완료 소감과 자극받은 부위를 공유해 보세요! 💪',
-                hintStyle: TextStyle(color: Colors.white38),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () async {
-                if (textCtrl.text.trim().isEmpty) return;
-                await _community.addPost(
-                  CommunityPost(
-                    id: DateTime.now().millisecondsSinceEpoch,
-                    userName: '나',
-                    userAvatar: '⚡',
-                    createdAt: DateTime.now(),
-                    content: textCtrl.text.trim(),
-                    workoutBadge: badgeCtrl.text.trim().isEmpty
-                        ? '오늘의 운동 인증'
-                        : badgeCtrl.text.trim(),
-                    isMine: true,
                   ),
-                );
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('오운완 인증 피드가 등록되었습니다!')),
-                );
-              },
-              child: const Text('피드에 등록하기'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '게시물 작성',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 게시물 종류 (카테고리 선택)
+                  const Text(
+                    '게시물 종류 선택',
+                    style: TextStyle(
+                      color: CoachFitColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(categories.length, (i) {
+                        final cat = categories[i];
+                        final isSelected = selectedCatIndex == i;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: InkWell(
+                            onTap: () {
+                              setModalState(() {
+                                selectedCatIndex = i;
+                                badgeCtrl.text = cat.defaultBadge;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? CoachFitColors.orange
+                                    : const Color(0xFF1E2432),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? CoachFitColors.orange
+                                      : CoachFitColors.line,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(cat.icon, style: const TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    cat.label,
+                                    style: TextStyle(
+                                      color: isSelected ? Colors.white : Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (selectedCatIndex == 0 && autoBadge != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: CoachFitColors.mint.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: CoachFitColors.mint.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.auto_awesome, size: 14, color: CoachFitColors.mint),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '오늘 운동 자동 요약: $autoBadge',
+                              style: const TextStyle(color: CoachFitColors.mint, fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  TextField(
+                    controller: badgeCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: '태그 / 뱃지 문구',
+                      labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
+                      filled: true,
+                      fillColor: CoachFitColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.orange),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: textCtrl,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: currentCat.hint,
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                      filled: true,
+                      fillColor: CoachFitColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: CoachFitColors.orange),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CoachFitColors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 4,
+                      ),
+                      icon: const Icon(Icons.send_rounded, size: 18),
+                      label: const Text('게시물 등록하기', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      onPressed: () async {
+                        if (textCtrl.text.trim().isEmpty) return;
+                        final badgeText = badgeCtrl.text.trim().isEmpty
+                            ? currentCat.defaultBadge
+                            : badgeCtrl.text.trim();
+                        await _community.addPost(
+                          CommunityPost(
+                            id: DateTime.now().millisecondsSinceEpoch,
+                            userName: '나',
+                            userAvatar: '⚡',
+                            createdAt: DateTime.now(),
+                            content: textCtrl.text.trim(),
+                            workoutBadge: selectedCatIndex == 0 ? badgeText : '[${currentCat.label}] $badgeText',
+                            isMine: true,
+                          ),
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('\'${currentCat.label}\' 게시물이 등록되었습니다!'),
+                            backgroundColor: CoachFitColors.mint,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -232,13 +370,15 @@ class _CommunityTabState extends State<CommunityTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: CoachFitColors.background,
+      appBar: const CoachFitAppBar(tabTitle: '커뮤니티'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreatePostModal,
         backgroundColor: CoachFitColors.orange,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.camera_alt_outlined),
+        icon: const Icon(Icons.edit_note_rounded, size: 24),
         label: const Text(
-          '오운완 인증',
+          '게시물 작성',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),

@@ -16,6 +16,8 @@ import '../coaching_screen.dart';
 import '../routine_detail_screen.dart';
 import '../widgets/last_workout_card.dart';
 import '../widgets/smart_suggestion_card.dart';
+import '../../widgets/common/coachfit_app_bar.dart';
+import '../../widgets/home/routine_start_modal.dart';
 
 /// 1. 홈 탭 (Home Tab)
 /// - 오늘의 AI 추천 운동 루틴
@@ -129,73 +131,60 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 64,
-        backgroundColor: const Color(0xF0090B0F),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: CoachFitColors.line),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: CoachFitColors.orange,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x42FF5A31),
-                    blurRadius: 20,
-                    offset: Offset(0, 8),
+  Future<void> _showStartRoutineModal(CoachingResult result) async {
+    final items = result.recommendedRoutine;
+    if (items.isEmpty) {
+      widget.onNavigateToLog();
+      return;
+    }
+
+    final focus = _focusMuscle(result);
+
+    await RoutineStartModal.show(
+      context: context,
+      title: '오늘의 AI 추천 루틴',
+      subtitle: '$focus 집중 공략',
+      tag: 'AI 실시간 분석',
+      tagColor: CoachFitColors.orange,
+      items: items.map((e) => RoutinePreviewItem.fromRecommended(e)).toList(),
+      onConfirm: (timerSec) async {
+        final created = await _workoutService.importRoutine(items);
+        WorkoutEvents.instance.ensureSessionStarted();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: CoachFitColors.mint, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('AI 추천 루틴 ${created.length}개 종목이 오늘 기록에 추가되었습니다! (휴식 $timerSec초)'),
                   ),
                 ],
               ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 22),
+              backgroundColor: const Color(0xFF151922),
             ),
-            const SizedBox(width: 10),
-            const Text(
-              'CoachFit',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 20,
-                letterSpacing: -0.8,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: CoachFitColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: CoachFitColors.line),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.notifications_none_rounded,
-                color: CoachFitColors.textSoft,
-                size: 20,
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('새로운 알림이 없습니다.'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
+          );
+          widget.onNavigateToLog();
+        }
+      },
+      onOpenFullDetail: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RoutineDetailScreen.fromCoachingResult(
+              result,
+              onStartWorkout: () => _handleImportRoutine(items),
             ),
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CoachFitAppBar(),
       body: RefreshIndicator(
         onRefresh: () async {
           _refreshHome();
@@ -255,8 +244,20 @@ class _HomeTabState extends State<HomeTab> {
                   onRetry: () {
                     _refreshHome();
                   },
-                  onImportRoutine: _handleImportRoutine,
-                  onStartRoutine: widget.onNavigateToLog,
+                  onImportRoutine: (items) {
+                    if (snap.data != null) {
+                      _showStartRoutineModal(snap.data!);
+                    } else {
+                      _handleImportRoutine(items);
+                    }
+                  },
+                  onStartRoutine: () {
+                    if (snap.data != null) {
+                      _showStartRoutineModal(snap.data!);
+                    } else {
+                      widget.onNavigateToLog();
+                    }
+                  },
                   onViewFullReport: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
