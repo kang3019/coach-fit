@@ -123,22 +123,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  post.workoutBadge,
-                  style: const TextStyle(
-                    color: accent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              _buildCategoryBadgeRow(post.workoutBadge),
               const SizedBox(height: 14),
               Text(
                 post.content,
@@ -258,6 +243,79 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildCategoryBadgeRow(String rawBadge) {
+    String category = '';
+    String detail = rawBadge.trim();
+    if (detail.startsWith('[') && detail.contains(']')) {
+      final closeIdx = detail.indexOf(']');
+      category = detail.substring(1, closeIdx).trim();
+      detail = detail.substring(closeIdx + 1).trim();
+    }
+
+    Color catColor;
+    switch (category) {
+      case '오운완':
+        catColor = const Color(0xFF00E5A0);
+        break;
+      case '질문':
+        catColor = const Color(0xFF38BDF8);
+        break;
+      case '식단':
+        catColor = const Color(0xFF10B981);
+        break;
+      case '루틴/팁':
+        catColor = const Color(0xFFFF9F1C);
+        break;
+      case '자유':
+        catColor = const Color(0xFFA78BFA);
+        break;
+      default:
+        catColor = const Color(0xFF00E5A0);
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (category.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: catColor.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: catColor.withValues(alpha: 0.5), width: 0.8),
+            ),
+            child: Text(
+              category,
+              style: TextStyle(
+                color: catColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        if (detail.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white12, width: 0.8),
+            ),
+            child: Text(
+              detail,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

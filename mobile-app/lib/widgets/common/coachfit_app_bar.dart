@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../screens/ai_chat_screen.dart';
 import '../../theme/coachfit_theme.dart';
 
 /// CoachFit 전 화면 공통 통일 상단 헤더 (AppBar)
@@ -79,6 +80,44 @@ class CoachFitAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: actions ?? [
+        // AI 코치 1:1 실시간 대화 버튼
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AiChatScreen()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: CoachFitColors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: CoachFitColors.orange.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome, color: CoachFitColors.orange, size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'AI 코치',
+                    style: TextStyle(
+                      color: CoachFitColors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         Container(
           margin: const EdgeInsets.only(right: 16),
           width: 40,

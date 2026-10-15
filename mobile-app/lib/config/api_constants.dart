@@ -52,6 +52,7 @@ class ApiConstants {
   static String get authRegister => '$baseUrl/api/auth/register';
   static String get authLogin => '$baseUrl/api/auth/login';
   static String get authMe => '$baseUrl/api/auth/me';
+  static String get aiChat => '$baseUrl/api/ai/chat';
 
   static const String defaultUserId = 'user_01';
 }

@@ -188,10 +188,50 @@ class CommunityService extends ChangeNotifier {
       final list = (jsonDecode(raw) as List<dynamic>)
           .map((e) => CommunityPost.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      // 기존 캐시된 데이터에 카테고리 태그([카테고리])가 누락된 경우 자동 마이그레이션 및 정규화
+      bool needsPersist = false;
+      for (int i = 0; i < list.length; i++) {
+        final p = list[i];
+        if (!p.workoutBadge.trim().startsWith('[')) {
+          final badge = p.workoutBadge.trim();
+          String category = '오운완';
+          if (badge.contains('질문') || p.content.contains('?') || p.content.contains('궁금')) {
+            category = '질문';
+          } else if (badge.contains('식단') || badge.contains('단백질') || p.content.contains('닭가슴살')) {
+            category = '식단';
+          } else if (badge.contains('팁') || badge.contains('루틴') || p.content.contains('추천')) {
+            category = '루틴/팁';
+          } else if (badge.contains('자유') || badge.contains('토크')) {
+            category = '자유';
+          }
+          final newBadge = '[$category] $badge';
+          list[i] = CommunityPost(
+            id: p.id,
+            userName: p.userName,
+            userAvatar: p.userAvatar,
+            createdAt: p.createdAt,
+            content: p.content,
+            workoutBadge: newBadge,
+            reactions: p.reactions,
+            myReactions: p.myReactions,
+            comments: p.comments,
+            isBookmarked: p.isBookmarked,
+            isMine: p.isMine,
+            isCrew: p.isCrew,
+          );
+          needsPersist = true;
+        }
+      }
+
       _cache = list;
+      if (needsPersist) {
+        await _persist();
+      }
       return List.unmodifiable(list);
     } catch (_) {
       _cache = _seedPosts();
+      await _persist();
       return List.unmodifiable(_cache!);
     }
   }
@@ -281,7 +321,7 @@ class CommunityService extends ChangeNotifier {
     );
   }
 
-  /// 처음 사용 시 더미 포스트 3건 시드.
+  /// 처음 사용 시 더미 포스트 시드 (5개 카테고리 균형 제공).
   List<CommunityPost> _seedPosts() {
     final now = DateTime.now();
     return [
@@ -291,7 +331,7 @@ class CommunityService extends ChangeNotifier {
         userAvatar: '🦁',
         createdAt: now.subtract(const Duration(minutes: 10)),
         content: '오늘 가슴 5세트 완료! 벤치프레스 70kg 10회 찍었습니다. 펌핑감 최고네요 🔥',
-        workoutBadge: '가슴 & 삼두 • 4,800kg 볼륨',
+        workoutBadge: '[오운완] 가슴 & 삼두 • 4,800kg 볼륨',
         reactions: {'❤': 24, '💪': 8},
         comments: [
           CommunityComment(
@@ -311,7 +351,7 @@ class CommunityService extends ChangeNotifier {
         createdAt: now.subtract(const Duration(minutes: 35)),
         content:
             '스쿼트 드디어 100kg 8회 성공했습니다! CoachFit AI 코치가 추천해 준 루틴대로 점진적 과부하 하니까 정체기 뚫렸어요 👏',
-        workoutBadge: '하체 메인 • 6,200kg 볼륨',
+        workoutBadge: '[루틴/팁] 하체 메인 • 6,200kg 볼륨',
         reactions: {'❤': 42, '🔥': 15, '💪': 20},
         myReactions: {'❤'},
         comments: [],
@@ -324,17 +364,47 @@ class CommunityService extends ChangeNotifier {
         createdAt: now.subtract(const Duration(hours: 2)),
         content:
             '야근하고 와서 진짜 가기 싫었는데 그래도 오운완 완료했습니다! 역시 운동은 일단 헬스장 가는 게 반이네요.',
-        workoutBadge: '등 & 이두 • 3,900kg 볼륨',
+        workoutBadge: '[오운완] 등 & 이두 • 3,900kg 볼륨',
         reactions: {'❤': 19, '💪': 7},
         comments: [],
       ),
       CommunityPost(
         id: 4,
+        userName: '초보헬서',
+        userAvatar: '🐼',
+        createdAt: now.subtract(const Duration(hours: 3)),
+        content:
+            '벤치프레스 할 때 바벨 그립을 얼마나 넓게 잡아야 삼각근 부담이 적을까요? 손목 통증 줄이는 노하우 궁금합니다!',
+        workoutBadge: '[질문] 벤치프레스 그립 & 손목 팁',
+        reactions: {'❤': 8, '👏': 5},
+        comments: [
+          CommunityComment(
+            id: 102,
+            userName: '득근요정',
+            userAvatar: '🐰',
+            createdAt: now.subtract(const Duration(hours: 2)),
+            content: '바를 내렸을 때 전완이 바닥과 수직(90도)을 이루는 너비가 어깨 부담이 가장 적습니다!',
+          ),
+        ],
+      ),
+      CommunityPost(
+        id: 5,
+        userName: '식단마스터',
+        userAvatar: '🥑',
+        createdAt: now.subtract(const Duration(hours: 5)),
+        content:
+            '오늘의 단백질 클린 식단 인증합니다. 닭가슴살 150g + 현미밥 150g + 아몬드 10알. 단백질 총 36g 채웠습니다 🥗',
+        workoutBadge: '[식단] 고단백 클린 식단',
+        reactions: {'❤': 16, '🔥': 9},
+        comments: [],
+      ),
+      CommunityPost(
+        id: 6,
         userName: '아침러너',
         userAvatar: '🦌',
         createdAt: DateTime(now.year, now.month, now.day - 1, 7, 30),
         content: '어제 비 와서 못 뛰어서 오늘 아침 10km 러닝으로 커버. 종아리 터질 것 같아요 🏃',
-        workoutBadge: '유산소 • 60분',
+        workoutBadge: '[오운완] 유산소 • 60분',
         reactions: {'❤': 11, '🔥': 4},
         comments: [],
         isCrew: true,

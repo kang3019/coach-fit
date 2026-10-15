@@ -14,6 +14,7 @@ import '../../widgets/home/today_plan_card.dart';
 import '../../widgets/home/weekly_rhythm_card.dart';
 import '../coaching_screen.dart';
 import '../routine_detail_screen.dart';
+import '../ai_chat_screen.dart';
 import '../widgets/last_workout_card.dart';
 import '../widgets/smart_suggestion_card.dart';
 import '../../widgets/common/coachfit_app_bar.dart';
@@ -282,6 +283,10 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: CoachFitSpacing.lg),
 
+            // AI 전담 코치 1:1 상담 배너
+            _buildAiCoachBanner(context),
+            const SizedBox(height: CoachFitSpacing.lg),
+
             // 4. 이번 주 리듬
             FutureBuilder<HomeSummary>(
               future: _summaryFuture,
@@ -305,6 +310,99 @@ class _HomeTabState extends State<HomeTab> {
 
             // 6. 스마트 제안 카드 (기존 기능 보존)
             const SmartSuggestionCard(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiCoachBanner(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AiChatScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF1B202A),
+              Color(0xFF141822),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: CoachFitColors.orange.withValues(alpha: 0.35),
+            width: 1,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: CoachFitColors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Icon(Icons.auto_awesome, color: CoachFitColors.orange, size: 22),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        '1:1 AI 전담 코치 상담',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: CoachFitColors.mint.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Bedrock Sonnet',
+                          style: TextStyle(
+                            color: CoachFitColors.mint,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '자세 교정, 맞춤 루틴, 식단/단백질 가이드 실시간 질문',
+                    style: TextStyle(color: Colors.white60, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white54, size: 22),
           ],
         ),
       ),
