@@ -96,6 +96,28 @@ class CoachingResponse(BaseModel):
 
 
 # ==========================================
+# 2-1. 1:1 실시간 AI 채팅(Chat) 스키마
+# ==========================================
+
+class ChatMessageItem(BaseModel):
+    role: str = Field(..., description="'user' 또는 'assistant'")
+    content: str = Field(..., description="대화 메시지 본문")
+
+
+class AiChatRequest(BaseModel):
+    message: str = Field(..., description="사용자 질문 또는 상담 메시지")
+    history: List[ChatMessageItem] = Field(default_factory=list, description="이전 대화 내역")
+    user_id: Optional[str] = Field(default="user_01", validation_alias="userId")
+    user_goal: Optional[str] = Field(default="근비대 및 전신 근력 증진")
+
+
+class AiChatResponse(BaseModel):
+    reply: str = Field(..., description="AI 코치의 답변")
+    suggested_questions: List[str] = Field(default_factory=list, description="후속 추천 질문")
+    timestamp: str = Field(default_factory=lambda: dt_datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+# ==========================================
 # 3. 신체 측정(BodyMetric) 관련 스키마
 # ==========================================
 

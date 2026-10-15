@@ -312,9 +312,12 @@ class _CommunityTabState extends State<CommunityTab> {
                       label: const Text('게시물 등록하기', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                       onPressed: () async {
                         if (textCtrl.text.trim().isEmpty) return;
-                        final badgeText = badgeCtrl.text.trim().isEmpty
+                        final rawBadge = badgeCtrl.text.trim().isEmpty
                             ? currentCat.defaultBadge
                             : badgeCtrl.text.trim();
+                        final finalBadge = rawBadge.startsWith('[')
+                            ? rawBadge
+                            : '[${currentCat.label}] $rawBadge';
                         await _community.addPost(
                           CommunityPost(
                             id: DateTime.now().millisecondsSinceEpoch,
@@ -322,7 +325,7 @@ class _CommunityTabState extends State<CommunityTab> {
                             userAvatar: '⚡',
                             createdAt: DateTime.now(),
                             content: textCtrl.text.trim(),
-                            workoutBadge: selectedCatIndex == 0 ? badgeText : '[${currentCat.label}] $badgeText',
+                            workoutBadge: finalBadge,
                             isMine: true,
                           ),
                         );
@@ -646,21 +649,7 @@ class _CommunityFeedCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  post.workoutBadge,
-                  style: const TextStyle(
-                      color: accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
+              _buildCategoryBadgeRow(post.workoutBadge),
               const SizedBox(height: 10),
               Text(
                 post.content,
@@ -715,6 +704,79 @@ class _CommunityFeedCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryBadgeRow(String rawBadge) {
+    String category = '';
+    String detail = rawBadge.trim();
+    if (detail.startsWith('[') && detail.contains(']')) {
+      final closeIdx = detail.indexOf(']');
+      category = detail.substring(1, closeIdx).trim();
+      detail = detail.substring(closeIdx + 1).trim();
+    }
+
+    Color catColor;
+    switch (category) {
+      case '오운완':
+        catColor = const Color(0xFF00E5A0);
+        break;
+      case '질문':
+        catColor = const Color(0xFF38BDF8);
+        break;
+      case '식단':
+        catColor = const Color(0xFF10B981);
+        break;
+      case '루틴/팁':
+        catColor = const Color(0xFFFF9F1C);
+        break;
+      case '자유':
+        catColor = const Color(0xFFA78BFA);
+        break;
+      default:
+        catColor = const Color(0xFF00E5A0);
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (category.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: catColor.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: catColor.withValues(alpha: 0.5), width: 0.8),
+            ),
+            child: Text(
+              category,
+              style: TextStyle(
+                color: catColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        if (detail.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white12, width: 0.8),
+            ),
+            child: Text(
+              detail,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

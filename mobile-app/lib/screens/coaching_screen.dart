@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/coaching_result.dart';
 import '../services/coaching_service.dart';
 import '../theme/coachfit_theme.dart';
+import 'ai_chat_screen.dart';
 
 class CoachingScreen extends StatefulWidget {
   const CoachingScreen({super.key});
@@ -59,15 +60,8 @@ class _CoachingScreenState extends State<CoachingScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
-              _SectionCard(
-                title: '📊 최근 분석 요약',
-                body: r.summary,
-              ),
-              _SectionCard(
-                title: '💬 AI 코치의 조언',
-                body: r.coachingAdvice,
-                highlight: true,
-              ),
+              _AnalysisSummaryCard(summary: r.summary),
+              _CoachAdviceCard(advice: r.coachingAdvice),
               const SizedBox(height: 8),
               const Text(
                 '🎯 오늘 추천 루틴',
@@ -79,6 +73,34 @@ class _CoachingScreenState extends State<CoachingScreen> {
               ),
               const SizedBox(height: 8),
               ...r.recommendedRoutine.map((e) => _RoutineCard(item: e)),
+              const SizedBox(height: 16),
+              // AI 코치 1:1 대화하기 CTA 버튼
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B202A),
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: CoachFitColors.orange.withValues(alpha: 0.6)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: CoachFitColors.orange, size: 18),
+                  label: const Text(
+                    '이 분석에 대해 AI 코치와 1:1 대화하기',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AiChatScreen(
+                          initialMessage: '방금 생성된 AI 코칭 리포트에 대해 추가로 질문하고 싶어요.',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
               const SizedBox(height: 12),
               Text(
                 '생성 시각: ${r.generatedAt}',
@@ -93,44 +115,184 @@ class _CoachingScreenState extends State<CoachingScreen> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final String body;
-  final bool highlight;
-  const _SectionCard({
-    required this.title,
-    required this.body,
-    this.highlight = false,
-  });
+class _AnalysisSummaryCard extends StatelessWidget {
+  final String summary;
+
+  const _AnalysisSummaryCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: highlight ? scheme.primary : Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+    String cleanText = summary;
+    final List<String> specBadges = [];
+
+    final specMatch = RegExp(r'\[신체 스펙:\s*([^\]]+)\]').firstMatch(cleanText);
+    if (specMatch != null) {
+      final specContent = specMatch.group(1) ?? '';
+      specBadges.addAll(
+        specContent.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty),
+      );
+      cleanText = cleanText.replaceAll(specMatch.group(0)!, '').replaceAll('  ', ' ').trim();
+    }
+
+    cleanText = cleanText.replaceAll(RegExp(r'\([^)]*에러로 더미[^)]*\)'), '').trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151922),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF232B38)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.analytics_outlined, color: CoachFitColors.mint, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    '최근 분석 요약',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              body,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                height: 1.5,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: CoachFitColors.mint.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'AI 진단 완료',
+                  style: TextStyle(
+                    color: CoachFitColors.mint,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
+            ],
+          ),
+          if (specBadges.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: specBadges.map((badge) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Text(
+                    badge,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ],
+          const SizedBox(height: 12),
+          Text(
+            cleanText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.5,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CoachAdviceCard extends StatelessWidget {
+  final String advice;
+
+  const _CoachAdviceCard({required this.advice});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1D1714),
+            Color(0xFF151922),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: CoachFitColors.orange.withValues(alpha: 0.35),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: CoachFitColors.orange.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.auto_awesome, color: CoachFitColors.orange, size: 15),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'AI 코치의 조언',
+                style: TextStyle(
+                  color: CoachFitColors.orange,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            advice,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.5,
+              height: 1.6,
+            ),
+          ),
+        ],
       ),
     );
   }

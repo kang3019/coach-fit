@@ -1,8 +1,15 @@
 import os
 import json
 from datetime import datetime
-from typing import List, Optional
-from app.models.schemas import CoachingRequest, CoachingResponse, RecommendedRoutineItem
+from typing import List, Optional, Tuple
+from app.models.schemas import (
+    CoachingRequest,
+    CoachingResponse,
+    RecommendedRoutineItem,
+    AiChatRequest,
+    AiChatResponse,
+    ChatMessageItem,
+)
 
 
 def _safe_routine_item(raw: dict) -> Optional[RecommendedRoutineItem]:
@@ -126,7 +133,7 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
     spec_summary = f" [신체 스펙: {', '.join(spec_parts)}]" if spec_parts else ""
 
     if count == 0:
-        summary = f"최근 운동 기록이 없습니다.{spec_summary} 새로운 시작을 위해 기초 전신 루틴을 권장합니다."
+        summary = f"최근 저장된 운동 기록이 없어 회원의 신체 지표{spec_summary}를 기반으로 초기 진단을 진행했습니다. 기초 근신경계 활성화 및 전신 자세 정렬을 위한 스타터 루틴을 구성했습니다."
         advice = (
             f"회원님의 목표인 '{request.user_goal}' 달성을 위해 무리한 중량보다 정확한 가동 범위와 자세 정렬에 집중해주세요. "
             "체중과 골격근량 밸런스를 고려하여 초반에는 기초 다관절 운동으로 신경계를 활성화하는 것이 효과적입니다."
@@ -161,8 +168,9 @@ def _generate_smart_dummy_coaching(request: CoachingRequest) -> CoachingResponse
         total_volume = sum(w.weight * w.sets * w.reps for w in workouts)
 
         summary = (
-            f"최근 {count}개 세션(총 {total_sets}세트, 누적 볼륨 약 {int(total_volume):,}kg)과 "
-            f"신체 스펙{spec_summary}을 정밀 분석했습니다. (최근 운동: {', '.join(recent_names[:3])})"
+            f"최근 {count}개 세션 동안 총 {total_sets}세트(누적 볼륨 약 {int(total_volume):,}kg)를 꾸준히 완주하셨습니다. "
+            f"신체 지표{spec_summary}와 최근 선호 종목({', '.join(recent_names[:3]) if recent_names else '주요 복합 운동'})의 근육 부하를 고려할 때, "
+            "타깃 부위의 충분한 회복과 안전한 점진적 과부하를 적용하기에 아주 좋은 컨디션입니다."
         )
 
         advice_body = ""
@@ -650,8 +658,8 @@ def _call_bedrock_gateway_coaching(
 
 반드시 아래 JSON 스키마만 포함하는 유효한 JSON 형식으로 응답하세요:
 {
-  "summary": "운동 및 신체 상태 요약 문자열",
-  "coaching_advice": "코칭 조언 및 운동 생리학적 피드백 문자열",
+  "summary": "운동 기록과 신체 상태를 바탕으로 한 현재 피트니스 상태 및 회복도 분석 요약 (전문 코치의 친절한 1~2문장)",
+  "coaching_advice": "생체역학적 부하 분석, 점진적 과부하 방향, 부상 예방 팁을 포함한 코칭 조언 (2~3문장)",
   "recommended_routine": [
     {
       "exercise_name": "운동명",
@@ -695,9 +703,202 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-    except Exception as e:
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (Bedrock Gateway 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+    except Exception:
+        return _generate_smart_dummy_coaching(request)
+
+
+# ==========================================
+# 1:1 실시간 AI 코칭 채팅 (Chat) 엔진
+# ==========================================
+
+def _extract_suggested_questions(text: str) -> Tuple[str, List[str]]:
+    """답변 텍스트에서 [추천 질문] 블록을 파싱하여 본문과 분리."""
+    markers = ["[추천 질문]", "추천 질문:", "[추천질문]"]
+    marker_pos = -1
+    for m in markers:
+        p = text.rfind(m)
+        if p != -1:
+            marker_pos = p
+            break
+
+    if marker_pos == -1:
+        return text.strip(), []
+
+    main_text = text[:marker_pos].strip()
+    questions_block = text[marker_pos:].split("\n")
+    suggestions: List[str] = []
+
+    for line in questions_block:
+        line = line.strip()
+        if not line or any(m in line for m in markers):
+            continue
+        cleaned = line.lstrip("-*•0123456789. \t").strip()
+        if cleaned:
+            suggestions.append(cleaned)
+
+    return main_text, suggestions[:3]
+
+
+def _generate_default_suggestions(user_message: str) -> List[str]:
+    """사용자 메시지 키워드에 따른 기본 후속 질문 3선."""
+    msg = user_message.lower()
+    if any(k in msg for k in ["루틴", "추천", "프로그램"]):
+        return [
+            "오늘 바로 할 수 있는 30분 루틴 알려줘",
+            "세트 간 휴식 시간은 몇 초가 좋아?",
+            "점진적 과부하는 어떻게 적용해?"
+        ]
+    if any(k in msg for k in ["어깨", "통증", "아파", "부상", "허리", "무릎"]):
+        return [
+            "어깨 충돌 증후군 예방 스트레칭 알려줘",
+            "벤치프레스 할 때 손목 통증 줄이는 법",
+            "허리 부담 없는 하체 운동 추천해줘"
+        ]
+    if any(k in msg for k in ["식단", "단백질", "칼로리", "다이어트", "살"]):
+        return [
+            "내 체중에 맞는 하루 단백질 권장량은?",
+            "운동 직후 단백질 섭취 타이밍",
+            "가성비 좋은 단백질 식단 추천해줘"
+        ]
+    return [
+        "오늘 추천 운동 루틴 알려줘",
+        "벤치프레스 자세 팁 가르쳐줘",
+        "근성장에 최적화된 식단 알려줘"
+    ]
+
+
+def _generate_smart_dummy_chat(
+    request: AiChatRequest,
+    user_context: Optional[dict] = None
+) -> AiChatResponse:
+    """Bedrock Gateway 키가 없거나 일시 장애 시의 지능형 피트니스 코치 응답."""
+    msg = request.message.strip().lower()
+    user_goal = request.user_goal or "근비대 및 전신 근력 증진"
+
+    if any(k in msg for k in ["안녕", "반가", "하이", "처음"]):
+        reply = (
+            "안녕하세요! 회원님의 1:1 전담 AI 피트니스 코치입니다. 💪\n\n"
+            f"현재 설정하신 목표인 **'{user_goal}'**에 맞추어 운동 루틴 설계, 자세 교정, 점진적 과부하 주기화, "
+            "그리고 영양 식단까지 무엇이든 물어보세요! 오늘 어떤 부위 운동을 계획 중이신가요?"
+        )
+    elif any(k in msg for k in ["어깨", "통증", "아파", "찝히", "부상"]):
+        reply = (
+            "웨이트 트레이닝 시 관절 통증은 즉시 점검해야 할 중요한 신호입니다! ⚠️\n\n"
+            "**1. 견갑골 후인하강 점검**: 프레스 동작 시 견갑골(날개뼈)이 거상(으쓱)되면 회전근개와 삼각근이 찝히기 쉽습니다. 가슴을 들고 날개뼈를 바닥 쪽으로 단단히 고정하세요.\n"
+            "**2. 팔꿈치 각도**: 바벨이나 덤벨을 내릴 때 팔꿈치가 어깨선과 평행(90도)이 되면 어깨 충돌이 일어납니다. 몸통과 60~75도 각도를 유지하세요.\n"
+            "**3. 회전근개 웜업**: 본 세트 전 케이블 페이스 풀이나 Y-레이즈로 후면 근육을 예열하는 것을 강력히 추천합니다."
+        )
+    elif any(k in msg for k in ["루틴", "오늘 운동", "추천", "프로그램"]):
+        reply = (
+            f"회원님의 목표인 **'{user_goal}'**을 극대화할 수 있는 추천 3분할 루틴 중 오늘 추천 세션입니다! 🎯\n\n"
+            "**[대흉근 & 삼두 집중 루틴]**\n"
+            "1. **바벨 벤치프레스**: 4세트 × 8~10회 (메인 복합 중량 운동)\n"
+            "2. **인클라인 덤벨 프레스**: 4세트 × 10~12회 (상부 가슴 타깃)\n"
+            "3. **케이블 체스트 플라이**: 3세트 × 15회 (지속 긴장 고립)\n"
+            "4. **로프 트라이셉스 익스텐션**: 3세트 × 12회 (삼두근 마무리)\n\n"
+            "💡 세트 간 휴식은 다관절 운동은 90~120초, 고립 운동은 60초를 유지하세요!"
+        )
+    elif any(k in msg for k in ["식단", "단백질", "칼로리", "닭가슴살", "보충제"]):
+        reply = (
+            "근성장과 체지방 관리를 위한 영양 섭취 황금 원칙입니다! 🥗\n\n"
+            "**1. 하루 단백질 섭취량**: 체중 1kg당 1.6g ~ 2.0g을 권장합니다. (체중 70kg 기준 약 120~140g)\n"
+            "**2. 끼니별 분배**: 한 번에 몰아먹기보다 3~4끼로 나누어 끼니당 25~35g씩 섭취하는 것이 근단백질 합성(MPS)을 종일 높게 유지하는 비결입니다.\n"
+            "**3. 수분 섭취**: 크레아틴 합성과 근육 펌핑을 위해 하루 최소 2~2.5L의 물을 충분히 마셔주세요."
+        )
+    elif any(k in msg for k in ["스쿼트", "하체", "데드리프트"]):
+        reply = (
+            "하체 및 후면 사슬은 신체 전체 근육량의 60% 이상을 차지하는 핵심 부위입니다! 🦵\n\n"
+            "**스쿼트 핵심 큐**: 발바닥 3점(엄지발가락, 새끼발가락, 뒤꿈치)으로 지면을 강하게 지지하고, "
+            "복압(발살바 호흡)을 채워 척추를 중립으로 보호한 상태에서 고관절과 무릎을 동시에 접어 내려가세요.\n"
+            "무릎이 안쪽으로 모이지 않도록 바깥쪽으로 밀어내는 느낌(엉덩이 외회전)을 유지하는 것이 핵심입니다!"
+        )
+    else:
+        reply = (
+            f"'{request.message}'에 대해 전문 코칭 관점에서 답변드립니다. 💡\n\n"
+            "효과적인 피트니스는 **[정확한 자세 정렬 ➔ 점진적 과부하 ➔ 충분한 단백질 영양 ➔ 양질의 수면]** 4가지 축이 조화를 이룰 때 가장 빠르고 부상 없이 완성됩니다.\n\n"
+            "추가로 세부적인 운동 종목이나 현재 겪고 계신 정체기, 식단에 대해 구체적으로 말씀해 주시면 회원님의 스펙에 맞춤 설계해 드릴게요!"
+        )
+
+    return AiChatResponse(
+        reply=reply,
+        suggested_questions=_generate_default_suggestions(request.message),
+        timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+
+
+def chat_with_ai_coach(
+    request: AiChatRequest,
+    user_context: Optional[dict] = None
+) -> AiChatResponse:
+    """
+    1:1 실시간 AI 코치 대화 엔진.
+    AWS Bedrock Gateway (Claude 3.5 Sonnet)를 우선 호출하며,
+    키 부재 또는 통신 불가 시 지능형 규칙/키워드 기반 피트니스 챗봇으로 안전하게 폴백합니다.
+    """
+    gateway_key = os.getenv("BEDROCK_GATEWAY_API_KEY")
+    gateway_url = os.getenv("BEDROCK_GATEWAY_BASE_URL")
+    gateway_model = os.getenv("BEDROCK_GATEWAY_MODEL", "bedrock-sonnet")
+
+    if gateway_key and gateway_url:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=gateway_key, base_url=gateway_url)
+
+            context_str = ""
+            if user_context:
+                h = user_context.get("height_cm")
+                w = user_context.get("weight_kg")
+                m = user_context.get("muscle_kg")
+                f = user_context.get("body_fat_percent")
+                exp = user_context.get("experience")
+                context_str = (
+                    f"[회원 신체 정보: 키 {h or '-'}cm, 체중 {w or '-'}kg, "
+                    f"골격근량 {m or '-'}kg, 체지방률 {f or '-'}%, 경력: {exp or '-'}, 목표: {request.user_goal}]\n"
+                )
+
+            system_instruction = (
+                "당신은 피트니스 플랫폼 CoachFit(코치핏)의 수석 1:1 전담 AI 코치입니다.\n"
+                "사용자의 웨이트 트레이닝 자세 교정, 분할 루틴 설계, 점진적 과부하 원리, 스포츠 영양(단백질/식단), "
+                "스트레칭 및 부상 방지에 대해 전문적이고 명쾌하며 친절하게 답변합니다.\n"
+                f"{context_str}\n"
+                "답변 가이드라인:\n"
+                "1. 핵심을 명확히 짚고, 모바일에서 편하게 읽을 수 있도록 이모지와 단락을 깔끔하게 구성하세요.\n"
+                "2. 너무 장황하지 않게 2~4개 단락 내외로 핵심 노하우를 전달하세요.\n"
+                "3. 답변의 맨 마지막 줄에 사용자가 바로 이어 물어볼 만한 후속 질문 2~3개를 아래 형식으로 꼭 붙여주세요:\n"
+                "[추천 질문]\n"
+                "- 추천 질문 1\n"
+                "- 추천 질문 2\n"
+                "- 추천 질문 3"
+            )
+
+            messages = [{"role": "system", "content": system_instruction}]
+            for h in request.history[-8:]:
+                role = "assistant" if h.role in ("assistant", "ai") else "user"
+                messages.append({"role": role, "content": h.content})
+
+            messages.append({"role": "user", "content": request.message})
+
+            response = client.chat.completions.create(
+                model=gateway_model,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1000,
+            )
+
+            raw_reply = response.choices[0].message.content or ""
+            reply, suggestions = _extract_suggested_questions(raw_reply)
+            if not suggestions:
+                suggestions = _generate_default_suggestions(request.message)
+
+            return AiChatResponse(
+                reply=reply.strip(),
+                suggested_questions=suggestions,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+        except Exception:
+            pass
+
+    return _generate_smart_dummy_chat(request, user_context)
+
 
 

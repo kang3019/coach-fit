@@ -30,9 +30,11 @@ from app.models.schemas import (
     UserLoginRequest,
     TokenResponse,
     UserResponse,
+    AiChatRequest,
+    AiChatResponse,
 )
 from app.models.user_db import UserRecord
-from app.services.ai_coach import generate_coaching_advice
+from app.services.ai_coach import generate_coaching_advice, chat_with_ai_coach
 from app.services.workout_service import (
     create_workout,
     get_workouts_by_user,
@@ -414,6 +416,42 @@ def api_coaching_direct(request: CoachingRequest):
         return generate_coaching_advice(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 코칭 생성 실패: {str(e)}")
+
+
+@app.post(
+    "/api/ai/chat",
+    response_model=AiChatResponse,
+    summary="1:1 실시간 AI 피트니스 코치 대화 (Bedrock Claude 3.5 Sonnet)"
+)
+def api_ai_chat(
+    request: AiChatRequest,
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    1:1 실시간 AI 피트니스 코치와 대화합니다.
+    사용자의 신체 스펙, 경력, 목표 컨텍스트를 자동 반영하여 개인 맞춤형 피트니스 답변을 제공합니다.
+    """
+    target_user_id = current_user.user_id if current_user else (request.user_id or "user_01")
+
+    user_context = None
+    try:
+        profile = get_or_create_user_profile(db, user_id=target_user_id)
+        latest_metric = get_latest_body_metric(db, user_id=target_user_id)
+        user_context = {
+            "height_cm": profile.height_cm,
+            "weight_kg": latest_metric.weight_kg if latest_metric and latest_metric.weight_kg else profile.weight_kg,
+            "muscle_kg": latest_metric.muscle_kg if latest_metric else None,
+            "body_fat_percent": latest_metric.body_fat_percent if latest_metric else None,
+            "experience": profile.experience,
+        }
+    except Exception:
+        pass
+
+    try:
+        return chat_with_ai_coach(request, user_context=user_context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 채팅 생성 실패: {str(e)}")
 
 
 # ==========================================
