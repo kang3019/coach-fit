@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/workout.dart';
+import '../../services/workout_events.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 
@@ -161,7 +162,7 @@ class _LastWorkoutCardState extends State<LastWorkoutCard> {
                         ),
                       ),
                       TextButton(
-                        onPressed: widget.onStartRecording,
+                        onPressed: () => _handleChallengeTap(context, last, nextWeight),
                         style: TextButton.styleFrom(
                           backgroundColor: accent,
                           foregroundColor: Colors.black,
@@ -169,7 +170,7 @@ class _LastWorkoutCardState extends State<LastWorkoutCard> {
                               horizontal: 12, vertical: 6),
                         ),
                         child: const Text(
-                          '기록하러',
+                          '도전 기록',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -185,6 +186,169 @@ class _LastWorkoutCardState extends State<LastWorkoutCard> {
         );
       },
     );
+  }
+
+  Future<void> _handleChallengeTap(
+    BuildContext context,
+    Workout last,
+    double nextWeight,
+  ) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: const Color(0xFF131720),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: CoachFitColors.mint.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CoachFitColors.mint.withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    '점진적 과부하 도전',
+                    style: TextStyle(
+                      color: CoachFitColors.mint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${last.exerciseName} +2.5kg 증량 도전',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: CoachFitColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: CoachFitColors.line),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('지난 수행 무게', style: TextStyle(color: CoachFitColors.textMuted, fontSize: 13)),
+                      Text(
+                        '${_fmtWeight(last.weight)}kg (${last.sets}세트 × ${last.reps}회)',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(color: CoachFitColors.line, height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '오늘 도전 무게 (+2.5kg)',
+                        style: TextStyle(color: CoachFitColors.mint, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${_fmtWeight(nextWeight)}kg (${last.sets}세트 × ${last.reps}회)',
+                        style: const TextStyle(color: CoachFitColors.mint, fontSize: 15, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '안전한 중량 증량을 위해 워밍업 세트 후 본 세트에서 시도해 보세요.\n오늘 기록에 +2.5kg 증량 세트를 추가하고 운동을 시작할까요?',
+              style: TextStyle(color: CoachFitColors.textSecondary, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: CoachFitColors.mint,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 4,
+                ),
+                icon: const Icon(Icons.fitness_center_rounded, size: 20),
+                label: const Text(
+                  '오늘 기록에 추가 & 바로 시작',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await _service.createWorkout(Workout(
+          userId: last.userId,
+          exerciseName: last.exerciseName,
+          sets: last.sets,
+          reps: last.reps,
+          weight: nextWeight,
+          workoutDate: DateTime.now(),
+          memo: '점진적 과부하 도전 (+2.5kg)',
+        ));
+        WorkoutEvents.instance.ensureSessionStarted();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: CoachFitColors.mint, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('🎯 ${last.exerciseName} ${_fmtWeight(nextWeight)}kg 도전이 오늘 기록에 추가되었습니다!'),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF151922),
+            ),
+          );
+          widget.onStartRecording?.call();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('기록 추가 실패: $e')),
+          );
+        }
+      }
+    }
   }
 
   String _fmtWeight(double w) =>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/workout.dart';
+import '../../screens/widgets/muscle_map_widget.dart';
 import '../../theme/coachfit_theme.dart';
 import '../common/coachfit_card.dart';
 import '../common/section_header.dart';
@@ -74,9 +75,25 @@ class RecentWorkoutCard extends StatelessWidget {
       grouped.putIfAbsent(w.exerciseName, () => []).add(w);
     }
 
-    final routineTitle = workouts.first.memo?.contains('루틴') == true
-        ? workouts.first.memo!.split('-').first.replaceAll(RegExp(r'[\[\]]'), '').trim()
-        : '맞춤 운동 루틴';
+    // AI 추천 루틴 여부 및 타겟 근육 기반 명확한 제목 산출
+    final bool isAiRoutine = workouts.any((w) => w.memo?.contains('AI 추천') == true);
+    final parts = <MuscleGroup>{};
+    for (final w in workouts) {
+      parts.addAll(MuscleGroupExtension.parseFromText(w.exerciseName));
+    }
+
+    String routineTitle;
+    if (parts.isNotEmpty) {
+      routineTitle = '${parts.map((p) => p.koreanName).take(2).join(' & ')} 집중 루틴';
+    } else if (workouts.isNotEmpty) {
+      routineTitle = workouts.length > 1
+          ? '${workouts.first.exerciseName} 외 ${workouts.length - 1}개 종목'
+          : workouts.first.exerciseName;
+    } else {
+      routineTitle = '맞춤 운동 루틴';
+    }
+
+    final String routineBadge = isAiRoutine ? 'AI 추천 루틴' : '최근 완료 세션';
 
     final totalSets = workouts.length;
     final estMinutes = (totalSets * 3.5 + 10).toInt();
@@ -140,6 +157,28 @@ class RecentWorkoutCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isAiRoutine
+                                    ? CoachFitColors.orange.withValues(alpha: 0.15)
+                                    : CoachFitColors.mint.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                routineBadge,
+                                style: TextStyle(
+                                  color: isAiRoutine ? CoachFitColors.orange : CoachFitColors.mint,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
                         Text(
                           routineTitle,
                           style: const TextStyle(

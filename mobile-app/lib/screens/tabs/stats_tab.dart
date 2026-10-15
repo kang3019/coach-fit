@@ -8,6 +8,7 @@ import '../../widgets/common/section_header.dart';
 import '../widgets/monthly_calendar_card.dart';
 import '../widgets/muscle_map_widget.dart';
 import '../widgets/weekly_volume_chart.dart';
+import '../../widgets/common/coachfit_app_bar.dart';
 
 /// 요일별 볼륨 맵 + 부위별 집계 결과 묶음.
 typedef _StatsData = ({
@@ -105,6 +106,7 @@ class _StatsTabState extends State<StatsTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CoachFitColors.background,
+      appBar: const CoachFitAppBar(tabTitle: '통계'),
       body: SafeArea(
         child: RefreshIndicator(
           color: CoachFitColors.orange,
