@@ -35,6 +35,7 @@ from app.models.schemas import (
 )
 from app.models.user_db import UserRecord
 from app.services.ai_coach import generate_coaching_advice, chat_with_ai_coach
+from app.services.ai_usage_guard import ai_rate_limiter, coaching_cache
 from app.services.workout_service import (
     create_workout,
     get_workouts_by_user,
@@ -336,26 +337,28 @@ def api_get_weekly_stats(
 # 4. AI 코칭(Coaching) API
 # ==========================================
 
+def _enforce_ai_rate_limit(user_id: str) -> None:
+    blocked_reason = ai_rate_limiter.check(user_id)
+    if blocked_reason:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=blocked_reason)
+
+
 @app.post(
     "/api/coaching/generate",
     response_model=CoachingResponse,
-    summary="DB 기반 AI 코칭 및 오늘 추천 루틴 생성"
+    summary="DB 기반 AI 코칭 및 오늘 추천 루틴 생성 (로그인 필수)"
 )
 def api_generate_coaching(
     request: Optional[CoachingGenerateRequest] = None,
-    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
+    current_user: UserRecord = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     DB에 저장된 사용자의 최근 운동 기록, 인바디 신체 측정치, 프로필 목표를
     직접 종합 조회하여 초개인화 AI 코칭 피드백 및 맞춤 루틴을 생성합니다.
+    같은 날 목표/신체 정보/운동 기록이 바뀌지 않았다면 LLM 을 다시 호출하지 않고 이전 결과를 반환합니다.
     """
-    if current_user:
-        target_user_id = current_user.user_id
-    elif request and request.user_id:
-        target_user_id = request.user_id
-    else:
-        target_user_id = "user_01"
+    target_user_id = current_user.user_id
 
     # DB에서 사용자 프로필 및 최신 신체 측정치 조회
     user_profile = get_or_create_user_profile(db, user_id=target_user_id)
@@ -397,21 +400,37 @@ def api_generate_coaching(
         recent_workouts=workout_items
     )
 
+    fingerprint = coaching_cache.fingerprint(coaching_req)
+    cached = coaching_cache.get(target_user_id, fingerprint)
+    if cached:
+        return cached
+
+    _enforce_ai_rate_limit(target_user_id)
+
     try:
-        return generate_coaching_advice(coaching_req)
+        result = generate_coaching_advice(coaching_req)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 코칭 생성 실패: {str(e)}")
+
+    # 실패 후 더미 결과가 하루 종일 고정되지 않도록 정상 응답만 캐시
+    if not result.is_fallback:
+        coaching_cache.put(target_user_id, fingerprint, result)
+    return result
 
 
 @app.post(
     "/api/coaching",
     response_model=CoachingResponse,
-    summary="수동 운동 목록 기반 AI 코칭 생성 (직접 페이로드 전달)"
+    summary="수동 운동 목록 기반 AI 코칭 생성 (직접 페이로드 전달, 로그인 필수)"
 )
-def api_coaching_direct(request: CoachingRequest):
+def api_coaching_direct(
+    request: CoachingRequest,
+    current_user: UserRecord = Depends(get_current_user),
+):
     """
     요청 본문에 직접 포함된 최근 운동 데이터를 바탕으로 코칭 생성
     """
+    _enforce_ai_rate_limit(current_user.user_id)
     try:
         return generate_coaching_advice(request)
     except Exception as e:
@@ -421,18 +440,19 @@ def api_coaching_direct(request: CoachingRequest):
 @app.post(
     "/api/ai/chat",
     response_model=AiChatResponse,
-    summary="1:1 실시간 AI 피트니스 코치 대화 (Bedrock Claude 3.5 Sonnet)"
+    summary="1:1 실시간 AI 피트니스 코치 대화 (Bedrock Claude 3.5 Sonnet, 로그인 필수)"
 )
 def api_ai_chat(
     request: AiChatRequest,
-    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
+    current_user: UserRecord = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     1:1 실시간 AI 피트니스 코치와 대화합니다.
     사용자의 신체 스펙, 경력, 목표 컨텍스트를 자동 반영하여 개인 맞춤형 피트니스 답변을 제공합니다.
     """
-    target_user_id = current_user.user_id if current_user else (request.user_id or "user_01")
+    target_user_id = current_user.user_id
+    _enforce_ai_rate_limit(target_user_id)
 
     user_context = None
     try:

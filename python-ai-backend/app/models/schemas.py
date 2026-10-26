@@ -93,6 +93,7 @@ class CoachingResponse(BaseModel):
     coaching_advice: str = Field(..., description="AI 코치의 개인 맞춤 피드백 및 조언")
     recommended_routine: List[RecommendedRoutineItem] = Field(..., description="오늘 수행할 추천 운동 루틴 목록")
     generated_at: str = Field(default_factory=lambda: dt_datetime.now().isoformat(), description="응답 생성 시각")
+    is_fallback: bool = Field(default=False, exclude=True, description="LLM 호출 실패로 더미 엔진이 대신 응답했는지 여부 (서버 내부용, 응답 JSON 미포함)")
 
 
 # ==========================================
