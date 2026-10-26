@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from datetime import datetime
 from typing import List, Optional, Tuple
 from app.models.schemas import (
@@ -10,6 +11,23 @@ from app.models.schemas import (
     AiChatResponse,
     ChatMessageItem,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _fallback_coaching(
+    request: CoachingRequest,
+    provider: str,
+    error: Exception,
+    annotate_summary: bool = True,
+) -> CoachingResponse:
+    """LLM 호출 실패 시 원인을 서버 로그에 남기고 스마트 더미 결과로 대체."""
+    logger.warning("AI 코칭 %s 호출 실패, 더미 엔진으로 대체: %s", provider, error)
+    fallback = _generate_smart_dummy_coaching(request)
+    if annotate_summary:
+        fallback.summary += f" ({provider} API 호출 에러로 더미 엔진 적용됨: {str(error)})"
+    fallback.is_fallback = True
+    return fallback
 
 
 def _safe_routine_item(raw: dict) -> Optional[RecommendedRoutineItem]:
@@ -73,7 +91,8 @@ def generate_coaching_advice(request: CoachingRequest) -> CoachingResponse:
     # Bedrock LLM 게이트웨이 (학교/기관 5만원 한도 제어 OpenAI 호환 API)
     gateway_key = os.getenv("BEDROCK_GATEWAY_API_KEY")
     gateway_url = os.getenv("BEDROCK_GATEWAY_BASE_URL")
-    gateway_model = os.getenv("BEDROCK_GATEWAY_MODEL", "bedrock-sonnet")
+    # 형식이 고정된 JSON 코칭은 저렴한 Haiku 로 충분, 채팅만 BEDROCK_GATEWAY_MODEL(Sonnet) 사용
+    gateway_model = os.getenv("BEDROCK_GATEWAY_COACHING_MODEL", "bedrock-haiku")
 
     if (ai_provider in ("bedrock-gateway", "bedrock")) and gateway_key and gateway_url:
         return _call_bedrock_gateway_coaching(
@@ -298,10 +317,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
-        # API 오류 발생 시 스마트 더미로 폴백
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (Groq API 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+        return _fallback_coaching(request, "Groq", e)
 
 
 def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
@@ -358,10 +374,7 @@ def _call_openai_coaching(request: CoachingRequest, api_key: str) -> CoachingRes
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
     except Exception as e:
-        # API 오류 발생 시 스마트 더미로 폴백
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (OpenAI API 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+        return _fallback_coaching(request, "OpenAI", e)
 
 
 def _call_claude_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
@@ -445,10 +458,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
     except Exception as e:
-        # API 오류 발생 시 스마트 더미로 폴백
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (Claude API 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+        return _fallback_coaching(request, "Claude", e)
 
 
 def _call_gemini_coaching(request: CoachingRequest, api_key: str) -> CoachingResponse:
@@ -521,10 +531,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
-        # API 오류 발생 시 스마트 더미로 폴백
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (Gemini API 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+        return _fallback_coaching(request, "Gemini", e)
 
 
 def _call_bedrock_coaching(request: CoachingRequest) -> CoachingResponse:
@@ -622,9 +629,7 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
     except Exception as e:
-        fallback = _generate_smart_dummy_coaching(request)
-        fallback.summary += f" (AWS Bedrock API 호출 에러로 더미 엔진 적용됨: {str(e)})"
-        return fallback
+        return _fallback_coaching(request, "AWS Bedrock", e)
 
 
 def _call_bedrock_gateway_coaching(
@@ -703,8 +708,9 @@ recommended_routine 은 3~5개 종목으로 구성하고, 각 종목의 tip 은 
             recommended_routine=_safe_routine_list(parsed.get("recommended_routine")),
             generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-    except Exception:
-        return _generate_smart_dummy_coaching(request)
+    except Exception as e:
+        # 게이트웨이 에러 문구에는 키 일부가 포함될 수 있어 사용자 화면에는 노출하지 않음
+        return _fallback_coaching(request, "Bedrock 게이트웨이", e, annotate_summary=False)
 
 
 # ==========================================
@@ -895,8 +901,8 @@ def chat_with_ai_coach(
                 suggested_questions=suggestions,
                 timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("AI 채팅 Bedrock 게이트웨이 호출 실패, 더미 응답으로 대체: %s", e)
 
     return _generate_smart_dummy_chat(request, user_context)
 

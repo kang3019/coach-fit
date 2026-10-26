@@ -90,7 +90,7 @@ def test_bedrock_success_is_used_without_fallback(monkeypatch, coaching_request)
     assert resp.recommended_routine[0].exercise_name == "스쿼트"
 
 
-def test_coaching_endpoint_survives_provider_failure(client, monkeypatch):
+def test_coaching_endpoint_survives_provider_failure(client, auth_headers, monkeypatch):
     class FailingClient:
         def converse(self, **kwargs):
             raise RuntimeError("boom")
@@ -102,9 +102,10 @@ def test_coaching_endpoint_survives_provider_failure(client, monkeypatch):
     monkeypatch.delenv("BEDROCK_GATEWAY_API_KEY", raising=False)
     monkeypatch.delenv("BEDROCK_GATEWAY_BASE_URL", raising=False)
 
-    res = client.post("/api/coaching/generate", json={"userId": "user_01"})
+    res = client.post("/api/coaching/generate", json={"userId": "user_01"}, headers=auth_headers)
 
     assert res.status_code == 200
     body = res.json()
     assert "더미 엔진 적용됨" in body["summary"]
     assert len(body["recommended_routine"]) >= 1
+    assert "is_fallback" not in body

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_constants.dart';
 import '../models/coaching_result.dart';
+import 'api_error.dart';
 import 'auth_service.dart';
 import 'goal_service.dart';
 
@@ -30,10 +31,10 @@ class CoachingService {
           headers: headers,
           body: jsonEncode({'userId': effectiveUserId, 'goal': effectiveGoal}),
         )
-        .timeout(const Duration(seconds: 20));
+        .timeout(const Duration(seconds: 30));
 
     if (res.statusCode != 200) {
-      throw Exception('AI 코칭 요청 실패 (status=${res.statusCode})');
+      throw Exception(apiErrorMessage(res, 'AI 코칭 요청 실패'));
     }
 
     final decoded = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;

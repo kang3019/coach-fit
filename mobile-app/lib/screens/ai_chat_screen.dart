@@ -94,9 +94,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
 
     try {
+      // 방금 추가한 질문은 message 로 따로 전송되므로 history 에서 제외 (중복 토큰 방지)
       final res = await _chatService.sendMessage(
         message: query,
-        history: _messages,
+        history: _messages.sublist(0, _messages.length - 1),
       );
 
       if (!mounted) return;
@@ -119,7 +120,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
           AiChatMessage(
             id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
             role: 'assistant',
-            content: '일시적인 연결 문제로 답변을 생성하지 못했습니다. 다시 시도해 주세요.',
+            content: e is AiChatException
+                ? e.message
+                : '일시적인 연결 문제로 답변을 생성하지 못했습니다. 다시 시도해 주세요.',
             suggestedQuestions: [
               '다시 시도하기',
               '오늘 추천 운동 루틴 알려줘',
