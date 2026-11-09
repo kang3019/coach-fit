@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/user_profile.dart';
@@ -432,13 +433,24 @@ class _InputBodyRecordSheetState extends State<InputBodyRecordSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final w = _parseOrNull(_weightCtrl.text);
+    final m = _parseOrNull(_muscleCtrl.text);
+    final f = _parseOrNull(_fatCtrl.text);
+    if (w == null && m == null && f == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('체중, 골격근량, 체지방률 중 최소 1개 이상 입력해 주세요.'),
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       final rec = BodyRecord(
         date: DateTime.now(),
-        weightKg: _parseOrNull(_weightCtrl.text),
-        muscleKg: _parseOrNull(_muscleCtrl.text),
-        bodyFatPercent: _parseOrNull(_fatCtrl.text),
+        weightKg: w,
+        muscleKg: m,
+        bodyFatPercent: f,
       );
       await widget.service.add(rec);
       if (!mounted) return;
@@ -484,11 +496,26 @@ class _InputBodyRecordSheetState extends State<InputBodyRecordSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            _NumField(controller: _weightCtrl, label: '체중 (kg)'),
+            _NumField(
+              controller: _weightCtrl,
+              label: '체중 (kg)',
+              min: 20,
+              max: 300,
+            ),
             const SizedBox(height: 10),
-            _NumField(controller: _muscleCtrl, label: '골격근량 (kg)'),
+            _NumField(
+              controller: _muscleCtrl,
+              label: '골격근량 (kg)',
+              min: 5,
+              max: 150,
+            ),
             const SizedBox(height: 10),
-            _NumField(controller: _fatCtrl, label: '체지방률 (%)'),
+            _NumField(
+              controller: _fatCtrl,
+              label: '체지방률 (%)',
+              min: 1,
+              max: 75,
+            ),
             const SizedBox(height: 18),
             ElevatedButton.icon(
               onPressed: _saving ? null : _save,
@@ -511,7 +538,14 @@ class _InputBodyRecordSheetState extends State<InputBodyRecordSheet> {
 class _NumField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
-  const _NumField({required this.controller, required this.label});
+  final double min;
+  final double max;
+  const _NumField({
+    required this.controller,
+    required this.label,
+    this.min = 0,
+    this.max = 500,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -519,10 +553,17 @@ class _NumField extends StatelessWidget {
       controller: controller,
       style: const TextStyle(color: Colors.white),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}')),
+      ],
       decoration: InputDecoration(labelText: label),
       validator: (v) {
         if (v == null || v.trim().isEmpty) return null;
-        if (double.tryParse(v.trim()) == null) return '숫자';
+        final val = double.tryParse(v.trim());
+        if (val == null) return '숫자를 입력해 주세요';
+        if (val < min || val > max) {
+          return '${min.toInt()}~${max.toInt()} 사이로 입력해 주세요';
+        }
         return null;
       },
     );

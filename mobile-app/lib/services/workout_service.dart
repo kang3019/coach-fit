@@ -103,6 +103,36 @@ class WorkoutService {
     );
   }
 
+  /// PUT /api/workouts/{id} (구버전 서버 호환 폴백 지원)
+  Future<Workout> updateWorkout(int id, Workout workout) async {
+    final headers = await AuthService.instance.getAuthHeaders();
+    final effectiveUserId = workout.userId.isNotEmpty && workout.userId != ApiConstants.defaultUserId
+        ? workout.userId
+        : await AuthService.instance.getCurrentUserId();
+
+    final payload = workout.toCreateJson();
+    payload['userId'] = effectiveUserId;
+
+    final uri = Uri.parse('${ApiConstants.workouts}/$id?userId=$effectiveUserId');
+    final res = await _client
+        .put(
+          uri,
+          headers: headers,
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (res.statusCode == 200) {
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      WorkoutEvents.instance.notifyChanged();
+      return Workout.fromJson(decoded);
+    }
+
+    // 구버전 서버에서 PUT 미지원 시 DELETE + CREATE 폴백
+    await deleteWorkout(id, userId: effectiveUserId);
+    return createWorkout(workout);
+  }
+
   /// DELETE /api/workouts/{id}
   Future<void> deleteWorkout(int id, {String? userId}) async {
     final targetUserId = userId ?? await AuthService.instance.getCurrentUserId();

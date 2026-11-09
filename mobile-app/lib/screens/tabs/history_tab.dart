@@ -293,8 +293,7 @@ class _HistoryTabState extends State<HistoryTab> {
     );
   }
 
-  /// A 담당 추가: 기존 운동 기록을 수정 (DELETE + CREATE 패턴).
-  /// 백엔드 PUT API 를 신설하지 않고 클라이언트에서 처리.
+  /// 기존 운동 기록을 수정 (PUT /api/workouts/{id} 우선, 구버전 서버는 폴백).
   Future<void> _openEditSheet(Workout original) async {
     final updated = await showModalBottomSheet<Workout>(
       context: context,
@@ -312,8 +311,7 @@ class _HistoryTabState extends State<HistoryTab> {
     );
     if (updated == null || original.id == null) return;
     try {
-      await _workoutService.deleteWorkout(original.id!);
-      final saved = await _workoutService.createWorkout(updated);
+      final saved = await _workoutService.updateWorkout(original.id!, updated);
       final history = await _workoutsFuture;
       final pr = _prService.evaluate(saved, history);
       if (!mounted) return;
@@ -1135,6 +1133,25 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
     final exerciseName = _nameCtrl.text.trim();
     if (exerciseName.isEmpty) return;
 
+    if (_isTableMode && _setRows.isNotEmpty) {
+      for (final row in _setRows) {
+        final w = row.weightValue;
+        final r = row.repsValue;
+        if (w == null || w < 0 || w > 600) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${row.setNumber}세트 중량을 0~600kg 사이로 입력해 주세요.')),
+          );
+          return;
+        }
+        if (r == null || r < 1 || r > 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${row.setNumber}세트 횟수를 1~200회 사이로 입력해 주세요.')),
+          );
+          return;
+        }
+      }
+    }
+
     setState(() => _saving = true);
 
     try {
@@ -1625,10 +1642,15 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                           TextFormField(
                             controller: _setsCtrl,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             decoration: const InputDecoration(labelText: '세트'),
-                            validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+                            validator: (v) {
+                              final val = int.tryParse(v ?? '');
+                              if (val == null || val < 1 || val > 50) return '1~50';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 6),
                           Row(
@@ -1649,10 +1671,15 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                           TextFormField(
                             controller: _repsCtrl,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             decoration: const InputDecoration(labelText: '회(Reps)'),
-                            validator: (v) => (v == null || int.tryParse(v) == null) ? '숫자' : null,
+                            validator: (v) {
+                              final val = int.tryParse(v ?? '');
+                              if (val == null || val < 1 || val > 200) return '1~200';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 6),
                           Row(
@@ -1673,10 +1700,17 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                           TextFormField(
                             controller: _weightCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}')),
+                            ],
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             decoration: const InputDecoration(labelText: '중량(kg)'),
-                            validator: (v) => (v == null || double.tryParse(v) == null) ? '숫자' : null,
+                            validator: (v) {
+                              final val = double.tryParse(v ?? '');
+                              if (val == null || val < 0 || val > 600) return '0~600';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 6),
                           Row(
@@ -1793,6 +1827,9 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
               child: TextFormField(
                 controller: row.weightCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}')),
+                ],
                 textAlign: TextAlign.center,
                 onChanged: (_) => setState(() => row.edited = true),
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
@@ -1819,6 +1856,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
               child: TextFormField(
                 controller: row.repsCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 textAlign: TextAlign.center,
                 onChanged: (_) => setState(() => row.edited = true),
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),

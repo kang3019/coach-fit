@@ -83,6 +83,32 @@ def get_weekly_volume_stats(db: Session, user_id: str = "user_01") -> Dict:
     }
 
 
+def update_workout(
+    db: Session,
+    workout_id: int,
+    data: WorkoutCreate,
+    user_id: str = "user_01",
+) -> WorkoutRecord | None:
+    """기존 운동 기록 수정 (ID 및 생성시각 유지)"""
+    record = (
+        db.query(WorkoutRecord)
+        .filter(WorkoutRecord.id == workout_id, WorkoutRecord.user_id == user_id)
+        .first()
+    )
+    if not record:
+        return None
+    record.exercise_name = data.exercise_name
+    record.sets = data.sets
+    record.reps = data.reps
+    record.weight = data.weight
+    if data.workout_date:
+        record.workout_date = data.workout_date
+    record.memo = data.memo
+    db.commit()
+    db.refresh(record)
+    return record
+
+
 def delete_workout(db: Session, workout_id: int, user_id: str = "user_01") -> bool:
     """운동 기록 삭제"""
     record = (
