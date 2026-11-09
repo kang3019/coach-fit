@@ -10,10 +10,14 @@ import '../../theme/coachfit_theme.dart';
 /// 서버는 데이터가 있는 요일만 반환하므로, 없는 요일은 0으로 채워 항상 7일 표시.
 class WeeklyVolumeChart extends StatelessWidget {
   final Map<String, double> volumeByDay;
+  final List<({String label, double value})>? customBars;
+  final String title;
   final bool isFlat;
   const WeeklyVolumeChart({
     super.key,
     required this.volumeByDay,
+    this.customBars,
+    this.title = '📈 주간 볼륨',
     this.isFlat = false,
   });
 
@@ -24,9 +28,15 @@ class WeeklyVolumeChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final values = _dayOrder.map((d) => volumeByDay[d] ?? 0.0).toList();
+    final labels = customBars != null
+        ? customBars!.map((e) => e.label).toList()
+        : _dayLabel;
+    final values = customBars != null
+        ? customBars!.map((e) => e.value).toList()
+        : _dayOrder.map((d) => volumeByDay[d] ?? 0.0).toList();
     final maxValue = values.fold<double>(0, (a, b) => a > b ? a : b);
     final total = values.fold<double>(0, (a, b) => a + b);
+    final rodWidth = values.length <= 4 ? 32.0 : 18.0;
 
     return Container(
       padding: isFlat ? EdgeInsets.zero : const EdgeInsets.fromLTRB(16, 14, 16, 12),
@@ -43,9 +53,9 @@ class WeeklyVolumeChart extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                '📈 주간 볼륨',
-                style: TextStyle(
+              Text(
+                title,
+                style: const TextStyle(
                   color: CoachFitColors.text,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -88,8 +98,9 @@ class WeeklyVolumeChart extends StatelessWidget {
                           getTooltipColor: (_) => CoachFitColors.surfaceRaised,
                           tooltipRoundedRadius: 8,
                           getTooltipItem: (group, _, rod, __) {
+                            final idx = group.x.clamp(0, labels.length - 1);
                             return BarTooltipItem(
-                              '${_dayLabel[group.x]} · ${NumberFormat('#,###').format(rod.toY.round())}kg',
+                              '${labels[idx]} · ${NumberFormat('#,###').format(rod.toY.round())}kg',
                               const TextStyle(
                                 color: CoachFitColors.text,
                                 fontSize: 12,
@@ -115,20 +126,20 @@ class WeeklyVolumeChart extends StatelessWidget {
                             reservedSize: 22,
                             getTitlesWidget: (v, _) {
                               final i = v.toInt();
-                              if (i < 0 || i >= _dayLabel.length) {
+                              if (i < 0 || i >= labels.length) {
                                 return const SizedBox.shrink();
                               }
-                              final isWeekend = i == 5 || i == 6;
+                              final isHighlight = customBars != null && i == labels.length - 1;
                               return Padding(
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(
-                                  _dayLabel[i],
+                                  labels[i],
                                   style: TextStyle(
-                                    color: isWeekend
-                                        ? CoachFitColors.textMuted
+                                    color: isHighlight
+                                        ? CoachFitColors.orange
                                         : CoachFitColors.textSecondary,
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w600,
                                   ),
                                 ),
                               );
@@ -138,14 +149,14 @@ class WeeklyVolumeChart extends StatelessWidget {
                       ),
                       gridData: const FlGridData(show: false),
                       borderData: FlBorderData(show: false),
-                      barGroups: List.generate(7, (i) {
+                      barGroups: List.generate(values.length, (i) {
                         final hasValue = values[i] > 0;
                         return BarChartGroupData(
                           x: i,
                           barRods: [
                             BarChartRodData(
                               toY: values[i],
-                              width: 18,
+                              width: rodWidth,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(6),
                                 topRight: Radius.circular(6),
