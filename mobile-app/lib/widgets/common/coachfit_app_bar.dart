@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../screens/ai_chat_screen.dart';
+import '../../screens/coaching_screen.dart';
+import '../../services/reminder_service.dart';
 import '../../theme/coachfit_theme.dart';
 
 /// CoachFit 전 화면 공통 통일 상단 헤더 (AppBar)
@@ -133,17 +135,149 @@ class CoachFitAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: CoachFitColors.textSoft,
               size: 20,
             ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('새로운 알림이 없습니다.'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
+            onPressed: () => _showNotificationSheet(context),
           ),
         ),
       ],
+    );
+  }
+
+  void _showNotificationSheet(BuildContext context) {
+    final reminder = ReminderService();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: CoachFitColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '알림 센터',
+                    style: TextStyle(
+                      color: CoachFitColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: CoachFitColors.textMuted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: CoachFitColors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.auto_awesome, color: CoachFitColors.orange, size: 20),
+                ),
+                title: const Text(
+                  '오늘의 AI 코칭 리포트 준비 완료',
+                  style: TextStyle(
+                    color: CoachFitColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: const Text(
+                  '최근 운동 볼륨과 신체 지표를 바탕으로 맞춤 루틴이 구성되었습니다.',
+                  style: TextStyle(color: CoachFitColors.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: CoachFitColors.textMuted),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CoachingScreen()),
+                  );
+                },
+              ),
+              const Divider(color: CoachFitColors.divider),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: CoachFitColors.mint.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.notifications_active_outlined, color: CoachFitColors.mint, size: 20),
+                ),
+                title: Text(
+                  '운동 리마인더 · ${reminder.enabled ? "켜짐 (${reminder.displayKorean})" : "꺼짐"}',
+                  style: const TextStyle(
+                    color: CoachFitColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: const Text(
+                  '마이 탭 > 운동 설정에서 리마인더 시간을 자유롭게 변경할 수 있습니다.',
+                  style: TextStyle(color: CoachFitColors.textSecondary, fontSize: 12),
+                ),
+              ),
+              const Divider(color: CoachFitColors.divider),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: CoachFitColors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline_rounded, color: CoachFitColors.orange, size: 20),
+                ),
+                title: const Text(
+                  '1:1 AI 피트니스 코치 상시 대기 중',
+                  style: TextStyle(
+                    color: CoachFitColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: const Text(
+                  '운동 자세, 점진적 과부하, 단백질 식단을 실시간으로 질문해 보세요.',
+                  style: TextStyle(color: CoachFitColors.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: CoachFitColors.textMuted),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AiChatScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

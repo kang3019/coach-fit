@@ -6,6 +6,7 @@ import '../../data/exercise_guide_data.dart';
 import '../../models/exercise_master.dart';
 import '../../models/user_profile.dart';
 import '../../models/workout.dart';
+import '../../services/app_settings_service.dart';
 import '../../services/body_record_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/pr_service.dart';
@@ -1057,6 +1058,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
         if (item.repsCtrl.text.trim().isEmpty && ghostReps != null) {
           item.repsCtrl.text = ghostReps.toString();
         }
+        final restSec = AppSettingsService().restTimerSeconds;
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1072,7 +1074,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
                 const Icon(Icons.check_circle, color: Color(0xFF00E5A0), size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  '${item.setNumber}세트 완료! ⏱️ 60초 휴식 권장',
+                  '${item.setNumber}세트 완료! ⏱️ $restSec초 휴식 권장',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ],
@@ -1081,7 +1083,7 @@ class _AddWorkoutModalState extends State<_AddWorkoutModal> {
               label: '타이머 열기',
               textColor: const Color(0xFF00E5A0),
               onPressed: () {
-                RestTimerSheet.show(context, initialSeconds: 60);
+                RestTimerSheet.show(context, initialSeconds: restSec);
               },
             ),
           ),

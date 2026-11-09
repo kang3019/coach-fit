@@ -49,6 +49,7 @@ class AppSettingsService extends ChangeNotifier {
   static const String _kThemeAccent = 'settings.themeAccent.v1';
   static const String _kTextScale = 'settings.textScale.v1';
   static const String _kTutorialSeen = 'settings.tutorialSeen.v1';
+  static const String _kRestTimerSeconds = 'settings.restTimerSeconds.v1';
 
   static final AppSettingsService _instance = AppSettingsService._internal();
   factory AppSettingsService() => _instance;
@@ -58,12 +59,14 @@ class AppSettingsService extends ChangeNotifier {
   ThemeAccent _themeAccent = ThemeAccent.mint;
   TextScale _textScale = TextScale.normal;
   bool _tutorialSeen = false;
+  int _restTimerSeconds = 90;
   bool _loaded = false;
 
   WeightUnit get weightUnit => _weightUnit;
   ThemeAccent get themeAccent => _themeAccent;
   TextScale get textScale => _textScale;
   bool get tutorialSeen => _tutorialSeen;
+  int get restTimerSeconds => _restTimerSeconds;
   bool get loaded => _loaded;
 
   Future<void> load() async {
@@ -85,7 +88,15 @@ class AppSettingsService extends ChangeNotifier {
       TextScale.normal,
     );
     _tutorialSeen = prefs.getBool(_kTutorialSeen) ?? false;
+    _restTimerSeconds = prefs.getInt(_kRestTimerSeconds) ?? 90;
     _loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setRestTimerSeconds(int seconds) async {
+    _restTimerSeconds = seconds.clamp(15, 600);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kRestTimerSeconds, _restTimerSeconds);
     notifyListeners();
   }
 
