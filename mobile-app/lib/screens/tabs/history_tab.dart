@@ -656,6 +656,7 @@ class _HistoryTabState extends State<HistoryTab> {
                   // 6. 게슈탈트 심리학 기반 신체 변화 카드 (체중, 골격근량, 체지방률, 목표치)
                   GestaltBodyMetricsCard(
                     latestRecord: _bodyRecords.isNotEmpty ? _bodyRecords.first : null,
+                    records: _bodyRecords,
                     profile: _userProfile,
                     onAddRecord: () async {
                       await InputBodyRecordSheet.show(context, service: _bodyRecordService);

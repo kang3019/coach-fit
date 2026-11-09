@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../models/user_profile.dart';
 import '../../models/workout.dart';
+import '../../services/body_record_service.dart';
+import '../../services/profile_service.dart';
+import '../../services/workout_events.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../../widgets/common/coachfit_card.dart';
 import '../../widgets/common/section_header.dart';
+import '../ai_chat_screen.dart';
 import '../widgets/monthly_calendar_card.dart';
 import '../widgets/muscle_map_widget.dart';
 import '../widgets/weekly_volume_chart.dart';
 import '../../widgets/common/coachfit_app_bar.dart';
 
-/// 요일별 볼륨 맵 + 부위별 집계 결과 묶음.
+/// 통계 탭 종합 데이터 묶음.
 typedef _StatsData = ({
   Map<String, double> weekly,
-  Map<_BodyGroup, double> byBody,
+  List<Workout> workouts,
+  List<BodyRecord> bodyRecords,
+  UserProfile profile,
 });
 
 /// 3. 통계 탭 (Statistics Tab)
 /// - 피그마 게슈탈트 시각 위계 기반 성장 통계 UI
-/// - 주간 누적 볼륨 바 차트 (fl_chart)
+/// - 기간별(주간/월간/3개월) 볼륨 차트 및 증감률 동적 산출
 /// - 운동 부위별 비율 분석 (가슴, 등, 하체 등)
-/// - 코치핏 인사이트 카드 및 월간 잔디 스트릭
+/// - 실시간 신체 측정치, 월간 운동 횟수 및 AI 코치 인사이트 연동
 class StatsTab extends StatefulWidget {
   const StatsTab({super.key});
 
@@ -30,30 +37,88 @@ class StatsTab extends StatefulWidget {
 
 class _StatsTabState extends State<StatsTab> {
   final WorkoutService _workoutService = WorkoutService();
+  final BodyRecordService _bodyRecordService = BodyRecordService();
+  final ProfileService _profileService = ProfileService();
   late Future<_StatsData> _future;
   String _selectedPeriod = '주간';
+
+  static const List<String> _weekdayKeys = [
+    'MON',
+    'TUE',
+    'WED',
+    'THU',
+    'FRI',
+    'SAT',
+    'SUN',
+  ];
 
   @override
   void initState() {
     super.initState();
     _future = _loadAll();
+    WorkoutEvents.instance.addListener(_onDataChanged);
+    _bodyRecordService.addListener(_onDataChanged);
+    _profileService.addListener(_onDataChanged);
   }
 
-  /// 주간 요일별 볼륨 + 전체 운동 리스트를 병렬로 받고
-  /// 운동 종목명에서 부위를 추출해 볼륨을 집계한다.
+  void _onDataChanged() {
+    if (!mounted) return;
+    setState(() {
+      _future = _loadAll();
+    });
+  }
+
+  /// 주간 요일별 볼륨 + 전체 운동 리스트 + 신체 기록 + 프로필을 병렬 조회한다.
   Future<_StatsData> _loadAll() async {
     final results = await Future.wait([
       _workoutService.fetchWeeklyVolume(),
       _workoutService.fetchWorkouts(),
+      _bodyRecordService.loadAll(),
+      _profileService.load(),
     ]);
-    final weekly = results[0] as Map<String, double>;
-    final workouts = results[1] as List<Workout>;
-    return (weekly: weekly, byBody: _aggregateByBodyGroup(workouts));
+    return (
+      weekly: results[0] as Map<String, double>,
+      workouts: results[1] as List<Workout>,
+      bodyRecords: results[2] as List<BodyRecord>,
+      profile: results[3] as UserProfile,
+    );
+  }
+
+  int get _periodDays {
+    switch (_selectedPeriod) {
+      case '월간':
+        return 30;
+      case '3개월':
+        return 90;
+      case '주간':
+      default:
+        return 7;
+    }
+  }
+
+  List<Workout> _filterByDays(List<Workout> all, int days, {int offsetDays = 0}) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endExclusive = today.add(Duration(days: 1 - offsetDays));
+    final startInclusive = endExclusive.subtract(Duration(days: days));
+    return all.where((w) {
+      final d = DateTime(w.workoutDate.year, w.workoutDate.month, w.workoutDate.day);
+      return !d.isBefore(startInclusive) && d.isBefore(endExclusive);
+    }).toList();
+  }
+
+  Map<String, double> _aggregateDayOfWeekVolume(List<Workout> list) {
+    final map = <String, double>{for (final k in _weekdayKeys) k: 0.0};
+    for (final w in list) {
+      final idx = (w.workoutDate.weekday - 1).clamp(0, 6);
+      final key = _weekdayKeys[idx];
+      map[key] = (map[key] ?? 0.0) + w.volume;
+    }
+    return map;
   }
 
   /// 각 운동의 종목명을 `MuscleGroup.parseFromText` 로 분석해
   /// 해당하는 부위 그룹(가슴/등/어깨/팔/하체/코어) 들에 볼륨을 등분배한다.
-  /// 예: "데드리프트" → {back, hamstrings, glutes} → 각 1/3 씩.
   Map<_BodyGroup, double> _aggregateByBodyGroup(List<Workout> workouts) {
     final acc = <_BodyGroup, double>{};
     for (final w in workouts) {
@@ -89,8 +154,83 @@ class _StatsTabState extends State<StatsTab> {
     }
   }
 
+  ({String badge, String caption, bool isPositive}) _computeGrowth({
+    required double currentVolume,
+    required double previousVolume,
+    required String periodLabel,
+  }) {
+    final prevName = periodLabel == '주간'
+        ? '지난주'
+        : periodLabel == '월간'
+            ? '지난달'
+            : '이전 3개월';
+    if (currentVolume <= 0 && previousVolume <= 0) {
+      return (
+        badge: '0.0%',
+        caption: '운동을 기록하면 $prevName 대비 볼륨 성장률이 표시됩니다.',
+        isPositive: true,
+      );
+    }
+    if (previousVolume <= 0) {
+      return (
+        badge: 'NEW',
+        caption: '이번 $periodLabel 총 ${NumberFormat('#,###').format(currentVolume.round())}kg 볼륨을 달성했어요!',
+        isPositive: true,
+      );
+    }
+    final pct = ((currentVolume - previousVolume) / previousVolume) * 100.0;
+    final sign = pct >= 0 ? '+' : '';
+    final formatted = '$sign${pct.toStringAsFixed(1)}%';
+    final caption = pct >= 0
+        ? '$prevName보다 총 볼륨이 ${pct.toStringAsFixed(1)}% 늘었어요.'
+        : '$prevName 대비 총 볼륨이 ${pct.abs().toStringAsFixed(1)}% 감소했어요. 오늘 한 세트 더 채워볼까요?';
+    return (badge: formatted, caption: caption, isPositive: pct >= 0);
+  }
+
+  ({String message, String prompt}) _buildDynamicInsight(
+    Map<_BodyGroup, double> bodyVolumes,
+    double totalBodyVolume,
+  ) {
+    if (totalBodyVolume <= 0) {
+      return (
+        message: '첫 운동을 기록하면 부위별 밸런스 분석과 맞춤 보완 팁을 알려드려요.',
+        prompt: '초보자를 위한 상·하체 균형 잡힌 주 4회 분할 루틴 추천해줘',
+      );
+    }
+    const majorGroups = [
+      _BodyGroup.chest,
+      _BodyGroup.back,
+      _BodyGroup.legs,
+      _BodyGroup.shoulders,
+    ];
+    _BodyGroup weakest = majorGroups.first;
+    double minVol = double.infinity;
+    for (final g in majorGroups) {
+      final v = bodyVolumes[g] ?? 0.0;
+      if (v < minVol) {
+        minVol = v;
+        weakest = g;
+      }
+    }
+    final shortName = weakest.shortKorean;
+    final ratio = ((minVol / totalBodyVolume) * 100).round();
+    if (ratio < 15) {
+      return (
+        message: '$shortName 운동 비중($ratio%)이 낮아요. $shortName 볼륨을 10% 높이면 전신 균형이 훨씬 좋아져요.',
+        prompt: '최근 내 운동 기록에서 $shortName 운동 비중이 낮은데, 균형을 맞출 수 있는 $shortName 집중 루틴 추천해줘',
+      );
+    }
+    return (
+      message: '상·하체 주요 부위 밸런스가 훌륭해요! 점진적 과부하로 중량을 2.5kg씩 높여보세요.',
+      prompt: '현재 상하체 볼륨 밸런스가 좋은 상태인데, 정체기 없이 중량을 늘리는 점진적 과부하 팁 알려줘',
+    );
+  }
+
   @override
   void dispose() {
+    WorkoutEvents.instance.removeListener(_onDataChanged);
+    _bodyRecordService.removeListener(_onDataChanged);
+    _profileService.removeListener(_onDataChanged);
     _workoutService.dispose();
     super.dispose();
   }
@@ -150,10 +290,60 @@ class _StatsTabState extends State<StatsTab> {
               }
 
               final data = snap.data;
-              final volumeMap = data?.weekly ?? const <String, double>{};
-              final totalWeeklyVolume = volumeMap.values.fold<double>(0.0, (a, b) => a + b);
-              final bodyVolumes = data?.byBody ?? const <_BodyGroup, double>{};
+              final allWorkouts = data?.workouts ?? const <Workout>[];
+              final bodyRecords = data?.bodyRecords ?? const <BodyRecord>[];
+              final profile = data?.profile;
+
+              final days = _periodDays;
+              final periodWorkouts = _filterByDays(allWorkouts, days);
+              final prevPeriodWorkouts = _filterByDays(allWorkouts, days, offsetDays: days);
+
+              final volumeMap = _selectedPeriod == '주간' && periodWorkouts.isEmpty
+                  ? (data?.weekly ?? const <String, double>{})
+                  : _aggregateDayOfWeekVolume(periodWorkouts);
+              final totalPeriodVolume = periodWorkouts.isNotEmpty
+                  ? periodWorkouts.fold<double>(0.0, (a, w) => a + w.volume)
+                  : volumeMap.values.fold<double>(0.0, (a, b) => a + b);
+              final prevPeriodVolume = prevPeriodWorkouts.fold<double>(0.0, (a, w) => a + w.volume);
+
+              final growth = _computeGrowth(
+                currentVolume: totalPeriodVolume,
+                previousVolume: prevPeriodVolume,
+                periodLabel: _selectedPeriod,
+              );
+
+              final targetForBody = periodWorkouts.isNotEmpty ? periodWorkouts : allWorkouts;
+              final bodyVolumes = _aggregateByBodyGroup(targetForBody);
               final totalBodyVolume = bodyVolumes.values.fold<double>(0.0, (a, b) => a + b);
+
+              // 실시간 체중 및 직전 측정 대비 변화량 계산
+              final latestWeight = (bodyRecords.isNotEmpty ? bodyRecords.first.weightKg : null) ??
+                  profile?.weightKg ??
+                  71.2;
+              String weightBadgeText = '체중 유지';
+              if (bodyRecords.length >= 2 &&
+                  bodyRecords[0].weightKg != null &&
+                  bodyRecords[1].weightKg != null) {
+                final diff = bodyRecords[0].weightKg! - bodyRecords[1].weightKg!;
+                final sign = diff > 0 ? '+' : '';
+                weightBadgeText = '$sign${diff.toStringAsFixed(1)} kg';
+              } else if (profile?.targetWeightKg != null && profile!.targetWeightKg! > 0) {
+                final toTarget = latestWeight - profile.targetWeightKg!;
+                weightBadgeText = toTarget.abs() < 0.1
+                    ? '목표 달성'
+                    : '목표 ${profile.targetWeightKg!.toStringAsFixed(1)}kg';
+              }
+
+              // 이번 달 실제 운동 일수 계산
+              final now = DateTime.now();
+              final monthlyWorkoutDays = allWorkouts
+                  .where((w) => w.workoutDate.year == now.year && w.workoutDate.month == now.month)
+                  .map((w) => DateTime(w.workoutDate.year, w.workoutDate.month, w.workoutDate.day))
+                  .toSet()
+                  .length;
+              const monthlyTarget = 16;
+
+              final insight = _buildDynamicInsight(bodyVolumes, totalBodyVolume);
 
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -163,21 +353,21 @@ class _StatsTabState extends State<StatsTab> {
                 ),
                 children: [
                   // 1. MY PROGRESS 헤더 (Figma 게슈탈트 3단 위계)
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'MY PROGRESS',
                         style: CoachFitTypography.kicker,
                       ),
-                      SizedBox(height: 6),
-                      Text(
+                      const SizedBox(height: 6),
+                      const Text(
                         '성장 통계',
                         style: CoachFitTypography.pageTitle,
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
-                        '지난주보다 총 볼륨이 18.2% 늘었어요.',
+                        growth.caption,
                         style: CoachFitTypography.pageCaption,
                       ),
                     ],
@@ -219,7 +409,7 @@ class _StatsTabState extends State<StatsTab> {
                   ),
                   const SizedBox(height: CoachFitSpacing.lg),
 
-                  // 3. 주간 총 볼륨 카드 (Figma surface-card volume-card)
+                  // 3. 기간별 총 볼륨 카드 (Figma surface-card volume-card)
                   CoachFitCard(
                     padding: const EdgeInsets.all(CoachFitSpacing.lg),
                     child: Column(
@@ -232,9 +422,9 @@ class _StatsTabState extends State<StatsTab> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '주간 총 볼륨',
-                                  style: TextStyle(
+                                Text(
+                                  '$_selectedPeriod 총 볼륨 (${periodWorkouts.length}세션)',
+                                  style: const TextStyle(
                                     color: CoachFitColors.textMuted,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -243,7 +433,7 @@ class _StatsTabState extends State<StatsTab> {
                                 const SizedBox(height: 4),
                                 RichText(
                                   text: TextSpan(
-                                    text: NumberFormat('#,###').format(totalWeeklyVolume.round()),
+                                    text: NumberFormat('#,###').format(totalPeriodVolume.round()),
                                     style: const TextStyle(
                                       color: CoachFitColors.textPrimary,
                                       fontSize: 26,
@@ -267,21 +457,36 @@ class _StatsTabState extends State<StatsTab> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: CoachFitColors.mintSoft,
+                                color: growth.isPositive
+                                    ? CoachFitColors.mintSoft
+                                    : CoachFitColors.orangeSoft,
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: CoachFitColors.mint.withValues(alpha: 0.3),
+                                  color: (growth.isPositive
+                                          ? CoachFitColors.mint
+                                          : CoachFitColors.orange)
+                                      .withValues(alpha: 0.3),
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.trending_up_rounded, color: CoachFitColors.mint, size: 15),
-                                  SizedBox(width: 4),
+                                  Icon(
+                                    growth.isPositive
+                                        ? Icons.trending_up_rounded
+                                        : Icons.trending_down_rounded,
+                                    color: growth.isPositive
+                                        ? CoachFitColors.mint
+                                        : CoachFitColors.orange,
+                                    size: 15,
+                                  ),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    '+18.2%',
+                                    growth.badge,
                                     style: TextStyle(
-                                      color: CoachFitColors.mint,
+                                      color: growth.isPositive
+                                          ? CoachFitColors.mint
+                                          : CoachFitColors.orange,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -298,22 +503,22 @@ class _StatsTabState extends State<StatsTab> {
                   ),
                   const SizedBox(height: CoachFitSpacing.lg),
 
-                  // 4. 2단 메트릭 카드 (현재 체중 & 이번 달 운동)
-                  const Row(
+                  // 4. 2단 메트릭 카드 (현재 체중 & 이번 달 운동 - 실시간 DB 연동)
+                  Row(
                     children: [
                       Expanded(
                         child: CoachFitCard(
-                          padding: EdgeInsets.all(CoachFitSpacing.md),
+                          padding: const EdgeInsets.all(CoachFitSpacing.md),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Icon(Icons.fitness_center_rounded, color: CoachFitColors.mint, size: 20),
+                                  const Icon(Icons.fitness_center_rounded, color: CoachFitColors.mint, size: 20),
                                   Text(
-                                    '-0.8 kg',
-                                    style: TextStyle(
+                                    weightBadgeText,
+                                    style: const TextStyle(
                                       color: CoachFitColors.mint,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -321,8 +526,8 @@ class _StatsTabState extends State<StatsTab> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10),
-                              Text(
+                              const SizedBox(height: 10),
+                              const Text(
                                 '현재 체중',
                                 style: TextStyle(
                                   color: CoachFitColors.textMuted,
@@ -330,10 +535,10 @@ class _StatsTabState extends State<StatsTab> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                '71.2 kg',
-                                style: TextStyle(
+                                '${latestWeight.toStringAsFixed(1)} kg',
+                                style: const TextStyle(
                                   color: CoachFitColors.textPrimary,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
@@ -343,20 +548,22 @@ class _StatsTabState extends State<StatsTab> {
                           ),
                         ),
                       ),
-                      SizedBox(width: CoachFitSpacing.md),
+                      const SizedBox(width: CoachFitSpacing.md),
                       Expanded(
                         child: CoachFitCard(
-                          padding: EdgeInsets.all(CoachFitSpacing.md),
+                          padding: const EdgeInsets.all(CoachFitSpacing.md),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Icon(Icons.emoji_events_rounded, color: CoachFitColors.orange, size: 20),
+                                  const Icon(Icons.emoji_events_rounded, color: CoachFitColors.orange, size: 20),
                                   Text(
-                                    '목표 16회',
-                                    style: TextStyle(
+                                    monthlyWorkoutDays >= monthlyTarget
+                                        ? '목표 달성 🎉'
+                                        : '목표 $monthlyTarget회',
+                                    style: const TextStyle(
                                       color: CoachFitColors.orange,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -364,8 +571,8 @@ class _StatsTabState extends State<StatsTab> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10),
-                              Text(
+                              const SizedBox(height: 10),
+                              const Text(
                                 '이번 달 운동',
                                 style: TextStyle(
                                   color: CoachFitColors.textMuted,
@@ -373,10 +580,10 @@ class _StatsTabState extends State<StatsTab> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                '14 회',
-                                style: TextStyle(
+                                '$monthlyWorkoutDays 회',
+                                style: const TextStyle(
                                   color: CoachFitColors.textPrimary,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
@@ -395,7 +602,7 @@ class _StatsTabState extends State<StatsTab> {
                     categoryTag: 'BALANCE',
                     title: '부위별 균형',
                     subtitle: totalBodyVolume > 0
-                        ? '전체 운동 기록 기준 · 종목명 자동 분류'
+                        ? '${periodWorkouts.isNotEmpty ? _selectedPeriod : "전체"} 운동 기록 기준 · 종목명 자동 분류'
                         : '아직 분류 가능한 운동 기록이 없습니다',
                   ),
                   const SizedBox(height: CoachFitSpacing.md),
@@ -408,64 +615,74 @@ class _StatsTabState extends State<StatsTab> {
                   ),
                   const SizedBox(height: CoachFitSpacing.lg),
 
-                  // 6. 코치핏 인사이트 카드 (Figma insight-card)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: CoachFitColors.orangeSoft,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: CoachFitColors.orange.withValues(alpha: 0.22),
+                  // 6. 코치핏 인사이트 카드 (탭 시 AI 1:1 코치 상담으로 직결)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AiChatScreen(initialMessage: insight.prompt),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: CoachFitColors.orangeSoft,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: CoachFitColors.orange.withValues(alpha: 0.22),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: CoachFitColors.orange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(11),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.bolt_rounded,
-                              color: CoachFitColors.orange,
-                              size: 22,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: CoachFitColors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.bolt_rounded,
+                                color: CoachFitColors.orange,
+                                size: 22,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '코치핏 인사이트',
-                                style: TextStyle(
-                                  color: CoachFitColors.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '코치핏 AI 밸런스 인사이트 · 탭하여 루틴 상담',
+                                  style: TextStyle(
+                                    color: CoachFitColors.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                '등 운동 비중을 10% 높이면 상체 균형이 더 좋아져요.',
-                                style: TextStyle(
-                                  color: CoachFitColors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(height: 2),
+                                Text(
+                                  insight.message,
+                                  style: const TextStyle(
+                                    color: CoachFitColors.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: CoachFitColors.textMuted,
-                          size: 18,
-                        ),
-                      ],
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: CoachFitColors.orange,
+                            size: 20,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: CoachFitSpacing.xl),
@@ -538,6 +755,23 @@ extension _BodyGroupExtension on _BodyGroup {
         return '하체 (Legs)';
       case _BodyGroup.core:
         return '코어 (Core)';
+    }
+  }
+
+  String get shortKorean {
+    switch (this) {
+      case _BodyGroup.chest:
+        return '가슴';
+      case _BodyGroup.back:
+        return '등';
+      case _BodyGroup.shoulders:
+        return '어깨';
+      case _BodyGroup.arms:
+        return '팔';
+      case _BodyGroup.legs:
+        return '하체';
+      case _BodyGroup.core:
+        return '코어';
     }
   }
 }
