@@ -5,6 +5,7 @@ import '../../services/coaching_service.dart';
 import '../../services/goal_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/workout_events.dart';
+import '../../services/workout_journal_service.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../../widgets/home/condition_selector.dart';
@@ -219,15 +220,46 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: CoachFitSpacing.lg),
 
-            // 2. 운동 전 체크인 (컨디션 선택기)
+            // 2. 운동 전 체크인 (컨디션 선택기 — 오늘의 운동 일지 영속화 및 피로 시 회복 상담 연동)
             ConditionSelector(
               selectedCondition: _selectedCondition,
-              onConditionSelected: (val) {
+              onConditionSelected: (val) async {
                 setState(() => _selectedCondition = val);
+                final ratingMap = {
+                  '최고예요': 5,
+                  '좋아요': 4,
+                  '보통': 3,
+                  '피곤해요': 2,
+                };
+                final rating = ratingMap[val] ?? 4;
+                await WorkoutJournalService().upsert(
+                  JournalEntry(
+                    date: DateTime.now(),
+                    rating: rating,
+                    note: '홈 체크인 컨디션: $val',
+                  ),
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('컨디션이 \'$val\'(으)로 반영되었습니다.'),
-                    duration: const Duration(seconds: 1),
+                    content: Text('오늘의 컨디션(\'$val\' · ⭐$rating)이 운동 일지에 기록되었습니다.'),
+                    duration: const Duration(seconds: 2),
+                    action: val == '피곤해요'
+                        ? SnackBarAction(
+                            label: '회복 루틴 질문',
+                            textColor: CoachFitColors.mint,
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const AiChatScreen(
+                                    initialMessage: '오늘 컨디션이 조금 피곤한데, 무리하지 않고 할 수 있는 회복/저강도 루틴 추천해줘',
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : null,
                   ),
                 );
               },

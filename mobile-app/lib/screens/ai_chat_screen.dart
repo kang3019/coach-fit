@@ -14,6 +14,8 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
+  static final List<AiChatMessage> _sessionCache = [];
+
   final AiChatService _chatService = AiChatService();
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
@@ -31,12 +33,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void initState() {
     super.initState();
-    _addInitialGreeting();
+    if (_sessionCache.isNotEmpty) {
+      _messages.addAll(_sessionCache);
+    } else {
+      _addInitialGreeting();
+    }
     if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _handleSend(widget.initialMessage!);
       });
     }
+  }
+
+  void _syncCache() {
+    _sessionCache
+      ..clear()
+      ..addAll(_messages);
   }
 
   void _addInitialGreeting() {
@@ -54,6 +66,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ],
       ),
     );
+    _syncCache();
   }
 
   @override
@@ -112,6 +125,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         );
         _isLoading = false;
       });
+      _syncCache();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -131,6 +145,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         );
         _isLoading = false;
       });
+      _syncCache();
       _scrollToBottom();
     }
   }
@@ -356,14 +371,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
               ],
             ),
-            child: Text(
-              msg.content,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                height: 1.55,
-              ),
-            ),
+            child: _buildFormattedMessageText(msg.content),
           ),
 
           // 추천 질문 리스트 (있는 경우 칩 형태로 제공)
@@ -411,6 +419,40 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildFormattedMessageText(String raw) {
+    final spans = <TextSpan>[];
+    final regex = RegExp(r'\*\*([^*]+)\*\*');
+    int lastEnd = 0;
+    for (final m in regex.allMatches(raw)) {
+      if (m.start > lastEnd) {
+        spans.add(TextSpan(text: raw.substring(lastEnd, m.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: m.group(1),
+          style: const TextStyle(
+            color: CoachFitColors.mint,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
+      lastEnd = m.end;
+    }
+    if (lastEnd < raw.length) {
+      spans.add(TextSpan(text: raw.substring(lastEnd)));
+    }
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          height: 1.55,
+        ),
+        children: spans,
       ),
     );
   }

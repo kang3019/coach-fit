@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/coaching_result.dart';
 import '../services/coaching_service.dart';
+import '../services/workout_events.dart';
+import '../services/workout_service.dart';
 import '../theme/coachfit_theme.dart';
+import '../widgets/home/routine_start_modal.dart';
 import 'ai_chat_screen.dart';
 
 class CoachingScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class CoachingScreen extends StatefulWidget {
 
 class _CoachingScreenState extends State<CoachingScreen> {
   final CoachingService _service = CoachingService();
+  final WorkoutService _workoutService = WorkoutService();
   Future<CoachingResult>? _future;
 
   @override
@@ -25,6 +29,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
   @override
   void dispose() {
     _service.dispose();
+    _workoutService.dispose();
     super.dispose();
   }
 
@@ -32,6 +37,31 @@ class _CoachingScreenState extends State<CoachingScreen> {
     setState(() {
       _future = _service.requestCoaching();
     });
+  }
+
+  Future<void> _openStartRoutineModal(CoachingResult result) async {
+    if (result.recommendedRoutine.isEmpty) return;
+    await RoutineStartModal.show(
+      context: context,
+      title: 'AI 코칭 추천 루틴 시작',
+      subtitle: '맞춤 진단 리포트 기반 루틴',
+      tag: 'AI 코칭 리포트',
+      tagColor: CoachFitColors.orange,
+      items: result.recommendedRoutine
+          .map((e) => RoutinePreviewItem.fromRecommended(e))
+          .toList(),
+      onConfirm: (timerSec) async {
+        final created = await _workoutService.importRoutine(result.recommendedRoutine);
+        WorkoutEvents.instance.ensureSessionStarted();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('추천 루틴 ${created.length}개 종목이 오늘 기록에 추가되었습니다! (휴식 $timerSec초)'),
+            backgroundColor: const Color(0xFF151922),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -74,6 +104,26 @@ class _CoachingScreenState extends State<CoachingScreen> {
               const SizedBox(height: 8),
               ...r.recommendedRoutine.map((e) => _RoutineCard(item: e)),
               const SizedBox(height: 16),
+              if (r.recommendedRoutine.isNotEmpty) ...[
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: CoachFitColors.orange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 3,
+                    ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: const Text(
+                      '추천 루틴 오늘 기록에 담고 시작하기',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                    ),
+                    onPressed: () => _openStartRoutineModal(r),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               // AI 코치 1:1 대화하기 CTA 버튼
               SizedBox(
                 height: 50,

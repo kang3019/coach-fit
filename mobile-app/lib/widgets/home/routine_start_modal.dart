@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/coaching_result.dart';
 import '../../models/workout.dart';
+import '../../services/app_settings_service.dart';
 import '../../theme/coachfit_theme.dart';
 
 /// 루틴 내 표시할 운동 종목 데이터 모델 (AI 추천 또는 기존 기록 통일)
@@ -101,7 +102,7 @@ class RoutineStartModal extends StatefulWidget {
 }
 
 class _RoutineStartModalState extends State<RoutineStartModal> {
-  int _selectedTimerSeconds = 90;
+  late int _selectedTimerSeconds = AppSettingsService().restTimerSeconds;
   bool _isStarting = false;
 
   @override
@@ -382,6 +383,7 @@ class _RoutineStartModalState extends State<RoutineStartModal> {
                       final messenger = ScaffoldMessenger.of(context);
                       setState(() => _isStarting = true);
                       try {
+                        await AppSettingsService().setRestTimerSeconds(_selectedTimerSeconds);
                         await widget.onConfirm(_selectedTimerSeconds);
                         navigator.pop();
                       } catch (e) {

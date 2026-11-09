@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../services/community_service.dart';
+import '../../services/profile_service.dart';
 import '../../services/workout_service.dart';
 import '../../theme/coachfit_theme.dart';
 import '../community_post_detail_screen.dart';
@@ -318,10 +319,14 @@ class _CommunityTabState extends State<CommunityTab> {
                         final finalBadge = rawBadge.startsWith('[')
                             ? rawBadge
                             : '[${currentCat.label}] $rawBadge';
+                        final profile = await ProfileService().load();
+                        final authorName = profile.nickname.trim().isNotEmpty
+                            ? profile.nickname.trim()
+                            : '회원';
                         await _community.addPost(
                           CommunityPost(
                             id: DateTime.now().millisecondsSinceEpoch,
-                            userName: '나',
+                            userName: authorName,
                             userAvatar: '⚡',
                             createdAt: DateTime.now(),
                             content: textCtrl.text.trim(),

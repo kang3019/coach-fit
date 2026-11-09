@@ -66,7 +66,10 @@ class _MenuTabState extends State<MenuTab> {
 
   // ===== 바텀시트들 =====
 
-  void _openTimer() => RestTimerSheet.show(context, initialSeconds: 90);
+  void _openTimer() => RestTimerSheet.show(
+        context,
+        initialSeconds: _settings.restTimerSeconds,
+      );
 
   void _openWeightUnitSheet() {
     showModalBottomSheet(
@@ -293,10 +296,10 @@ class _MenuTabState extends State<MenuTab> {
                   icon: Icons.timer_outlined,
                   color: CoachFitColors.orange,
                   title: '기본 세트 간 휴식 시간',
-                  subtitle: '90초 (타이머 프리셋)',
-                  trailing: const Text(
-                    '90초',
-                    style: TextStyle(
+                  subtitle: '${_settings.restTimerSeconds}초 (타이머 프리셋)',
+                  trailing: Text(
+                    '${_settings.restTimerSeconds}초',
+                    style: const TextStyle(
                       color: CoachFitColors.orange,
                       fontWeight: FontWeight.w700,
                     ),
