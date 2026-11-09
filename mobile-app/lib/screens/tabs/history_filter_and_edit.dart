@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/workout.dart';
 import '../widgets/muscle_map_widget.dart';
@@ -262,9 +263,13 @@ class _EditWorkoutSheetState extends State<EditWorkoutSheet> {
                     controller: _setsCtrl,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(labelText: '세트'),
-                    validator: (v) =>
-                        int.tryParse(v ?? '') == null ? '숫자' : null,
+                    validator: (v) {
+                      final val = int.tryParse(v ?? '');
+                      if (val == null || val < 1 || val > 50) return '1~50';
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -273,9 +278,13 @@ class _EditWorkoutSheetState extends State<EditWorkoutSheet> {
                     controller: _repsCtrl,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(labelText: '횟수'),
-                    validator: (v) =>
-                        int.tryParse(v ?? '') == null ? '숫자' : null,
+                    validator: (v) {
+                      final val = int.tryParse(v ?? '');
+                      if (val == null || val < 1 || val > 200) return '1~200';
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -285,9 +294,15 @@ class _EditWorkoutSheetState extends State<EditWorkoutSheet> {
                     style: const TextStyle(color: Colors.white),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,1}')),
+                    ],
                     decoration: const InputDecoration(labelText: '무게(kg)'),
-                    validator: (v) =>
-                        double.tryParse(v ?? '') == null ? '숫자' : null,
+                    validator: (v) {
+                      final val = double.tryParse(v ?? '');
+                      if (val == null || val < 0 || val > 600) return '0~600';
+                      return null;
+                    },
                   ),
                 ),
               ],

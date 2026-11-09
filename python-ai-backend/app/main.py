@@ -41,6 +41,7 @@ from app.services.workout_service import (
     get_workouts_by_user,
     get_recent_workouts,
     get_weekly_volume_stats,
+    update_workout,
     delete_workout,
     seed_initial_workouts,
 )
@@ -294,6 +295,28 @@ def api_get_workouts(
     """
     target_user_id = current_user.user_id if current_user else userId
     return get_workouts_by_user(db, user_id=target_user_id)
+
+
+@app.put(
+    "/api/workouts/{workout_id}",
+    response_model=WorkoutResponse,
+    summary="운동 기록 수정"
+)
+def api_update_workout(
+    workout_id: int,
+    workout_in: WorkoutCreate,
+    userId: str = Query(default="user_01", alias="userId"),
+    current_user: Optional[UserRecord] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    운동 기록 단건 수정 API (기존 ID 및 날짜 유지)
+    """
+    target_user_id = current_user.user_id if current_user else (workout_in.user_id or userId)
+    updated = update_workout(db, workout_id=workout_id, data=workout_in, user_id=target_user_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="수정할 운동 기록을 찾을 수 없습니다.")
+    return updated
 
 
 @app.delete(
