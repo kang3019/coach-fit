@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoachFit — AI 맞춤형 피트니스 코칭 포트폴리오</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.4.0/dist/mermaid.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0E1116;--s1:#151922;--s2:#1C2230;--bd:#2A3346;
+  --t:#F3F6FA;--m:#9BA6B8;
+  --v:#FF4820;--v2:#FF6B3D;
+  --g:#00E5A0;--y:#FBBF24;--bl:#60A5FA;--pk:#F472B6;--pu:#A78BFA;
+}
+html{zoom:1.35}
+html,body{width:100%;height:100%;overflow:hidden;
+  background:var(--bg);color:var(--t);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+
+/* ── SLIDES ─────────────────────────────────────────────── */
+#deck{position:fixed;inset:0}
+.sl{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:48px 72px 68px;
+  opacity:0;pointer-events:none;
+  transform:translateX(48px);
+  transition:opacity .4s ease,transform .4s ease;
+}
+.sl.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.sl.out-l{opacity:0;transform:translateX(-48px);transition:opacity .3s,transform .3s}
+
+/* ── NAV ────────────────────────────────────────────────── */
+.nav-arr{
+  position:fixed;top:50%;transform:translateY(-50%);z-index:100;
+  font-size:32px;color:rgba(255,72,32,.3);
+  cursor:pointer;padding:20px 14px;
+  transition:color .2s;user-select:none;line-height:1;
+}
+.nav-arr:hover{color:rgba(255,72,32,.85)}
+#na-p{left:4px}
+#na-n{right:4px}
+
+/* ── DOTS & SLIDE COUNTER ───────────────────────────────── */
+#dots{
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  display:flex;gap:6px;z-index:100;align-items:center;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:rgba(255,255,255,.2);cursor:pointer;
+  transition:all .2s;
+}
+.dot.on{background:var(--v);width:22px;border-radius:4px;box-shadow:0 0 10px rgba(255,72,32,.7)}
+#slide-num{
+  position:fixed;bottom:16px;right:28px;z-index:100;
+  font-size:12px;font-weight:700;color:var(--m);font-family:monospace;
+}
+
+/* ── COMMON ─────────────────────────────────────────────── */
+.tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,72,32,.12);border:1px solid rgba(255,72,32,.38);
+  border-radius:20px;padding:4px 16px;
+  font-size:13px;font-weight:800;color:#FF8566;
+  letter-spacing:.11em;text-transform:uppercase;margin-bottom:14px;
+}
+.tag.mint{
+  background:rgba(0,229,160,.12);border-color:rgba(0,229,160,.38);color:var(--g);
+}
+.wbs-link-btn{
+  position:absolute;top:22px;right:30px;z-index:10;
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,var(--v),var(--v2));
+  color:#fff;text-decoration:none;
+  border-radius:20px;padding:7px 16px;
+  font-size:13px;font-weight:700;
+  box-shadow:0 0 16px rgba(255,72,32,.35);
+  transition:box-shadow .2s;
+}
+.wbs-link-btn:hover{box-shadow:0 0 24px rgba(255,72,32,.6)}
+.sh{
+  font-size:clamp(22px,2.8vw,36px);font-weight:800;letter-spacing:-.4px;
+  text-align:center;margin-bottom:12px;
+}
+.card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:16px;
+  padding:18px 20px;
+}
+.big-title{
+  font-size:clamp(48px,7.2vw,88px);font-weight:900;letter-spacing:-3px;line-height:1.02;
+  text-align:center;margin-bottom:14px;
+  background:linear-gradient(135deg,#fff 0%,#ffd8ce 35%,var(--v) 70%,#ff2a00 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.badge{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;padding:5px 13px;font-size:13.5px;font-weight:600;color:var(--m);
+}
+.team{margin-top:20px;font-size:14px;color:rgba(255,133,102,.8);text-align:center;font-weight:600}
+
+/* ── PROBLEM GRID ───────────────────────────────────────── */
+.s2w{width:100%;max-width:1120px;margin:0 auto}
+.hook{
+  font-size:clamp(20px,2.5vw,31px);font-weight:800;text-align:center;
+  line-height:1.38;margin-bottom:20px;
+}
+.hook em{font-style:normal;color:var(--v)}
+.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.pc{
+  background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.24);
+  border-radius:16px;padding:16px 16px;text-align:center;
+}
+.pi{font-size:30px;display:block;margin-bottom:8px}
+.pt{font-size:15px;font-weight:800;color:#fca5a5;margin-bottom:6px}
+.pd{font-size:13.5px;color:var(--m);line-height:1.58}
+.sol{
+  background:linear-gradient(135deg,rgba(255,72,32,.15),rgba(0,229,160,.08));
+  border:1px solid rgba(255,72,32,.4);border-radius:16px;
+  padding:15px 22px;display:flex;align-items:center;gap:18px;
+}
+.sol-lbl{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--g);white-space:nowrap}
+.sol-txt{font-size:14.5px;font-weight:600;line-height:1.58;color:var(--t)}
+
+/* ── FLOW DIAGRAM ───────────────────────────────────────── */
+.flow{display:flex;align-items:center;gap:4px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+.fn{
+  background:var(--s1);border:1px solid var(--bd);border-radius:14px;
+  padding:12px 15px;text-align:center;min-width:128px;
+}
+.fi{font-size:24px;display:block;margin-bottom:5px}
+.fl{font-size:14px;font-weight:800}
+.fs{font-size:12px;color:var(--m);margin-top:3px;line-height:1.4}
+.fa{font-size:20px;color:rgba(255,72,32,.55);margin:0 2px;flex-shrink:0}
+.meta{display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.mi{
+  background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.28);
+  border-radius:10px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--bl);
+}
+
+/* ── ARCH DIAGRAM ───────────────────────────────────────── */
+.arch-wrap{
+  width:100%;max-width:1120px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:16px;
+  padding:14px 18px;margin-top:10px;
+}
+#arch-diag{min-height:245px;display:flex;align-items:center;justify-content:center}
+#arch-diag svg{width:100%;height:auto;max-height:290px}
+.arch-rule{
+  display:flex;align-items:center;gap:10px;margin-top:10px;
+  padding:8px 16px;background:rgba(0,229,160,.07);
+  border:1px solid rgba(0,229,160,.25);border-radius:10px;
+  font-size:13.5px;color:var(--g);font-weight:600;
+}
+
+/* ── WBS / MILESTONE GRID ───────────────────────────────── */
+.mc{
+  background:var(--s1);border:1px solid var(--bd);border-radius:12px;
+  padding:11px 8px;text-align:center;
+}
+.mid{font-size:12.5px;font-weight:800;color:var(--v2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.mn{font-size:13.5px;font-weight:700;line-height:1.25;margin-bottom:7px;min-height:36px;display:flex;align-items:center;justify-content:center}
+.tr{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}
+.td{width:9px;height:9px;border-radius:3px}
+.td.done{background:var(--g)}.td.active{background:var(--y)}
+.td.ms{background:var(--v)}
+.mpct{font-size:18px;font-weight:800;font-family:monospace}
+.obar{
+  width:100%;max-width:1140px;margin:10px auto 0;
+  background:var(--s1);border:1px solid var(--bd);border-radius:12px;
+  padding:9px 18px;display:flex;align-items:center;gap:14px;
+}
+.obar-track{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.obar-fill{
+  height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--v),var(--v2),var(--g));
+  box-shadow:0 0 14px rgba(0,229,160,.5);
+}
+
+/* ── UTILITY GRIDS / CARDS ──────────────────────────────── */
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;width:100%}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;width:100%}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;width:100%}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;width:100%}
+
+.icard{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;min-width:0}
+.icard h4{font-size:15px;font-weight:800;margin-bottom:6px;color:var(--t)}
+.icard p{font-size:13px;color:var(--m);line-height:1.6;overflow-wrap:break-word}
+
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,72,32,.1);border:1px solid rgba(255,72,32,.32);
+  border-radius:10px;padding:6px 13px;font-size:13.5px;font-weight:700;color:#FF9E85;white-space:nowrap;
+}
+.chip.mint{
+  background:rgba(0,229,160,.1);border-color:rgba(0,229,160,.32);color:var(--g);
+}
+
+.code-block{
+  background:#090B0E;border:1px solid var(--bd);border-radius:12px;
+  padding:13px 18px;font-family:'SF Mono',Consolas,monospace;font-size:12.8px;line-height:1.58;
+  overflow:auto;white-space:pre;text-align:left;width:100%;
+}
+.c1{color:#FF6B3D}
+.c2{color:#00E5A0}
+.c3{color:#6E7A8A}
+.c4{color:#60A5FA}
+.c5{color:#FBBF24}
+
+.dirtree{
+  background:#090B0E;border:1px solid var(--bd);border-radius:12px;
+  padding:13px 16px;font-family:Consolas,monospace;font-size:12px;line-height:1.5;
+  color:#D1D9E6;white-space:pre;text-align:left;
+}
+
+.adr-card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:13px 14px}
+.adr-id{font-size:12px;font-weight:800;color:var(--v2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.adr-t{font-size:14.5px;font-weight:800;margin-bottom:6px;line-height:1.3}
+.adr-d{font-size:12.5px;color:var(--m);line-height:1.55}
+.adr-r{font-size:12px;color:var(--g);line-height:1.48;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+
+.step{display:flex;gap:12px;align-items:flex-start}
+.step-num{
+  flex-shrink:0;width:28px;height:28px;border-radius:50%;
+  background:rgba(255,72,32,.16);border:1px solid rgba(255,72,32,.45);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--v2);font-size:13px;
+}
+.step-body{padding-top:1px}
+.step-t{font-size:14.5px;font-weight:800;margin-bottom:2px}
+.step-d{font-size:12.8px;color:var(--m);line-height:1.52}
+
+/* ── DEMO SWITCHER ──────────────────────────────────────── */
+.demo-tabs{display:flex;gap:8px;margin-bottom:8px}
+.demo-tab{
+  background:var(--s1);border:1px solid var(--bd);color:var(--m);
+  padding:6px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;
+}
+.demo-tab.on{background:rgba(255,72,32,.18);border-color:var(--v);color:#fff}
+
+/* ── BG VARIANTS ────────────────────────────────────────── */
+.bg-v{background:radial-gradient(ellipse at 50% 35%,rgba(255,72,32,.14) 0%,transparent 60%),var(--bg)}
+.bg-r{background:radial-gradient(ellipse at 50% 20%,rgba(239,68,68,.1) 0%,transparent 60%),var(--bg)}
+.bg-g{background:radial-gradient(ellipse at 50% 45%,rgba(0,229,160,.08) 0%,transparent 60%),var(--bg)}
+.bg-b{background:radial-gradient(ellipse at 50% 35%,rgba(96,165,250,.08) 0%,transparent 60%),var(--bg)}
+.bg-y{background:radial-gradient(ellipse at 50% 40%,rgba(251,191,36,.07) 0%,transparent 60%),var(--bg)}
+.bg-p{
+  background:
+    radial-gradient(ellipse at 30% 35%,rgba(255,72,32,.18) 0%,transparent 55%),
+    radial-gradient(ellipse at 72% 68%,rgba(0,229,160,.1) 0%,transparent 50%),
+    var(--bg);
+}
+
+/* ── BG ORBS ────────────────────────────────────────────── */
+.orb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0;opacity:.5}
+.o1{width:620px;height:620px;background:rgba(255,72,32,.12);top:-220px;left:-220px}
+.o2{width:500px;height:500px;background:rgba(0,229,160,.08);bottom:-180px;right:-180px}
+</style>
+</head>
+<body>
+
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+
+<!-- Nav arrows -->
+<div class="nav-arr" id="na-p" onclick="go(cur-1)">&#8249;</div>
+<div class="nav-arr" id="na-n" onclick="go(cur+1)">&#8250;</div>
+
+<!-- Progress dots & Slide counter -->
+<div id="dots"></div>
+<div id="slide-num">1 / 16</div>
+
+<!-- ═══════════════════ SLIDES ═══════════════════ -->
+<div id="deck">
+
+<!-- ── S1: 인트로 ────────────────────────────────────────── -->
+<div class="sl bg-p active" id="s1">
+  <div class="tag">포트폴리오 · Capstone Design &amp; KAICTS 2026</div>
+  <div class="big-title">CoachFit</div>
+  <p style="font-size:15.5px;color:var(--m);text-align:center;max-width:680px;line-height:1.72;margin-top:6px">
+    혼자 운동하는 헬스 초·중급자가 중도 포기하지 않도록,<br>
+    <strong style="color:var(--t)">3초 세트 기록 · 3D 다중 레이어 근육 해부도 · AI 부위별 피로도 기반 맞춤 루틴</strong>을 제공하는<br>
+    온·오프라인 하이브리드 AI 피트니스 코칭 플랫폼
+  </p>
+  <div class="badges" style="margin-top:20px">
+    <span class="badge" style="color:var(--v2);border-color:rgba(255,72,32,.35)">Flutter 3.35 Cross-Platform</span>
+    <span class="badge" style="color:var(--g);border-color:rgba(0,229,160,.35)">FastAPI Unified Backend</span>
+    <span class="badge" style="color:var(--bl);border-color:rgba(96,165,250,.35)">AWS EC2 · RDS · Bedrock</span>
+    <span class="badge">3D Anatomical Muscle Map</span>
+  </div>
+  <div class="team">강민권 · 팀 코치핏 &nbsp;|&nbsp; 최종 데모 발표 · 2026-11</div>
+</div>
+
+<!-- ── S2: 문제 정의 ─────────────────────────────────────── -->
+<div class="sl bg-r" id="s2">
+  <div class="s2w">
+    <div class="tag" style="margin-bottom:12px">Problem Definition · 왜 만들었는가?</div>
+    <div class="hook">
+      혼자 헬스장에 간 초·중급자의 가장 큰 장벽 —<br>
+      <em>"어제 가슴 운동했는데, 오늘 무슨 운동을 몇 kg으로 몇 세트 해야 하지?"</em>
+    </div>
+    <div class="prob-grid">
+      <div class="pc">
+        <span class="pi">💸</span>
+        <div class="pt">높은 PT 비용과 루틴 설계 막막함</div>
+        <div class="pd">회당 5~8만 원의 PT 부담으로 혼자 시작하지만,<br>부위별 분할과 점진적 과부하 방법을 몰라<br>1~2개월 내 중도 포기율 급증</div>
+      </div>
+      <div class="pc">
+        <span class="pi">📝</span>
+        <div class="pt">단순 수첩에 그치는 기존 기록 앱</div>
+        <div class="pd">기존 운동 앱(Fleek 등)은 기록 UX는 훌륭하나,<br>누적된 기록과 신체 지표를 분석해<br><strong>"오늘 할 루틴"</strong>을 역제안하지 못함</div>
+      </div>
+      <div class="pc">
+        <span class="pi">🦴</span>
+        <div class="pt">자극 부위의 직관적 피드백 부재</div>
+        <div class="pd">낯선 운동 명칭만 나열되어 초보자가<br>어느 근육이 타겟인지 직관적으로 이해하기 어렵고<br>특정 부위 편중·부상 위험 발생</div>
+      </div>
+    </div>
+    <div class="sol">
+      <div class="sol-lbl">✦ Solution</div>
+      <div class="sol-txt">
+        Fleek 스타일 <strong>3초 다중 세트 기록 UX</strong> + <strong>실제 3D 인체 해부도 다중 레이어 동적 점등</strong> +<br>
+        DB 직결(최근 운동 볼륨 · 인바디 · 운동 목표) <strong>AI 맞춤형 당일 루틴 추천 &amp; 1:1 전담 코칭</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S3: 우리의 비전 ───────────────────────────────────── -->
+<div class="sl bg-v" id="s3">
+  <div class="tag">Our Vision · 우리의 비전</div>
+  <div style="font-size:clamp(30px,4.4vw,56px);font-weight:900;letter-spacing:-.6px;line-height:1.32;text-align:center;max-width:900px;margin-bottom:26px">
+    단순한 기록장을 넘어,<br>
+    <span style="background:linear-gradient(135deg,var(--v),var(--v2),var(--g));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">기록할수록 똑똑해지는 주머니 속 AI 트레이너.</span>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;max-width:980px">
+    <div class="chip" style="font-size:13.5px;padding:8px 18px">⚡ 원터치 이전 세트 복사 &amp; 자동 휴식 타이머</div>
+    <div class="chip mint" style="font-size:13.5px;padding:8px 18px">🧬 10종 근육 부위 실시간 3D 해부도 점등</div>
+    <div class="chip" style="font-size:13.5px;padding:8px 18px">🤖 체성분·피로도 기반 초개인화 AI 루틴</div>
+    <div class="chip mint" style="font-size:13.5px;padding:8px 18px">🛡️ 5단 멀티 LLM + 하이브리드 무중단 폴백</div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(255,72,32,.14),rgba(21,25,34,.9));border:1px solid rgba(255,72,32,.38);border-radius:14px;padding:13px 26px;font-size:14px;font-weight:600;color:var(--t);text-align:center;max-width:740px;line-height:1.6">
+    💬 &nbsp;"오늘 헬스장에서 뭐 하지?"라는 고민을 0초로 줄이고, 추천 루틴을 원터치로 오늘 기록에 담아 바로 시작한다
+  </div>
+</div>
+
+<!-- ── S4: 프로젝트 계획 & 진행 현황 ──────────────────────── -->
+<div class="sl bg-y" id="s4">
+  <a class="wbs-link-btn" href="http://43.200.179.25:8000/docs" target="_blank">⚡ Live Swagger API</a>
+  <div class="tag">Project Plan &amp; WBS</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">프로젝트 계획 &amp; 진행 현황 — MoSCoW 우선순위 · WBS 100% 달성</div>
+  <div class="grid7" style="max-width:1160px;margin-top:6px">
+    <div class="mc"><div class="mid">M1 · 10주차</div><div class="mn">기획 &amp; 컨벤션</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M2 · 11주차</div><div class="mn">단일 백엔드 &amp; DB</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M3 · 12주차</div><div class="mn">3D 해부도 &amp; UX</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M4 · 12주차 말</div><div class="mn">멀티 LLM &amp; 폴백</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M5 · 13주차</div><div class="mn">AWS 인프라 구축</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M6 · 14주차</div><div class="mn">통계·커뮤니티·CI</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+    <div class="mc"><div class="mid">M7 · 15~16주</div><div class="mn">QA · 논문 · 발표</div>
+      <div class="tr"><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td done"></div><div class="td ms"></div></div>
+      <div class="mpct" style="color:var(--g)">100%</div></div>
+  </div>
+  <div class="obar" style="max-width:1160px">
+    <span style="font-size:13px;font-weight:800;color:var(--m);white-space:nowrap;text-transform:uppercase;letter-spacing:.1em">전체 WBS 진행률</span>
+    <div class="obar-track"><div class="obar-fill" style="width:100%"></div></div>
+    <span style="font-size:21px;font-weight:800;font-family:monospace;color:var(--g);white-space:nowrap">100%</span>
+    <span style="font-size:13px;color:var(--m);white-space:nowrap">PR #1 ~ #90 병합 · 20% 일정 버퍼 운영</span>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px;max-width:1160px">
+    <span class="chip">📌 Must: 운동 CRUD · 볼륨 차트 · AI 루틴 · 스마트 폴백</span>
+    <span class="chip mint">▲ Should: 목표 분기 · 휴식 타이머 · 인바디 추이 · JWT 인증</span>
+    <span class="chip">✖ Won't: 카메라 비전 자세교정 · 웨어러블 (범위 폭주 사전 차단)</span>
+  </div>
+</div>
+
+<!-- ── S5: 사용자 시나리오 (5대 핵심 탭 플로우) ──────────────── -->
+<div class="sl bg-b" id="s5">
+  <div class="tag">User Scenarios · 핵심 사용 흐름</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">사용자 시나리오 — 체크인부터 오운완·통계 분석까지</div>
+  <div class="flow" style="max-width:1160px;margin-top:8px">
+    <div class="fn" style="border-color:rgba(255,72,32,.45)"><span class="fi">🏠</span><div class="fl">1. 홈 &amp; 체크인</div><div class="fs">컨디션 선택 · 회복 상태<br>오늘의 AI 추천 루틴</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(0,229,160,.45)"><span class="fi">🧬</span><div class="fl">2. 3D 근육 해부도</div><div class="fs">타겟 근육 실시간 점등<br>원터치 루틴 담아 시작</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(96,165,250,.45)"><span class="fi">🏋️</span><div class="fl">3. 세트 기록 &amp; 타이머</div><div class="fs">다중 세트 입력 · 복사<br>휴식 타이머 자동 가동</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(251,191,36,.45)"><span class="fi">📊</span><div class="fl">4. 기간별 통계·인바디</div><div class="fs">주간·월간·3개월 볼륨<br>골격근·체지방 변화 추이</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(167,139,250,.45)"><span class="fi">💬</span><div class="fl">5. AI 1:1 코치 &amp; 오운완</div><div class="fs">실시간 상담 채팅<br>오운완 피드 · 13종 업적</div></div>
+  </div>
+  <div class="grid3" style="max-width:1140px;margin-top:12px">
+    <div class="icard">
+      <h4>🎬 시나리오 1 · 헬린이 민수 (23세)</h4>
+      <p>어제 가슴 운동 후 오늘 뭘 할지 막막할 때 홈 화면을 열면, AI가 최근 DB 기록을 분석해 <b>등·후면 사슬 루틴</b>을 추천하고 3D 해부도에 타겟 부위를 점등해 고민 없이 바로 운동을 시작합니다.</p>
+    </div>
+    <div class="icard">
+      <h4>🎬 시나리오 2 · 직장인 지수 (28세)</h4>
+      <p>추천 루틴을 오늘 기록에 일괄 담고 세트 완료 체크박스를 누르면, <b>전역 동기화 휴식 타이머(60~90초)</b>가 즉시 작동하며 운동 GIF 가이드로 정확한 자세를 현장에서 확인합니다.</p>
+    </div>
+    <div class="icard">
+      <h4>🎬 시나리오 3 · 중급자 현우 (25세)</h4>
+      <p>통계 탭에서 <b>주간(요일별) · 월간(주차별) · 3개월(월별)</b> 볼륨 추이와 인바디 체성분 그래프를 점검하고, 부족한 부위는 AI 1:1 전담 코치 채팅으로 즉시 피드백받습니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S6: 구현 방법 설명 ────────────────────────────────── -->
+<div class="sl bg-v" id="s6">
+  <div class="tag">Implementation · 핵심 구현 메커니즘</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">구현 방법 — AI 맞춤 루틴 생성과 3D 근육 동적 점등의 여정</div>
+  <div class="flow" style="margin-top:2px">
+    <div class="fn"><span class="fi">📱</span><div class="fl">HomeTab</div><div class="fs">requestCoaching()<br>목표·컨디션 전달</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(96,165,250,.5)"><span class="fi">⚡</span><div class="fl">FastAPI + DB</div><div class="fs">최근 10세션 · 인바디 조회<br>Fingerprint 캐시 대조</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(0,229,160,.5)"><span class="fi">🧠</span><div class="fl">Multi-LLM / Fallback</div><div class="fs">Bedrock · Groq 추론<br>_safe_routine_list 검증</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(255,72,32,.5)"><span class="fi">🧬</span><div class="fl">MuscleMapWidget</div><div class="fs">타겟 근육 키워드 파싱<br>다중 PNG 레이어 점등</div></div>
+  </div>
+  <div class="code-block" style="max-width:1040px;margin-top:6px">
+<span class="c3">// 1) Python FastAPI: DB 직결 컨텍스트 구성 + 지문(Fingerprint) 캐시 + 안전 파싱 (app/main.py, ai_coach.py)</span>
+<span class="c1">fingerprint</span> = coaching_cache.fingerprint(coaching_req)  <span class="c3"># 날짜 + 목표 + 신체스펙 + 최근운동 SHA-256 해시</span>
+<span class="c1">result</span> = coaching_cache.get(user_id, fingerprint) <span class="c1">or</span> generate_coaching_advice(coaching_req)
+
+<span class="c3">// 2) Flutter 3D 해부도: 추천 루틴 종목·포커스 텍스트에서 타겟 근육 추출 후 다중 레이어 PNG 합성 (muscle_map_widget.dart)</span>
+<span class="c1">for</span> (<span class="c1">final</span> item <span class="c1">in</span> result.recommendedRoutine) {
+  activeMuscles.addAll(MuscleGroupExtension.<span class="c4">parseFromText</span>(<span class="c2">'${item.exerciseName} ${item.focus}'</span>));
+}
+<span class="c3">// Stack: body_base_neutral.png 위에 activeMuscles에 해당하는 overlay_chest.png, overlay_back.png 등 동적 적층</span></div>
+  <div style="margin-top:8px;background:linear-gradient(135deg,rgba(255,72,32,.14),rgba(0,229,160,.08));border:1px solid rgba(255,72,32,.35);border-radius:12px;padding:8px 20px;font-size:13.5px;font-weight:600;color:var(--t);text-align:center;max-width:1040px">
+    💡 <b>저희만의 기법</b> — 인위적인 도형 블러(<code>drawOval</code>)를 배제하고 실제 3D 인체 해부도 에셋(Base + 10종 근육 Overlay 레이어)을 동적 합성하며, 동일 입력 재호출 시 <code>CoachingCache</code>로 0.01초 만에 응답합니다.
+  </div>
+</div>
+
+<!-- ── S7: ADR 요약 ──────────────────────────────────────── -->
+<div class="sl bg-v" id="s7">
+  <div class="tag">ADR Summary · 아키텍처 의사결정</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">아키텍처 의사결정 기록 (ADR-0001 ~ ADR-0005)</div>
+  <div class="grid4" style="max-width:1160px;margin-top:6px">
+    <div class="adr-card">
+      <div class="adr-id">ADR-0001</div>
+      <div class="adr-t">모바일 · 웹 — Flutter 단일 코드</div>
+      <div class="adr-d"><b style="color:var(--v2)">💡 왜?</b> Android·iOS·Web·Windows를 단일 코드베이스로 지원하고 AMOLED 다크 테마 및 커스텀 차트/해부도 렌더링 일관성 확보</div>
+      <div class="adr-r">✅ 결과: 모바일 앱과 EC2 정적 웹 데모(SPA)를 동시에 릴리즈, 핫 리로드로 UI 개발 속도 극대화</div>
+    </div>
+    <div class="adr-card">
+      <div class="adr-id">ADR-0004 (Supersedes 0002)</div>
+      <div class="adr-t">단일 백엔드 — FastAPI + PostgreSQL</div>
+      <div class="adr-d"><b style="color:var(--v2)">💡 왜?</b> 초기 Java(8080)+Python(8000) 이중 서버의 오버엔지니어링과 DTO 중복 비용을 교수님 피드백 반영해 포트 8000 하나로 통합</div>
+      <div class="adr-r">✅ 결과: 개발 생산성 3배 향상, AWS 프리티어 EC2(RAM 1GB)에서 OOM 없이 24/7 안정 가동</div>
+    </div>
+    <div class="adr-card">
+      <div class="adr-id">ADR-0003</div>
+      <div class="adr-t">AI 엔진 — 5단 멀티 LLM + 스마트 폴백</div>
+      <div class="adr-d"><b style="color:var(--v2)">💡 왜?</b> 외부 LLM 장애·할당량 초과·발표장 네트워크 단절 시에도 100% 서비스 연속성을 보장해야 함</div>
+      <div class="adr-r">✅ 결과: Bedrock → Groq → Gemini → Claude → OpenAI → 스마트 룰 엔진 + 클라이언트 폴백 완성</div>
+    </div>
+    <div class="adr-card">
+      <div class="adr-id">ADR-0005</div>
+      <div class="adr-t">시각화 — 다중 레이어 3D 근육 해부도</div>
+      <div class="adr-d"><b style="color:var(--v2)">💡 왜?</b> 단순 원형 하이라이트는 해부학적 정확도가 떨어져 운동 타겟 부위를 직관적으로 전달하기 어려움</div>
+      <div class="adr-r">✅ 결과: <code>body_base_neutral.png</code> + 부위별 정밀 <code>overlay_*.png</code> 다중 레이어 실시간 점등 구현</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S8: 앱 구조 설명 + 아키텍처 다이어그램 ────────────── -->
+<div class="sl bg-b" id="s8">
+  <div class="tag">App Structure &amp; Architecture</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">클라우드 네이티브 아키텍처 &amp; 디렉터리 구조</div>
+  <div style="display:flex;gap:14px;width:100%;max-width:1160px;align-items:stretch;margin-top:4px">
+    <div class="arch-wrap" style="flex:1.5;margin-top:0">
+      <div id="arch-diag">
+        <div style="color:var(--m);font-size:14px;padding:30px">아키텍처 다이어그램 렌더링 중…</div>
+      </div>
+    </div>
+    <div class="dirtree" style="flex:0.95;margin:0;font-size:11.6px">coach-fit/
+├── mobile-app/lib/          # Flutter 클라이언트
+│   ├── config/api_constants.dart
+│   ├── models/              # DTO (Workout, CoachingResult..)
+│   ├── screens/             # 5대 탭 &amp; 상세 화면
+│   │   ├── tabs/ (home, history, stats, community, menu)
+│   │   └── widgets/ (muscle_map, weekly_volume_chart..)
+│   ├── services/            # REST &amp; 로컬 상태 서비스
+│   └── theme/coachfit_theme.dart
+└── python-ai-backend/       # FastAPI 단일 통합 서버 (8000)
+    ├── app/
+    │   ├── main.py          # REST 라우터 &amp; 정적 웹 서빙
+    │   ├── database.py      # PostgreSQL / SQLite 연결
+    │   ├── models/          # SQLAlchemy ORM &amp; Pydantic v2
+    │   ├── services/        # ai_coach, ai_usage_guard, CRUD
+    │   └── dependencies/    # JWT Bearer 인증 미들웨어
+    └── tests/               # pytest 39개 단위/통합 테스트</div>
+  </div>
+  <div class="arch-rule" style="max-width:1160px">
+    <span>🔒</span>
+    <span>BFF(Backend For Frontend) 패턴 준수 &nbsp;|&nbsp; 모바일 ↔ FastAPI(포트 8000 단일 통신) ↔ RDS PostgreSQL / AWS Bedrock (IAM 무키 인증)</span>
+  </div>
+</div>
+
+<!-- ── S9: 개발 환경 설정 · 설치 가이드 ─────────────────── -->
+<div class="sl bg-g" id="s9">
+  <div class="tag mint">Dev Environment &amp; Setup</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">개발 환경 설정 · 설치 가이드 — 5분 안에 풀스택 구동</div>
+  <div class="grid2" style="max-width:1080px;margin-top:6px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-t">Python 3.12+ 가상환경 &amp; 의존성 설치</div><div class="step-d"><code>python -m venv venv</code> → <code>pip install -r requirements.txt</code></div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-t">FastAPI 단일 백엔드 기동 (포트 8000)</div><div class="step-d"><code>.env</code> 없이도 SQLite(<code>coachfit.db</code>) + 초기 시드 자동 적재 &amp; 스마트 더미 즉시 동작</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-t">Flutter 3.35.7 패키지 설치 &amp; 실행</div><div class="step-d"><code>flutter pub get</code> → <code>flutter run -d chrome</code> (또는 <code>windows</code> / <code>android</code>)</div></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-t">플랫폼별 네트워크 자동 분기 (<code>ApiConstants</code>)</div><div class="step-d"><code>useEc2Backend</code> 토글 하나로 AWS EC2 실서버(<code>43.200.179.25</code>) ↔ 로컬 오프라인 즉시 전환</div></div></div>
+      <div class="icard" style="margin-top:2px">
+        <h4>🛡️ 발표장 Wi-Fi 단절 대응 (Offline-First)</h4>
+        <p>외부 인터넷이 완전히 차단된 환경에서도 로컬 FastAPI + 내장 SQLite 시드 데이터 + 하이브리드 룰 엔진으로 모든 기능을 100% 동일하게 시연 가능합니다.</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="code-block" style="font-size:12.5px">
+<span class="c3"># 1. 백엔드 서버 실행 (포트 8000, 자동 시드 적재)</span>
+<span class="c1">cd</span> python-ai-backend
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+<span class="c3"># 2. Flutter 앱 실행 (새 터미널)</span>
+<span class="c1">cd</span> mobile-app
+flutter pub get
+flutter run -d chrome</div>
+      <div class="badges" style="margin-top:6px">
+        <span class="badge" style="color:var(--g)">pytest 39 passing</span>
+        <span class="badge" style="color:var(--g)">flutter analyze 0 issues</span>
+        <span class="badge">Swagger /docs 자동 생성</span>
+      </div>
+      <div style="font-size:13px;color:var(--m);margin-top:4px;text-align:center">상세 환경 구성 및 트러블슈팅 → <code>docs/setup.md</code> · <code>docs/aws_setup_guide.md</code></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S10: 빌드와 배포 과정 ─────────────────────────────── -->
+<div class="sl bg-y" id="s10">
+  <div class="tag">Build &amp; CI/CD Deploy</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">빌드와 무중단 배포 파이프라인 (GitHub Actions → AWS EC2)</div>
+  <div class="flow" style="max-width:1120px;margin-bottom:10px">
+    <div class="fn"><span class="fi">🌿</span><div class="fl">Feature Branch</div><div class="fs">기능/버그 작업 후<br>GitHub PR 생성</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(96,165,250,.5)"><span class="fi">🧪</span><div class="fl">CI 자동 검증</div><div class="fs">pytest 39건 +<br>flutter analyze</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(251,191,36,.5)"><span class="fi">🔀</span><div class="fl">main 병합</div><div class="fs">코드 리뷰 후<br>PR Merge</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(0,229,160,.5)"><span class="fi">🚀</span><div class="fl">OpenSSH 자동 배포</div><div class="fs">EC2 git pull &amp;<br>systemd 재시작</div></div>
+    <div class="fa">→</div>
+    <div class="fn" style="border-color:rgba(255,72,32,.5)"><span class="fi">🩺</span><div class="fl">Health Check</div><div class="fs">/health 200 OK 검증<br>웹+API 동시 서빙</div></div>
+  </div>
+  <div class="grid3" style="max-width:1120px">
+    <div class="icard">
+      <h4>📱 Mobile &amp; Desktop 빌드</h4>
+      <p><code>flutter build apk --release</code><br><code>flutter build windows --release</code><br>Android 클리어텍스트 허용 및 플랫폼별 호스트 분기로 실기기·에뮬레이터·데스크톱 즉시 구동</p>
+    </div>
+    <div class="icard">
+      <h4>🌐 Web SPA 원터치 통합 서빙</h4>
+      <p><code>flutter build web --release</code> 산출물을 <code>python-ai-backend/static/</code>에 탑재해 FastAPI가 <b>REST API와 Flutter Web SPA를 단일 포트(8000)에서 동시 서빙</b></p>
+    </div>
+    <div class="icard">
+      <h4>☁️ AWS EC2 + Systemd 24/7</h4>
+      <p>서울 리전 EC2(<code>43.200.179.25</code>)에 Elastic IP 고정 및 <code>coachfit.service</code> 등록. 비정상 종료 시 3초 내 자동 재기동(<code>Restart=always</code>) 보장</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S11: 구현 시행착오 사례 ────────────────────────────── -->
+<div class="sl bg-r" id="s11">
+  <div class="tag">Trial &amp; Error · 공학적 문제 해결</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">구현 시행착오 및 극복 사례 (4대 핵심 트러블슈팅)</div>
+  <div class="grid2" style="max-width:1120px;margin-top:4px">
+    <div class="icard">
+      <h4>1️⃣ Java + Python 이중 서버 오버엔지니어링</h4>
+      <p><b>문제:</b> 초기 Spring Boot(8080)와 FastAPI(8000)를 분리했으나 DTO 중복 정의와 서버 간 통신 지연으로 2인 팀 리소스 분산.<br>
+      <b>해결:</b> 교수님 피드백을 수용해 <b>FastAPI + PostgreSQL 단일 백엔드(ADR-0004)</b>로 전면 통합하여 메모리 점유율 절감 및 개발 속도 3배 향상.</p>
+    </div>
+    <div class="icard">
+      <h4>2️⃣ 3D 근육 해부도 원형 블러(<code>drawOval</code>)의 한계</h4>
+      <p><b>문제:</b> 초기에는 인체 이미지 위에 단순 원형 번짐 효과를 그렸으나 실제 근육 형태와 괴리감이 크고 시각적 완성도가 낮음.<br>
+      <b>해결:</b> <code>drawOval</code>을 전면 폐기하고 <b>실제 3D 해부도 베이스 + 10개 부위별 정밀 투명 PNG 레이어</b>를 Stack으로 동적 합성해 해결.</p>
+    </div>
+    <div class="icard">
+      <h4>3️⃣ LLM 비정형 응답 &amp; 세션 불일치로 인한 루틴 로드 실패</h4>
+      <p><b>문제:</b> LLM이 간혹 <code>sets/reps</code>에 문자열·null을 반환하거나, 서버 재배포 후 만료 토큰으로 접근 시 추천 루틴 카드가 에러를 표시.<br>
+      <b>해결:</b> 백엔드 <code>_safe_routine_list</code> 방어 파서 + 데모 세션 자동 복구 + 클라이언트 목표별 스마트 폴백으로 <b>무중단 루틴 표시</b> 달성.</p>
+    </div>
+    <div class="icard">
+      <h4>4️⃣ CI/CD 서드파티 SSH 액션 장애 &amp; Flutter 버전 충돌</h4>
+      <p><b>문제:</b> GitHub Actions 배포 중 <code>appleboy/drone-ssh</code> 504 다운로드 장애 및 CI 최신 Flutter(3.47+)의 <code>deprecated_member_use</code> 실패 발생.<br>
+      <b>해결:</b> 외부 액션 의존성을 제거하고 <b>Ubuntu 네이티브 OpenSSH 직접 배포</b>로 전환, CI Flutter 버전 고정(<code>3.35.7</code>)으로 해결.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S12: 성능 최적화 & 코드 품질 관리 ──────────────────── -->
+<div class="sl bg-g" id="s12">
+  <div class="tag mint">Performance &amp; Code Quality</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">성능 최적화 · 비용 방어 · 코드 품질 관리</div>
+  <div class="grid3" style="max-width:1120px;margin-top:6px">
+    <div class="icard">
+      <h4>⚡ AI 캐싱 &amp; 3중 과금 방어 가드</h4>
+      <p>· <b>CoachingCache:</b> 날짜+목표+프로필+최근운동 SHA-256 지문 해싱으로 동일 조건 재호출 시 LLM 호출 없이 <b>0.01초 즉시 응답</b><br>
+      · <b>AiRateLimiter:</b> 분당 10회 · 일일 100회 · 전역 300회 한도 제어로 과금 폭탄 원천 차단<br>
+      · 실패한 더미 폴백 응답은 캐시에서 자동 제외</p>
+    </div>
+    <div class="icard">
+      <h4>🎨 AMOLED 디자인 &amp; 렌더링 최적화</h4>
+      <p>· 순수 다크 배경(<code>#0E1116</code>) + 카드(<code>#151922</code>) + 오렌지(<code>#FF4820</code>)/민트(<code>#00E5A0</code>) 일관된 디자인 토큰<br>
+      · 운동 GIF 썸네일에 <code>gaplessPlayback: true</code> 적용으로 부위 필터 전환 시 깜빡임 제거<br>
+      · <code>WorkoutEvents</code> 리스너로 필요한 요약 위젯만 선택적 갱신</p>
+    </div>
+    <div class="icard">
+      <h4>📏 AGENTS.md 엄격한 협업·품질 규칙</h4>
+      <p>· <code>main</code> 브랜치 직접 커밋 절대 금지 (100% PR 기반 병합)<br>
+      · 모든 코드 변경 시 <code>flutter analyze</code> <b>경고·에러 0건</b> 강제<br>
+      · 입력 폼 음수/비정상 범위(무게·세트·신체치수) 클라이언트 + Pydantic v2 이중 검증</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S13: 테스트 결과 (단위/통합/벤치마크) ───────────────── -->
+<div class="sl bg-g" id="s13">
+  <div class="tag mint">Testing &amp; Verification</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">자동화 테스트 &amp; 정적 분석 검증 결과 — 전 항목 Pass</div>
+  <div class="grid4" style="max-width:1140px;margin-top:6px">
+    <div class="icard" style="text-align:center">
+      <h4>인증 &amp; 보안 테스트</h4>
+      <p style="font-size:24px;font-weight:800;color:var(--g);font-family:monospace">test_auth.py</p>
+      <p>JWT 토큰 발급·디코딩, 만료/위변조 토큰 차단(401), 회원가입-로그인-중복 이메일 검증</p>
+      <span style="display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--g)">7 / 7 통과</span>
+    </div>
+    <div class="icard" style="text-align:center">
+      <h4>운동 CRUD &amp; 볼륨 통계</h4>
+      <p style="font-size:24px;font-weight:800;color:var(--bl);font-family:monospace">test_workouts.py</p>
+      <p>세트×횟수×무게 볼륨 계산 정합성, 요일별 분리 집계, 타 유저 기록 삭제 방지(멀티테넌시)</p>
+      <span style="display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--g)">5 / 5 통과</span>
+    </div>
+    <div class="icard" style="text-align:center">
+      <h4>AI 폴백 &amp; 과금 가드</h4>
+      <p style="font-size:24px;font-weight:800;color:var(--y);font-family:monospace">test_ai_*.py</p>
+      <p>Bedrock 장애·비정형 JSON 시 룰 엔진 폴백, 지문 캐시 히트, 분당/일일 레이트 리밋 검증</p>
+      <span style="display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--g)">27 / 27 통과</span>
+    </div>
+    <div class="icard" style="text-align:center">
+      <h4>Flutter 정적 분석 &amp; 테스트</h4>
+      <p style="font-size:24px;font-weight:800;color:var(--pk);font-family:monospace">flutter analyze</p>
+      <p>전체 69개 Dart 소스 파일 정적 분석 0 이슈 + <code>home_summary_test</code> 위젯/유닛 검증</p>
+      <span style="display:inline-block;margin-top:8px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);color:var(--pk)">0 Warnings</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── S14: 시연 영상 & 실시간 라이브 데모 ────────────────── -->
+<div class="sl bg-p" id="s14">
+  <div class="tag">Live Demo &amp; Video</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">실시간 라이브 시연 &amp; 시연 영상</div>
+  <div class="demo-tabs">
+    <button class="demo-tab on" id="tab-live" onclick="switchDemo('live')">📱 실시간 인터랙티브 앱 (EC2 Live)</button>
+    <button class="demo-tab" id="tab-vid" onclick="switchDemo('vid')">🎬 녹화 시연 영상 (demo/coachfit_demo.mp4)</button>
+    <a class="demo-tab" href="http://43.200.179.25:8000" target="_blank" style="text-decoration:none">↗ 새 탭에서 전체화면 열기</a>
+  </div>
+  <div style="display:flex;gap:18px;width:100%;max-width:1160px;align-items:stretch;margin-top:2px">
+    <div style="flex:1.25;background:#07090C;border:2px solid var(--bd);border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:340px;position:relative">
+      <!-- Live iframe view -->
+      <iframe id="demo-iframe" src="http://43.200.179.25:8000" style="width:100%;height:350px;border:none;display:block" title="CoachFit Live Demo"></iframe>
+      <!-- Backup video view -->
+      <div id="demo-video-wrap" style="display:none;width:100%;height:350px;align-items:center;justify-content:center;flex-direction:column;padding:16px">
+        <video id="demo-video" controls preload="metadata" style="width:100%;max-height:310px;border-radius:10px">
+          <source src="demo/coachfit_demo.mp4" type="video/mp4">
+        </video>
+        <div style="font-size:11.5px;color:var(--m);margin-top:6px">※ <code>docs/demo/coachfit_demo.mp4</code> 파일을 배치하면 오프라인 백업 영상이 즉시 재생됩니다.</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-t">데모 계정 원터치 진입</div><div class="step-d"><code>데모 계정으로 바로 둘러보기</code> 클릭 → JWT 발급 및 홈 대시보드 진입</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-t">컨디션 체크인 &amp; 3D 근육 해부도</div><div class="step-d">오늘의 컨디션 기록 + AI 추천 루틴 타겟 근육 다중 레이어 실시간 점등 확인</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-t">추천 루틴 시작 &amp; 세트 기록·타이머</div><div class="step-d"><code>추천 루틴 시작하기</code>로 오늘 기록에 일괄 추가 → 세트 체크 시 휴식 타이머 가동</div></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-t">주간·월간·3개월 볼륨 &amp; 신체변화 추이</div><div class="step-d">통계 탭에서 기간별 볼륨 차트(요일/주차/월별) 및 인바디 추이 그래프 확인</div></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-t">AI 1:1 전담 코치 실시간 상담</div><div class="step-d">체성분·운동기록 컨텍스트가 반영된 맞춤형 루틴/식단 Q&amp;A 대화</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S15: 마무리 및 향후 발전 방향 ─────────────────────── -->
+<div class="sl bg-v" id="s15">
+  <div class="tag">Wrap-up &amp; Roadmap</div>
+  <div class="sh" style="font-size:clamp(20px,2.5vw,32px)">프로젝트 성과 요약 및 향후 발전 방향</div>
+  <div class="meta" style="margin-top:6px">
+    <div class="mi" style="color:var(--g);border-color:rgba(0,229,160,.35);background:rgba(0,229,160,.08)">✅ pytest 39 / 39 통과</div>
+    <div class="mi" style="color:var(--g);border-color:rgba(0,229,160,.35);background:rgba(0,229,160,.08)">✅ flutter analyze 경고 0건</div>
+    <div class="mi">☁️ AWS EC2 · RDS · Bedrock 단일 생태계</div>
+    <div class="mi">🧬 다중 레이어 3D 근육 해부도 동적 점등</div>
+    <div class="mi">📄 KAICTS 2026 학술대회 논문 투고</div>
+  </div>
+  <div class="tag mint" style="margin-top:24px">향후 발전 방향 (Future Roadmap)</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:1020px;margin-top:4px">
+    <span class="chip">⌚ Apple Watch / Galaxy Watch 심박수·세트 연동</span>
+    <span class="chip mint">📷 온디바이스 경량 Pose Estimation 자세 분석</span>
+    <span class="chip">🥗 식단 사진 인식 기반 일일 탄단지 매크로 코칭</span>
+    <span class="chip mint">🔒 커스텀 도메인 HTTPS (Let's Encrypt) &amp; 스토어 정식 출시</span>
+    <span class="chip">🤝 헬스장 트레이너-회원 매칭 B2B 대시보드 확장</span>
+  </div>
+</div>
+
+<!-- ── S16: Thank You ───────────────────────────────────── -->
+<div class="sl bg-p" id="s16">
+  <div class="tag">Q &amp; A · Thank You</div>
+  <div style="font-size:clamp(64px,9.5vw,130px);font-weight:900;letter-spacing:-2px;line-height:1;
+              background:linear-gradient(135deg,#fff 0%,#ffd8ce 40%,var(--v) 75%,#ff2a00 100%);
+              -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+              text-align:center;margin-bottom:18px">Thank You</div>
+  <div style="font-size:clamp(16px,2vw,23px);font-weight:600;color:var(--m);text-align:center;margin-bottom:32px">
+    혼자 운동하는 모든 순간에 가장 똑똑한 러닝메이트 — <strong style="color:var(--t)">CoachFit</strong><br>
+    경청해 주셔서 감사합니다. 질문을 받겠습니다.
+  </div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+    <div style="background:rgba(255,72,32,.1);border:1px solid rgba(255,72,32,.3);border-radius:12px;padding:10px 22px;font-size:14.5px;font-weight:700;color:#FF9E85">CoachFit (코치핏)</div>
+    <div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:12px;padding:10px 22px;font-size:14.5px;font-weight:700;color:var(--g)">Live: http://43.200.179.25:8000</div>
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px 22px;font-size:14.5px;font-weight:700;color:var(--t)">github.com/kang3019/coach-fit</div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+/* ── SLIDES ── */
+const sls  = Array.from(document.querySelectorAll('.sl'));
+let cur = 0;
+let archDone = false;
+
+/* ── DOTS ── */
+const dotsEl = document.getElementById('dots');
+const numEl  = document.getElementById('slide-num');
+sls.forEach((_,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' on':'');
+  d.onclick = ()=>go(i);
+  dotsEl.appendChild(d);
+});
+const dots = Array.from(document.querySelectorAll('.dot'));
+
+function go(idx){
+  if(idx<0||idx>=sls.length)return;
+  sls[cur].classList.remove('active');
+  sls[cur].classList.add('out-l');
+  const prev=cur;
+  setTimeout(()=>sls[prev].classList.remove('out-l'),360);
+  cur=idx;
+  sls[cur].classList.add('active');
+  dots.forEach((d,i)=>d.classList.toggle('on',i===cur));
+  numEl.textContent = `${cur+1} / ${sls.length}`;
+  document.getElementById('na-p').style.opacity=cur===0?'0.1':'1';
+  document.getElementById('na-n').style.opacity=cur===sls.length-1?'0.1':'1';
+  if(cur===7&&!archDone) renderArch();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA')) return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(cur+1)}
+  if(e.key==='ArrowLeft')              {e.preventDefault();go(cur-1)}
+});
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX});
+document.addEventListener('touchend',  e=>{const d=e.changedTouches[0].clientX-tx;if(Math.abs(d)>50)go(d<0?cur+1:cur-1)});
+go(0);
+
+/* ── DEMO TAB SWITCHER ── */
+function switchDemo(mode){
+  const iframe = document.getElementById('demo-iframe');
+  const vwrap  = document.getElementById('demo-video-wrap');
+  const tLive  = document.getElementById('tab-live');
+  const tVid   = document.getElementById('tab-vid');
+  if(mode==='live'){
+    iframe.style.display='block';
+    vwrap.style.display='none';
+    tLive.classList.add('on');
+    tVid.classList.remove('on');
+  }else{
+    iframe.style.display='none';
+    vwrap.style.display='flex';
+    tLive.classList.remove('on');
+    tVid.classList.add('on');
+  }
+}
+
+/* ── ARCHITECTURE (Mermaid) ── */
+mermaid.initialize({
+  startOnLoad:false,
+  theme:'base',
+  themeVariables:{
+    background:'#0E1116',mainBkg:'#151922',lineColor:'#60A5FA',
+    primaryColor:'#FF4820',primaryTextColor:'#F3F6FA',primaryBorderColor:'#FF6B3D',
+    edgeLabelBackground:'#151922',
+  }
+});
+
+async function renderArch(){
+  const def = `%%{init:{"theme":"base","themeVariables":{"background":"#0E1116","mainBkg":"#151922","lineColor":"#60A5FA","edgeLabelBackground":"#151922","primaryColor":"#FF4820","primaryTextColor":"#F3F6FA","fontSize":"18px"}}}%%
+flowchart LR
+  classDef client fill:#431407,stroke:#FF4820,stroke-width:2px,color:#fff
+  classDef api    fill:#1E3A8A,stroke:#60A5FA,stroke-width:2px,color:#fff
+  classDef ai     fill:#064E3B,stroke:#00E5A0,stroke-width:2px,color:#fff
+  classDef db     fill:#78350F,stroke:#FBBF24,stroke-width:2px,color:#fff
+
+  C["📱 Flutter App (Mobile · Web)\n5대 탭 · 3D 근육 해부도\n스마트 폴백 & 세션 자동복구"]
+  S["⚡ FastAPI 단일 백엔드 (Port 8000)\nJWT 인증 · 운동/인바디 CRUD\nCoachingCache · AiRateLimiter"]
+  L["🧠 5단 멀티 AI 엔진\nAWS Bedrock (Claude 3.5 / Nova)\nGroq · Gemini · 스마트 룰 엔진"]
+  D["🗄️ Database Layer\nAWS RDS PostgreSQL 16\n(로컬 SQLite 자동 폴백)"]
+
+  C <-->|"REST JSON + JWT"| S
+  S <-->|"SQLAlchemy ORM"| D
+  S <-->|"IAM Role / Converse API"| L
+
+  class C client
+  class S api
+  class L ai
+  class D db`;
+
+  try{
+    const {svg}=await mermaid.render('arch-svg',def);
+    document.getElementById('arch-diag').innerHTML=svg;
+    archDone=true;
+  }catch(e){
+    document.getElementById('arch-diag').innerHTML=
+      '<div style="color:#fca5a5;padding:20px;font-size:14px">다이어그램 렌더 실패 — 인터넷 연결을 확인하세요</div>';
+  }
+}
+</script>
+
+</body>
+</html>
