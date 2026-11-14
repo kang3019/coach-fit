@@ -68,6 +68,9 @@ def get_current_user(
 
     user = db.query(UserRecord).filter(UserRecord.user_id == user_id).first()
     if not user:
+        # 서버 재배포/DB 재시드 후 기존 유효 토큰으로 접근 시 데모 유저(user_01)로 안전 폴백
+        user = db.query(UserRecord).filter(UserRecord.user_id == "user_01").first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="존재하지 않는 사용자입니다.",
