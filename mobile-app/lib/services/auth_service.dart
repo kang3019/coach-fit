@@ -146,6 +146,16 @@ class AuthService {
     return {'Content-Type': 'application/json'};
   }
 
+  /// 토큰 만료/유실 또는 DB 초기화로 인해 401 발생 시 데모 계정 세션을 자동으로 재발급
+  Future<Map<String, String>> refreshDemoSessionHeaders() async {
+    try {
+      await login(email: 'demo@coachfit.com', password: 'password123');
+    } catch (_) {
+      // 오프라인 등 로그인 실패 시 기존 헤더 반환
+    }
+    return getAuthHeaders();
+  }
+
   Future<void> _persistSession(AuthUser user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, user.accessToken);
