@@ -1059,7 +1059,7 @@ code{
   <!-- ── S13: 실시간 라이브 시연 ────────────────────────────── -->
   <div class="sl" id="s13">
     <div class="sl-head" style="margin-bottom:12px">
-      <div class="tag">12 · Live Demo (약 1분)</div>
+      <div class="tag">12 · Live Demo (1분 4초)</div>
       <div class="sh">AWS EC2 실서버 라이브 시연 &amp; 백업 영상</div>
     </div>
 
@@ -1082,26 +1082,26 @@ code{
       </div>
 
       <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:8px;height:445px">
-        <div style="font-size:11.5px;font-weight:800;color:#FF8B6B;letter-spacing:.1em;margin-bottom:2px">DEMO SCENARIO CHECKLIST (60s)</div>
+        <div style="font-size:11.5px;font-weight:800;color:#FF8B6B;letter-spacing:.1em;margin-bottom:2px">DEMO SCENARIO CHECKLIST (01:04 · 자막 연동)</div>
         <div class="step demo-check" onclick="this.classList.toggle('done')">
           <div class="step-num">1</div>
-          <div><div class="step-t">데모 계정 원터치 진입 (10s)</div><div class="step-d">JWT 자동 발급 → 홈 대시보드 &amp; 오늘의 컨디션 체크인</div></div>
+          <div><div class="step-t">데모 계정 원터치 로그인 (0:00~0:09)</div><div class="step-d">JWT 자동 발급 → 홈 대시보드 진입</div></div>
         </div>
         <div class="step demo-check" onclick="this.classList.toggle('done')">
           <div class="step-num">2</div>
-          <div><div class="step-t">AI 추천 루틴 &amp; SVG 근육 해부도 (15s)</div><div class="step-d">Front/Back 실시간 타겟 점등 + 부위 뱃지 인터랙션 확인</div></div>
+          <div><div class="step-t">컨디션 체크 · AI 추천 루틴 · 근육 해부도 (0:10~0:22)</div><div class="step-d">컨디션 체크인 → 후면 추천 루틴 &amp; 앞·뒷면 SVG 해부도 점등</div></div>
         </div>
         <div class="step demo-check" onclick="this.classList.toggle('done')">
           <div class="step-num">3</div>
-          <div><div class="step-t">추천 루틴 시작 &amp; 휴식 타이머 (15s)</div><div class="step-d">오늘 기록에 종목 일괄 등록 → 세트 체크 시 타이머 자동 가동</div></div>
+          <div><div class="step-t">추천 루틴 시작 &amp; 세트 체크 · 휴식 타이머 (0:23~0:36)</div><div class="step-d">오늘 기록에 종목 일괄 추가 → 세트 체크 시 자동 휴식 타이머</div></div>
         </div>
         <div class="step demo-check" onclick="this.classList.toggle('done')">
           <div class="step-num">4</div>
-          <div><div class="step-t">주간·월간·3개월 볼륨 &amp; 인바디 추이 (10s)</div><div class="step-d">기간 전환 차트(요일/주차/월별) 및 골격근·체지방 그래프</div></div>
+          <div><div class="step-t">통계 탭 볼륨 차트 &amp; 인바디 변화 그래프 (0:37~0:54)</div><div class="step-d">주간·월간·3개월 볼륨·부위별 균형 및 신체 변화 그래프 확인</div></div>
         </div>
         <div class="step demo-check" onclick="this.classList.toggle('done')">
           <div class="step-num">5</div>
-          <div><div class="step-t">AI 1:1 전담 코치 실시간 상담 (10s)</div><div class="step-d">사용자 DB 기록이 반영된 맞춤형 운동·식단 질의응답</div></div>
+          <div><div class="step-t">AI 1:1 코치 채팅 · 기록 기반 맞춤 피드백 (0:55~1:04)</div><div class="step-d">AWS Bedrock 기반 개인화 운동 루틴·휴식 팁 실시간 상담</div></div>
         </div>
       </div>
     </div>
@@ -1280,9 +1280,9 @@ const META = [
   { title:'테스트 & 품질 검증', dur:'0:25', cum:'5:55',
     cue:'"지켰습니다"',
     note:'검증 결과입니다. JWT 인증 보안 9건, 운동 CRUD·볼륨 정합성 7건, AI 폴백·지문 캐시·레이트 리밋·벤치마크 23건까지 총 39건의 백엔드 pytest 자동화 테스트를 100% 통과했습니다. 프론트엔드도 전체 85개 Dart 파일에서 flutter analyze 경고 0건을 달성했고, AGENTS.md 규칙으로 main 직접 커밋 금지와 PR 전수 CI 검증을 지켰습니다.' },
-  { title:'실시간 라이브 시연', dur:'1:00', cum:'6:55',
-    cue:'"확인할 수 있습니다" (5단계 체크하며 시연)',
-    note:'AWS EC2 실서버에서 구동 중인 실제 CoachFit 앱을 1분간 시연하겠습니다. ① 데모 계정 원터치 로그인 → ② 컨디션 체크인 및 AI 추천 루틴·SVG 해부도 확인 → ③ 추천 루틴 시작하기 + 세트 완료 휴식 타이머 가동 → ④ 통계 탭 주간·월간·3개월 볼륨 및 인바디 추이 → ⑤ AI 1:1 코치 채팅 피드백 순서로 보여드리겠습니다.' },
+  { title:'실시간 라이브 시연', dur:'1:04', cum:'6:59',
+    cue:'"확인합니다" (자막 5단계 맞춰 설명)',
+    note:'AWS EC2 실서버에서 구동 중인 실제 CoachFit 앱을 1분간 시연하겠습니다. ①[0:00] 데모 계정 원터치 로그인으로 홈 대시보드 진입 → ②[0:10] 컨디션 체크와 AI 추천 루틴·앞뒷면 SVG 근육 해부도 점등 확인 → ③[0:23] 추천 루틴 시작하기로 오늘 기록에 종목 일괄 추가 후 세트 체크 시 자동 휴식 타이머 확인 → ④[0:37] 통계 탭 주간·월간·3개월 볼륨 차트와 부위별 균형, 인바디 신체 변화 그래프 확인 → ⑤[0:55] 마지막으로 AI 1:1 코치 채팅에서 기록 기반 맞춤 피드백을 확인합니다.' },
   { title:'성과 요약 & 로드맵', dur:'0:25', cum:'7:20',
     cue:'"확장해 나가겠습니다"',
     note:'정리하겠습니다. 저희는 기획부터 AWS 풀스택 배포, 테스트 39건 통과와 린트 0건, 그리고 KAICTS 2026 학술대회 논문 투고까지 전 과정을 완주했습니다. 향후 HTTPS 도메인 적용과 스토어 출시를 시작으로, 스마트워치 심박수 연동, 온디바이스 자세 분석·식단 코칭, 헬스장 트레이너 B2B 대시보드로 확장해 나가겠습니다.' },

@@ -1,3 +1,8 @@
+* **🎬 발표 자료**
+  * [🖥️ 발표 슬라이드 (GitHub Pages · 영상 포함)](slide.html ':ignore')
+  * [📱 발표 슬라이드 (EC2 라이브 앱 연동)](http://43.200.179.25:8000/slide.html)
+  * [📝 발표 대본 (인쇄용 · 발음 포함)](slides/presentation-script-print.txt ':ignore')
+
 * **소개 & 시작하기**
   * [🏋️ 프로젝트 개요](README.md)
   * [🚀 로컬 실행 가이드](setup.md)

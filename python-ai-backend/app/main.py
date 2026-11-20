@@ -127,6 +127,25 @@ handler = Mangum(app) if Mangum else None
 # ==========================================
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+DOCS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs")
+
+
+@app.get("/slide.html", include_in_schema=False)
+def serve_presentation_slide():
+    """발표 슬라이드 HTML 서빙 (EC2 HTTP 동일 오리진으로 라이브 iframe·영상 동시 지원)"""
+    slide_path = os.path.join(DOCS_DIR, "slide.html")
+    if os.path.exists(slide_path):
+        return FileResponse(slide_path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Presentation slide not found")
+
+
+@app.get("/demo.mp4", include_in_schema=False)
+def serve_presentation_demo_video():
+    """발표 슬라이드 시연 영상 MP4 서빙"""
+    video_path = os.path.join(DOCS_DIR, "demo.mp4")
+    if os.path.exists(video_path):
+        return FileResponse(video_path, media_type="video/mp4")
+    raise HTTPException(status_code=404, detail="Demo video not found")
 
 
 @app.get("/api/status", summary="백엔드 서비스 상태 확인")
