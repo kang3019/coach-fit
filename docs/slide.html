@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoachFit — AI 맞춤형 피트니스 코칭 &amp; 인터랙티브 근육 해부도 플랫폼</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0D13;
+  --s1:#131823;
+  --s2:#1A2130;
+  --s3:#20293B;
+  --bd:rgba(255,255,255,.09);
+  --bd-hi:rgba(255,255,255,.18);
+  --t:#F4F7FB;
+  --m:#96A3B8;
+  --dim:#64728A;
+  --v:#FF4820;
+  --v2:#FF7247;
+  --g:#00E5A0;
+  --y:#FBBF24;
+  --bl:#60A5FA;
+  --pu:#A78BFA;
+  --pk:#F472B6;
+  --red:#F87171;
+}
+
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:#05070A;color:var(--t);
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  word-break:keep-all;
+  user-select:none;
+}
+
+/* ── 16:9 VIEWPORT STAGE (해상도 무관 절대 안 잘림) ─────────── */
+#viewport{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#111622 0%,#05070A 75%);
+}
+#stage{
+  position:relative;
+  width:1280px;height:720px;
+  background:var(--bg);
+  overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.78), 0 0 0 1px rgba(255,255,255,.07);
+  transform-origin:center center;
+}
+
+/* ── AMBIENT GLOW & GRID ────────────────────────────────── */
+.bg-grid{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse at 50% 45%,black 25%,transparent 78%);
+}
+.orb{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;opacity:.45}
+.o1{width:540px;height:540px;background:rgba(255,72,32,.16);top:-200px;left:-160px}
+.o2{width:460px;height:460px;background:rgba(0,229,160,.11);bottom:-180px;right:-140px}
+
+/* ── TOP PROGRESS BAR ───────────────────────────────────── */
+#top-progress{
+  position:absolute;top:0;left:0;height:3px;width:0%;z-index:120;
+  background:linear-gradient(90deg,var(--v),var(--v2),var(--g));
+  box-shadow:0 0 12px rgba(255,72,32,.65);
+  transition:width .35s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── SLIDE BASE ─────────────────────────────────────────── */
+#deck{position:absolute;inset:0;z-index:10}
+.sl{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:42px 58px 54px;
+  opacity:0;pointer-events:none;
+  transform:translateX(36px);
+  transition:opacity .36s ease,transform .36s cubic-bezier(.22,1,.36,1);
+}
+.sl.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.sl.out-l{opacity:0;transform:translateX(-36px);transition:opacity .26s ease,transform .26s ease}
+.sl.center{align-items:center}
+
+/* ── HEADER BLOCK ───────────────────────────────────────── */
+.sl-head{margin-bottom:20px;width:100%}
+.sl-head.c{text-align:center}
+.tag{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,72,32,.11);border:1px solid rgba(255,72,32,.34);
+  border-radius:999px;padding:4px 13px;
+  font-size:11.5px;font-weight:800;color:#FF8B6B;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;
+}
+.tag.mint{background:rgba(0,229,160,.1);border-color:rgba(0,229,160,.34);color:var(--g)}
+.tag.blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.34);color:var(--bl)}
+.tag.amber{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.34);color:var(--y)}
+.sh{
+  font-size:30px;font-weight:800;letter-spacing:-.6px;line-height:1.22;color:var(--t);
+}
+.sh em{font-style:normal;color:var(--v2)}
+.sh .mint{color:var(--g)}
+.sub{font-size:14.5px;color:var(--m);margin-top:6px;line-height:1.5}
+
+/* ── CARDS & SURFACES ───────────────────────────────────── */
+.card{
+  background:linear-gradient(180deg,rgba(26,33,48,.78) 0%,rgba(19,24,35,.94) 100%);
+  border:1px solid var(--bd);border-radius:16px;padding:18px 20px;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:16px;right:16px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+}
+.card.accent-v{border-color:rgba(255,72,32,.32)}
+.card.accent-g{border-color:rgba(0,229,160,.3)}
+.card.accent-b{border-color:rgba(96,165,250,.3)}
+.card.accent-y{border-color:rgba(251,191,36,.3)}
+.card h4{font-size:15.5px;font-weight:800;color:var(--t);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+.card p{font-size:13.3px;color:var(--m);line-height:1.58}
+.card strong,.card b{color:var(--t);font-weight:700}
+
+code{
+  font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+  font-size:.9em;background:rgba(255,255,255,.07);
+  padding:1px 6px;border-radius:5px;color:#FFD0C2;
+}
+
+/* ── GRIDS ──────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;width:100%}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;width:100%}
+
+/* ── CHIPS & BADGES ─────────────────────────────────────── */
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--m);
+}
+.pill.v{background:rgba(255,72,32,.12);border-color:rgba(255,72,32,.35);color:#FF977A}
+.pill.g{background:rgba(0,229,160,.1);border-color:rgba(0,229,160,.34);color:var(--g)}
+.pill.b{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.34);color:var(--bl)}
+.pill.y{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.34);color:var(--y)}
+
+/* ── SLIDE 1 HERO ───────────────────────────────────────── */
+.hero-wrap{display:grid;grid-template-columns:1.25fr 0.9fr;gap:34px;align-items:center;width:100%}
+.hero-title{
+  font-size:74px;font-weight:900;letter-spacing:-3px;line-height:.98;
+  background:linear-gradient(135deg,#FFFFFF 0%,#FFE0D6 38%,var(--v) 74%,#FF2A00 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:14px;
+}
+.hero-sub{font-size:16.5px;color:var(--m);line-height:1.68;margin-bottom:22px;max-width:600px}
+.hero-sub strong{color:var(--t);font-weight:700}
+.hero-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
+.hkpi{
+  background:rgba(255,255,255,.035);border:1px solid var(--bd);border-radius:12px;padding:11px 14px;
+}
+.hkpi-v{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--t)}
+.hkpi-l{font-size:11.5px;color:var(--m);margin-top:2px;font-weight:600}
+.hero-visual{
+  background:radial-gradient(circle at 50% 45%,rgba(255,72,32,.14),rgba(15,19,28,.96) 70%);
+  border:1px solid rgba(255,72,32,.28);border-radius:22px;padding:20px 20px 16px;
+  box-shadow:0 20px 55px rgba(0,0,0,.55);
+}
+.hero-meta{margin-top:18px;font-size:13px;color:var(--dim);font-weight:600;display:flex;gap:14px;align-items:center}
+.hero-meta span{color:#FF977A}
+
+/* ── PROBLEM & SOLUTION ─────────────────────────────────── */
+.hook-box{
+  background:linear-gradient(135deg,rgba(255,72,32,.11),rgba(19,24,35,.8));
+  border:1px solid rgba(255,72,32,.28);border-radius:16px;
+  padding:16px 24px;margin-bottom:16px;text-align:center;
+  font-size:21px;font-weight:800;line-height:1.4;color:var(--t);
+}
+.hook-box em{font-style:normal;color:var(--v2)}
+.prob-stat{
+  font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;
+  color:#FCA5A5;margin-bottom:6px;letter-spacing:-.5px;
+}
+.sol-bar{
+  margin-top:14px;
+  background:linear-gradient(135deg,rgba(255,72,32,.15),rgba(0,229,160,.1));
+  border:1px solid rgba(0,229,160,.36);border-radius:14px;
+  padding:14px 20px;display:flex;align-items:center;gap:16px;
+}
+.sol-tag{
+  font-size:11.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:#0A0D13;background:var(--g);padding:5px 11px;border-radius:8px;white-space:nowrap;
+}
+
+/* ── COMPARISON TABLE (S3) ──────────────────────────────── */
+.cmp-table{
+  width:100%;border-collapse:separate;border-spacing:0;
+  background:var(--s1);border:1px solid var(--bd);border-radius:16px;overflow:hidden;
+}
+.cmp-table th,.cmp-table td{padding:12px 18px;text-align:left;font-size:13.5px;border-bottom:1px solid var(--bd)}
+.cmp-table tr:last-child td{border-bottom:none}
+.cmp-table th{background:rgba(255,255,255,.035);font-weight:800;font-size:12.5px;letter-spacing:.04em;color:var(--m)}
+.cmp-table th.cf{color:#FF8B6B;background:rgba(255,72,32,.1)}
+.cmp-table td.cf{background:rgba(255,72,32,.045);color:var(--t);font-weight:700}
+.cmp-table td.dim{color:var(--m)}
+
+/* ── WBS MILESTONES (S4) ────────────────────────────────── */
+.g7{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;width:100%}
+.mc{
+  background:var(--s1);border:1px solid var(--bd);border-radius:13px;
+  padding:12px 9px;text-align:center;
+}
+.mc-id{font-size:11px;font-weight:800;color:var(--v2);letter-spacing:.05em;margin-bottom:5px}
+.mc-n{font-size:12.8px;font-weight:700;line-height:1.28;min-height:36px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.mc-dots{display:flex;gap:3px;justify-content:center;margin-bottom:7px}
+.mc-d{width:8px;height:8px;border-radius:2px;background:var(--g)}
+.mc-d.hi{background:var(--v)}
+.mc-pct{font-size:16px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--g)}
+.obar{
+  width:100%;margin-top:12px;background:var(--s1);border:1px solid var(--bd);
+  border-radius:13px;padding:11px 18px;display:flex;align-items:center;gap:14px;
+}
+.obar-track{flex:1;height:9px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden}
+.obar-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--v),var(--v2),var(--g));border-radius:99px}
+
+/* ── FLOW STEPS ─────────────────────────────────────────── */
+.flow{display:flex;align-items:stretch;gap:8px;width:100%}
+.fnode{
+  flex:1;background:var(--s1);border:1px solid var(--bd);border-radius:14px;
+  padding:13px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.fnode .fi{font-size:22px;margin-bottom:6px}
+.fnode .fl{font-size:13.5px;font-weight:800;color:var(--t);margin-bottom:4px}
+.fnode .fs{font-size:11.8px;color:var(--m);line-height:1.42}
+.farr{display:flex;align-items:center;font-size:18px;color:rgba(255,72,32,.65);font-weight:900;flex-shrink:0}
+
+/* ── CODE BLOCK & DIRTREE ───────────────────────────────── */
+.code-block{
+  background:#080B10;border:1px solid var(--bd);border-radius:13px;
+  padding:13px 16px;font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+  font-size:12px;line-height:1.58;white-space:pre;overflow:hidden;color:#D6DFEC;
+}
+.c1{color:#FF7247}.c2{color:#00E5A0}.c3{color:#64748B}.c4{color:#60A5FA}.c5{color:#FBBF24}
+
+/* ── INTERACTIVE MUSCLE MAP WIDGET (S1 & S6) ────────────── */
+.mm-panel{
+  background:#0C1018;border:1px solid rgba(255,255,255,.1);border-radius:18px;
+  padding:14px 16px;display:flex;flex-direction:column;height:100%;
+}
+.mm-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.mm-btn{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  color:var(--m);font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;
+  cursor:pointer;transition:all .18s;font-family:inherit;
+}
+.mm-btn:hover{border-color:rgba(255,72,32,.5);color:var(--t)}
+.mm-btn.on{background:rgba(255,72,32,.2);border-color:var(--v);color:#fff;box-shadow:0 0 12px rgba(255,72,32,.28)}
+.mm-views{
+  flex:1;display:grid;grid-template-columns:1fr 1px 1fr;gap:8px;align-items:center;
+  min-height:220px;
+}
+.mm-div{width:1px;height:75%;background:rgba(255,255,255,.07);justify-self:center}
+.mm-col{display:flex;flex-direction:column;align-items:center;height:100%}
+.mm-lbl{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--dim);margin-bottom:4px}
+.mm-svg{width:100%;height:235px;display:block}
+.mm-tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:8px;min-height:24px}
+.mm-tag{
+  font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;
+  background:rgba(255,72,32,.18);border:1px solid rgba(255,72,32,.48);color:#FF8B6B;
+}
+
+/* ── WATERFALL (S7) ─────────────────────────────────────── */
+.wf-chain{display:flex;flex-direction:column;gap:7px}
+.wf-row{
+  display:grid;grid-template-columns:72px 1.2fr 1.6fr 94px;gap:12px;align-items:center;
+  background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:9px 14px;
+  font-size:13px;
+}
+.wf-tier{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:11.5px;color:var(--v2)}
+.wf-name{font-weight:800;color:var(--t)}
+.wf-desc{color:var(--m);font-size:12.3px}
+.wf-lat{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--g)}
+
+/* ── ADR CARDS (S8) ─────────────────────────────────────── */
+.adr-id{font-size:11px;font-weight:800;color:var(--v2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.adr-t{font-size:15px;font-weight:800;color:var(--t);margin-bottom:8px;line-height:1.3}
+.adr-why{font-size:12.5px;color:var(--m);line-height:1.54;margin-bottom:10px}
+.adr-res{font-size:12.2px;color:var(--g);line-height:1.48;padding-top:9px;border-top:1px solid var(--bd);font-weight:600}
+
+/* ── STEP LIST ──────────────────────────────────────────── */
+.step-list{display:flex;flex-direction:column;gap:9px}
+.step{display:flex;gap:11px;align-items:flex-start}
+.step-num{
+  flex-shrink:0;width:25px;height:25px;border-radius:50%;
+  background:rgba(255,72,32,.16);border:1px solid rgba(255,72,32,.48);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;color:var(--v2);font-size:12px;margin-top:1px;
+}
+.step.done .step-num{background:rgba(0,229,160,.2);border-color:var(--g);color:var(--g)}
+.step-t{font-size:13.8px;font-weight:800;color:var(--t);margin-bottom:2px}
+.step-d{font-size:12.3px;color:var(--m);line-height:1.48}
+
+/* ── TRIAL & ERROR BEFORE/AFTER (S11) ───────────────────── */
+.ba-row{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.ba-item{
+  font-size:12.5px;line-height:1.5;padding:7px 10px;border-radius:9px;
+}
+.ba-bad{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.22);color:#FECACA}
+.ba-good{background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.24);color:#A7F3D0}
+
+/* ── TEST STAT CARD (S12) ───────────────────────────────── */
+.tstat{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+.tstat-num{font-size:36px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1.1;margin:6px 0}
+.tstat-file{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--m);margin-bottom:6px}
+.tstat-pill{
+  margin-top:10px;font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;
+  background:rgba(0,229,160,.14);border:1px solid rgba(0,229,160,.36);color:var(--g);
+}
+
+/* ── DEMO TABS (S13) ────────────────────────────────────── */
+.demo-bar{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.demo-tab{
+  background:var(--s1);border:1px solid var(--bd);color:var(--m);
+  padding:6px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;text-decoration:none;transition:all .18s;
+}
+.demo-tab.on{background:rgba(255,72,32,.18);border-color:var(--v);color:#fff}
+.demo-check{cursor:pointer;padding:7px 10px;border-radius:10px;border:1px solid transparent;transition:background .15s,border-color .15s}
+.demo-check:hover{background:rgba(255,255,255,.04)}
+.demo-check.playing{background:rgba(255,72,32,.14);border-color:rgba(255,72,32,.55)}
+.demo-check.playing .step-num{background:var(--v);color:#fff}
+
+/* ── BOTTOM HUD BAR ─────────────────────────────────────── */
+#hud{
+  position:absolute;bottom:0;left:0;right:0;height:42px;z-index:110;
+  padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,transparent,rgba(5,7,10,.72));
+}
+.hud-left{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--dim);font-weight:700}
+#timer-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  color:var(--m);border-radius:8px;padding:4px 10px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+  transition:all .2s;
+}
+#timer-btn.running{border-color:rgba(0,229,160,.45);color:var(--g)}
+#timer-btn.warn{border-color:rgba(251,191,36,.6);color:var(--y)}
+#timer-btn.over{border-color:rgba(248,113,113,.7);color:var(--red)}
+#dots{display:flex;gap:5px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.22);cursor:pointer;transition:all .22s}
+.dot.on{width:22px;border-radius:4px;background:var(--v);box-shadow:0 0 8px rgba(255,72,32,.7)}
+.hud-right{display:flex;align-items:center;gap:8px}
+.hud-btn{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11);
+  color:var(--m);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;
+  cursor:pointer;font-family:inherit;
+}
+.hud-btn:hover,.hud-btn.on{border-color:rgba(255,72,32,.5);color:#fff;background:rgba(255,72,32,.14)}
+#slide-num{font-size:12px;font-weight:800;color:var(--m);font-family:'JetBrains Mono',monospace;min-width:52px;text-align:right}
+
+/* ── NAV ARROWS ─────────────────────────────────────────── */
+.nav-arr{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:100;
+  width:34px;height:64px;display:flex;align-items:center;justify-content:center;
+  font-size:28px;color:rgba(255,255,255,.22);cursor:pointer;transition:all .2s;
+  border-radius:10px;
+}
+.nav-arr:hover{color:var(--v2);background:rgba(255,255,255,.04)}
+#na-p{left:8px}
+#na-n{right:8px}
+
+/* ── PRESENTER NOTES OVERLAY (N 키 토글) ────────────────── */
+#notes-drawer{
+  position:absolute;bottom:48px;left:50%;transform:translateX(-50%);
+  width:920px;max-width:92%;z-index:150;
+  background:rgba(10,13,19,.95);border:1px solid rgba(255,72,32,.45);
+  border-radius:14px;padding:14px 18px;
+  box-shadow:0 16px 50px rgba(0,0,0,.75);
+  display:none;backdrop-filter:blur(10px);
+}
+#notes-drawer.open{display:block}
+.notes-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11.5px;font-weight:800;color:#FF8B6B}
+.notes-body{font-size:13.5px;color:var(--t);line-height:1.62;user-select:text}
+.notes-cue{margin-top:6px;font-size:11.8px;color:var(--g);font-weight:700}
+
+/* ── SLIDE OVERVIEW GRID (G 키 토글) ────────────────────── */
+#grid-modal{
+  position:absolute;inset:0;z-index:180;
+  background:rgba(8,10,15,.94);backdrop-filter:blur(10px);
+  padding:32px 46px;display:none;flex-direction:column;
+}
+#grid-modal.open{display:flex}
+.gm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.gm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;flex:1;align-content:center}
+.gm-card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:12px;
+  padding:14px 14px;cursor:pointer;transition:all .16s;display:flex;flex-direction:column;justify-content:space-between;min-height:106px;
+}
+.gm-card:hover{border-color:var(--v);transform:translateY(-2px)}
+.gm-card.cur{border-color:var(--g);background:rgba(0,229,160,.08)}
+.gm-num{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--v2)}
+.gm-title{font-size:13.5px;font-weight:800;color:var(--t);margin:5px 0;line-height:1.3}
+.gm-time{font-size:11px;color:var(--m);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<div id="viewport">
+<div id="stage">
+  <div class="bg-grid"></div>
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div id="top-progress"></div>
+
+  <!-- Arrows -->
+  <div class="nav-arr" id="na-p" onclick="go(cur-1)" title="이전 슬라이드 (←)">&#8249;</div>
+  <div class="nav-arr" id="na-n" onclick="go(cur+1)" title="다음 슬라이드 (→ / Space)">&#8250;</div>
+
+  <!-- ═══════════════════ DECK (15 SLIDES · 7:30 TARGET) ═══════════════════ -->
+  <div id="deck">
+
+  <!-- ── S1: 표지 ──────────────────────────────────────────── -->
+  <div class="sl active" id="s1">
+    <div class="hero-wrap">
+      <div>
+        <div class="tag">Capstone Design &amp; KAICTS 2026</div>
+        <div class="hero-title">CoachFit</div>
+        <p class="hero-sub">
+          혼자 운동하는 헬스 초·중급자가 중도 포기하지 않도록,<br>
+          <strong>3초 세트 기록 · 89-Path 인터랙티브 근육 해부도 · DB 직결 AI 맞춤 루틴</strong>을<br>
+          하나로 결합한 온·오프라인 하이브리드 피트니스 코칭 플랫폼
+        </p>
+        <div class="pill-row">
+          <span class="pill v">Flutter 3.35 Cross-Platform</span>
+          <span class="pill g">FastAPI + PostgreSQL</span>
+          <span class="pill b">AWS EC2 · RDS · Bedrock</span>
+        </div>
+        <div class="hero-kpis">
+          <div class="hkpi">
+            <div class="hkpi-v" style="color:var(--g)">100%</div>
+            <div class="hkpi-l">WBS 7대 마일스톤 달성</div>
+          </div>
+          <div class="hkpi">
+            <div class="hkpi-v" style="color:var(--v2)">39 / 39</div>
+            <div class="hkpi-l">pytest 자동화 테스트 통과</div>
+          </div>
+          <div class="hkpi">
+            <div class="hkpi-v" style="color:var(--bl)">0 Warn</div>
+            <div class="hkpi-l">85개 Dart 정적 분석 통과</div>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <span>발표자 강민권 · 팀 코치핏</span> &nbsp;|&nbsp; 최종 데모 발표 (목표 7분 30초) &nbsp;|&nbsp; 2026-11
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:#FF8B6B">LIVE MUSCLE MAP PREVIEW</span>
+          <span id="hero-routine-label" style="font-size:11.5px;font-weight:700;color:var(--g)">● 등 · 후면 사슬 추천 중</span>
+        </div>
+        <div class="mm-views" style="min-height:285px">
+          <div class="mm-col">
+            <div class="mm-lbl">FRONT</div>
+            <svg class="mm-svg" id="hero-front" viewBox="0 0 35 93" style="height:265px"></svg>
+          </div>
+          <div class="mm-div"></div>
+          <div class="mm-col">
+            <div class="mm-lbl">BACK</div>
+            <svg class="mm-svg" id="hero-back" viewBox="37 0 35 93" style="height:265px"></svg>
+          </div>
+        </div>
+        <div class="mm-tags" id="hero-tags"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S2: 문제 정의 ─────────────────────────────────────── -->
+  <div class="sl" id="s2">
+    <div class="sl-head c">
+      <div class="tag">01 · Problem Definition</div>
+      <div class="sh">왜 CoachFit을 만들었는가?</div>
+    </div>
+    <div class="hook-box">
+      혼자 헬스장에 간 초·중급자의 매일 같은 고민 —<br>
+      <em>"어제 가슴 운동을 했는데, 오늘 어느 부위를 몇 kg로 몇 세트 하지?"</em>
+    </div>
+    <div class="g3">
+      <div class="card" style="border-color:rgba(248,113,113,.28)">
+        <div class="prob-stat">5~8만 원 / 회</div>
+        <h4>💸 높은 PT 비용과 루틴 설계 장벽</h4>
+        <p>고가의 1:1 PT 부담 때문에 혼자 시작하지만, 부위별 분할과 점진적 과부하 기준을 몰라 <b>1~2개월 내 중도 포기</b>가 빈번하게 발생합니다.</p>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.28)">
+        <div class="prob-stat">기록만 100%</div>
+        <h4>📝 단순 수첩에 머무는 기존 운동 앱</h4>
+        <p>기존 인기 앱(Fleek 등)은 세트 기록 UX는 뛰어나지만, 누적된 운동 볼륨·피로도와 체성분을 종합해 <b>"오늘 할 루틴"을 역제안</b>하지 못합니다.</p>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.28)">
+        <div class="prob-stat">텍스트 나열</div>
+        <h4>🦴 자극 부위의 직관적 시각화 부재</h4>
+        <p>랫풀다운·루마니안 데드리프트 등 생소한 종목명만 나열되어 어느 근육을 쓰는지 감이 오지 않고, <b>특정 부위 편중·부상 위험</b>이 커집니다.</p>
+      </div>
+    </div>
+    <div class="sol-bar">
+      <span class="sol-tag">SOLUTION</span>
+      <div style="font-size:14.2px;line-height:1.52;color:var(--t)">
+        <b>3초 다중 세트 기록 UX</b> + <b>89-Path 정밀 근육 해부도 실시간 점등</b> + <b>DB 직결(최근 10세션·인바디·목표) AI 맞춤 당일 루틴 &amp; 1:1 코칭</b>을 단일 앱으로 통합
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S3: 비전 & 기존 앱 대비 차별점 ────────────────────── -->
+  <div class="sl" id="s3">
+    <div class="sl-head c">
+      <div class="tag">02 · Vision &amp; Differentiation</div>
+      <div class="sh">단순한 운동 수첩을 넘어, <em>기록할수록 똑똑해지는 AI 트레이너</em></div>
+      <div class="sub">"오늘 헬스장에서 뭐 하지?" 고민 시간을 0초로 줄이고, 추천 루틴을 원터치로 바로 시작합니다.</div>
+    </div>
+    <table class="cmp-table">
+      <thead>
+        <tr>
+          <th style="width:19%">비교 항목</th>
+          <th style="width:36%">기존 운동 기록 앱 (Fleek 등)</th>
+          <th class="cf" style="width:45%">✦ CoachFit (우리의 해결책)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>당일 루틴 결정</b></td>
+          <td class="dim">사용자가 매번 직접 종목·세트·중량을 고민해 입력</td>
+          <td class="cf">최근 10세션 볼륨·인바디·목표 DB 직결 분석 → AI가 당일 루틴 즉시 제안</td>
+        </tr>
+        <tr>
+          <td><b>루틴 → 실행 전환</b></td>
+          <td class="dim">루틴 참고와 실제 기록 입력 화면이 단절됨</td>
+          <td class="cf">'추천 루틴 시작하기' 원터치 일괄 등록 + 세트 완료 시 휴식 타이머 자동 가동</td>
+        </tr>
+        <tr>
+          <td><b>타겟 근육 피드백</b></td>
+          <td class="dim">텍스트 라벨 또는 단순 정적 이미지 제공</td>
+          <td class="cf">89개 정밀 해부학 SVG 패스 기반 Front/Back 듀얼 뷰 실시간 점등 &amp; 부위 필터</td>
+        </tr>
+        <tr>
+          <td><b>장애·네트워크 내성</b></td>
+          <td class="dim">AI 호출 실패 또는 오프라인 시 기능 중단</td>
+          <td class="cf">5단 멀티 LLM + 스마트 룰 엔진 + 클라이언트 폴백으로 100% 무중단 동작</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="pill-row" style="justify-content:center;margin-top:16px">
+      <span class="pill v">⚡ 원터치 이전 세트 복사</span>
+      <span class="pill g">🧬 10대 근육 그룹 실시간 매핑</span>
+      <span class="pill b">📊 주간·월간·3개월 볼륨 트렌드</span>
+      <span class="pill y">🤖 AI 1:1 전담 코치 채팅</span>
+    </div>
+  </div>
+
+  <!-- ── S4: 프로젝트 계획 & WBS ───────────────────────────── -->
+  <div class="sl" id="s4">
+    <div class="sl-head">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="tag amber">03 · Project Plan &amp; WBS</div>
+        <a href="http://43.200.179.25:8000/docs" target="_blank" style="text-decoration:none;background:linear-gradient(135deg,var(--v),var(--v2));color:#fff;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:800">⚡ Live Swagger API</a>
+      </div>
+      <div class="sh">MoSCoW 범위 통제 &amp; 7주 마일스톤 <span class="mint">WBS 100% 달성</span></div>
+    </div>
+
+    <div class="g7">
+      <div class="mc"><div class="mc-id">M1 · 10주</div><div class="mc-n">기획 · Git<br>컨벤션</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc"><div class="mc-id">M2 · 11주</div><div class="mc-n">단일 백엔드<br>&amp; DB 통합</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc"><div class="mc-id">M3 · 12주</div><div class="mc-n">해부도 &amp;<br>기록 UX</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc"><div class="mc-id">M4 · 12주말</div><div class="mc-n">멀티 LLM<br>&amp; 폴백</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc"><div class="mc-id">M5 · 13주</div><div class="mc-n">AWS EC2<br>RDS·Bedrock</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc"><div class="mc-id">M6 · 14주</div><div class="mc-n">통계·오운완<br>CI/CD</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div></div><div class="mc-pct">100%</div></div>
+      <div class="mc" style="border-color:rgba(255,72,32,.38)"><div class="mc-id">M7 · 15~16주</div><div class="mc-n">QA · 학회논문<br>최종 발표</div><div class="mc-dots"><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d"></div><div class="mc-d hi"></div></div><div class="mc-pct">100%</div></div>
+    </div>
+
+    <div class="obar">
+      <span style="font-size:12px;font-weight:800;color:var(--m);letter-spacing:.08em;white-space:nowrap">OVERALL WBS</span>
+      <div class="obar-track"><div class="obar-fill"></div></div>
+      <span style="font-size:20px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--g)">100%</span>
+      <span style="font-size:12.5px;color:var(--m);white-space:nowrap">PR #1~#90 병합 · 245+ 커밋 · 20% 일정 버퍼 운영</span>
+    </div>
+
+    <div class="g3" style="margin-top:14px">
+      <div class="card accent-v">
+        <h4>📌 Must Have (필수 핵심)</h4>
+        <p>운동 세트 CRUD, 주간·월간·3개월 볼륨 통계, DB 직결 AI 루틴 추천, 무중단 스마트 폴백 엔진</p>
+      </div>
+      <div class="card accent-g">
+        <h4>▲ Should Have (경험 고도화)</h4>
+        <p>목표별 분기(근비대/감량/근력), 전역 휴식 타이머, 인바디 변화 추이 그래프, JWT 인증 &amp; 오운완 피드</p>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.25)">
+        <h4>✖ Won't Have (범위 폭주 차단)</h4>
+        <p>일정 지연 리스크가 큰 카메라 비전 자세 교정 및 웨어러블 심박수 연동은 과감히 향후 과제로 분리</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S5: 사용자 시나리오 ───────────────────────────────── -->
+  <div class="sl" id="s5">
+    <div class="sl-head">
+      <div class="tag blue">04 · User Journey &amp; Scenarios</div>
+      <div class="sh">체크인부터 세트 기록 · 기간별 통계 · AI 상담까지 <em>5단계 통합 흐름</em></div>
+    </div>
+
+    <div class="flow" style="margin-bottom:16px">
+      <div class="fnode" style="border-color:rgba(255,72,32,.42)">
+        <div class="fi">🏠</div><div class="fl">1. 홈 &amp; 컨디션</div><div class="fs">오늘 컨디션 체크인<br>AI 맞춤 루틴 자동 생성</div>
+      </div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(0,229,160,.42)">
+        <div class="fi">🧬</div><div class="fl">2. 근육 해부도</div><div class="fs">타겟 근육 실시간 점등<br>원터치로 오늘 기록 담기</div>
+      </div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(96,165,250,.42)">
+        <div class="fi">🏋️</div><div class="fl">3. 세트 기록·타이머</div><div class="fs">3초 다중 세트 입력<br>휴식 타이머 &amp; GIF 가이드</div>
+      </div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(251,191,36,.42)">
+        <div class="fi">📊</div><div class="fl">4. 기간별 통계</div><div class="fs">주간·월간·3개월 볼륨<br>골격근·체지방 인바디 추이</div>
+      </div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(167,139,250,.42)">
+        <div class="fi">💬</div><div class="fl">5. AI 코치·오운완</div><div class="fs">기록 기반 1:1 상담 채팅<br>오운완 피드 · 13종 업적</div>
+      </div>
+    </div>
+
+    <div class="g3">
+      <div class="card">
+        <h4>🎬 시나리오 1 · 헬린이 민수 (23세)</h4>
+        <p>어제 가슴 운동 후 오늘 뭘 할지 막막할 때 앱을 열면, AI가 최근 DB 기록을 분석해 <b>등·후면 사슬 루틴</b>을 제안하고 해부도에 자극 부위를 점등해 즉시 시작하게 돕습니다.</p>
+      </div>
+      <div class="card">
+        <h4>🎬 시나리오 2 · 직장인 지수 (28세)</h4>
+        <p>'추천 루틴 시작하기'로 종목을 일괄 등록하고 세트 완료를 체크하면, <b>전역 동기화 휴식 타이머(60~90초)</b>가 자동 가동되며 운동 GIF로 현장에서 자세를 확인합니다.</p>
+      </div>
+      <div class="card">
+        <h4>🎬 시나리오 3 · 중급자 현우 (25세)</h4>
+        <p>주말에 통계 탭에서 <b>요일별·주차별·월별 볼륨 추이</b>와 인바디 체성분 그래프를 점검하고, 부족한 부위는 AI 1:1 전담 코치 채팅으로 맞춤형 피드백을 받습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S6: 핵심 구현 ① (AI 루틴 & 인터랙티브 해부도 데모) ── -->
+  <div class="sl" id="s6">
+    <div class="sl-head">
+      <div class="tag">05 · Core Implementation ①</div>
+      <div class="sh">DB 직결 AI 루틴 생성 &amp; <em>89-Path SVG 근육 해부도</em> 실시간 점등</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.18fr 0.92fr;gap:18px;width:100%;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:11px;justify-content:space-between">
+        <div class="flow">
+          <div class="fnode" style="padding:10px 8px"><div class="fl">1. DB 컨텍스트</div><div class="fs">최근 10세션<br>인바디 · 목표</div></div>
+          <div class="farr">→</div>
+          <div class="fnode" style="padding:10px 8px;border-color:rgba(96,165,250,.45)"><div class="fl">2. SHA-256 캐시</div><div class="fs">동일 입력 시<br><b>0.01초</b> 반환</div></div>
+          <div class="farr">→</div>
+          <div class="fnode" style="padding:10px 8px;border-color:rgba(0,229,160,.45)"><div class="fl">3. LLM + 파서</div><div class="fs">JSON 정제<br>null 안전 방어</div></div>
+          <div class="farr">→</div>
+          <div class="fnode" style="padding:10px 8px;border-color:rgba(255,72,32,.45)"><div class="fl">4. SVG 점등</div><div class="fs">10대 근육 파싱<br>네온 글로우</div></div>
+        </div>
+
+        <div class="code-block"><span class="c3"># 1) FastAPI — DB 직결 조회 + 지문(Fingerprint) 캐시 (app/main.py)</span>
+<span class="c1">fp</span> = coaching_cache.fingerprint(req)  <span class="c3"># 날짜 + 목표 + 스펙 + 최근운동 SHA-256</span>
+<span class="c1">res</span> = coaching_cache.get(uid, fp) <span class="c1">or</span> generate_coaching_advice(req)
+
+<span class="c3">// 2) Flutter — 추천 루틴 텍스트 파싱 → 89개 SVG 패스 실시간 점등</span>
+<span class="c1">for</span> (<span class="c1">final</span> item <span class="c1">in</span> result.recommendedRoutine) {
+  activeMuscles.addAll(
+    MuscleGroupExtension.<span class="c4">parseFromText</span>(<span class="c2">'${item.exerciseName} ${item.focus}'</span>)
+  );
+}</div>
+
+        <div class="card accent-g" style="padding:12px 16px">
+          <p style="color:var(--t);font-size:13px">
+            💡 <b>시각화 3단계 진화:</b> 초기 <code>drawOval</code> 원형 블러 폐기 → 3D PNG 다중 레이어(<code>anatomy_3d_display</code>) → 현재 실제 앱은 <b>89개 해부학 SVG 벡터 패스(Front/Back 듀얼 뷰)</b>로 해상도 깨짐 0% · 부위 터치 필터링까지 완성!
+          </p>
+        </div>
+      </div>
+
+      <!-- 실제 앱 SVG 패스를 그대로 렌더링하는 인터랙티브 위젯 -->
+      <div class="mm-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:11.5px;font-weight:800;color:#FF8B6B;letter-spacing:.08em">⚡ INTERACTIVE MUSCLE MAP (클릭 체험)</span>
+          <span style="font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace">svg_body_data.dart</span>
+        </div>
+        <div class="mm-presets" id="s6-presets">
+          <button class="mm-btn on" onclick="setDemoPreset('back',this)">등·후면사슬</button>
+          <button class="mm-btn" onclick="setDemoPreset('chest',this)">가슴·삼두</button>
+          <button class="mm-btn" onclick="setDemoPreset('legs',this)">하체·둔근</button>
+          <button class="mm-btn" onclick="setDemoPreset('shoulders',this)">어깨·이두·코어</button>
+        </div>
+        <div class="mm-views">
+          <div class="mm-col">
+            <div class="mm-lbl">FRONT</div>
+            <svg class="mm-svg" id="demo-front" viewBox="0 0 35 93"></svg>
+          </div>
+          <div class="mm-div"></div>
+          <div class="mm-col">
+            <div class="mm-lbl">BACK</div>
+            <svg class="mm-svg" id="demo-back" viewBox="37 0 35 93"></svg>
+          </div>
+        </div>
+        <div class="mm-tags" id="demo-tags"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S7: 핵심 구현 ② (5단 멀티 LLM 폴백 & 비용 방어) ─── -->
+  <div class="sl" id="s7">
+    <div class="sl-head">
+      <div class="tag mint">06 · Core Implementation ②</div>
+      <div class="sh">5단 멀티 LLM 폴백 체인 &amp; <span class="mint">3중 AI 과금 방어 가드</span></div>
+      <div class="sub">외부 LLM 장애 · 할당량 초과 · 발표장 Wi-Fi 단절에도 서비스 연속성 100% 보장</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.38fr 0.82fr;gap:16px;width:100%;align-items:stretch">
+      <div class="wf-chain">
+        <div class="wf-row" style="border-color:rgba(255,72,32,.42)">
+          <span class="wf-tier">TIER 1</span>
+          <span class="wf-name">AWS Bedrock (Primary)</span>
+          <span class="wf-desc">EC2 IAM Role 무키 인증 · Claude 3.5 / Nova Converse API</span>
+          <span class="wf-lat" style="color:#FF8B6B">Zero-Key</span>
+        </div>
+        <div class="wf-row">
+          <span class="wf-tier" style="color:var(--bl)">TIER 2~4</span>
+          <span class="wf-name">Groq · Gemini · Claude · OpenAI</span>
+          <span class="wf-desc">환경변수(<code>AI_PROVIDER</code>) 전환 · <code>benchmark_llm.py</code> 정량 비교</span>
+          <span class="wf-lat" style="color:var(--bl)">Multi-LLM</span>
+        </div>
+        <div class="wf-row" style="border-color:rgba(0,229,160,.36)">
+          <span class="wf-tier" style="color:var(--g)">TIER 5</span>
+          <span class="wf-name">백엔드 스마트 룰 엔진</span>
+          <span class="wf-desc">LLM 오류·비정형 JSON 시 최근 볼륨/체중 기반 규칙 추론</span>
+          <span class="wf-lat">~0.1 sec</span>
+        </div>
+        <div class="wf-row" style="border-color:rgba(251,191,36,.36)">
+          <span class="wf-tier" style="color:var(--y)">CLIENT</span>
+          <span class="wf-name">Flutter 오프라인 스마트 폴백</span>
+          <span class="wf-desc">네트워크 완전 단절·429 초과 시 목표별 로컬 루틴 자동 제공</span>
+          <span class="wf-lat" style="color:var(--y)">0.00 sec</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card accent-g" style="flex:1">
+          <h4>🛡️ 3중 과금 폭탄 방어망</h4>
+          <div class="step-list" style="margin-top:8px">
+            <div class="step">
+              <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">1</div>
+              <div><div class="step-t">CoachingCache (SHA-256 지문)</div><div class="step-d">같은 날 기록 변경 없으면 재호출 0회 (0.01초 응답)</div></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">2</div>
+              <div><div class="step-t">AiRateLimiter 상한 제어</div><div class="step-d">사용자당 <b>분당 10회 · 일 100회</b> · 전역 300회 제한</div></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">3</div>
+              <div><div class="step-t">폴백 응답 캐시 자동 제외</div><div class="step-d">임시 장애 복구 즉시 정상 AI 응답으로 자연 복원</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S8: 아키텍처 의사결정 (ADR) ───────────────────────── -->
+  <div class="sl" id="s8">
+    <div class="sl-head">
+      <div class="tag">07 · Architecture Decision Records</div>
+      <div class="sh">핵심 기술 의사결정 기록 (ADR-0001 ~ ADR-0005)</div>
+    </div>
+
+    <div class="g4">
+      <div class="card">
+        <div class="adr-id">ADR-0001</div>
+        <div class="adr-t">Flutter 단일 코드베이스</div>
+        <div class="adr-why"><b>왜?</b> 2인 팀이 Android·Web·Windows를 동시 지원하며 AMOLED 다크 테마와 커스텀 차트 일관성을 유지해야 함</div>
+        <div class="adr-res">✅ 모바일 앱 + EC2 정적 웹 SPA 동시 릴리즈, 핫 리로드로 UI 반복 속도 극대화</div>
+      </div>
+      <div class="card accent-v">
+        <div class="adr-id">ADR-0004 (Supersedes 0002)</div>
+        <div class="adr-t">FastAPI + PostgreSQL 단일 통합</div>
+        <div class="adr-why"><b>왜?</b> 초기 Java(8080)+Python(8000) 이중 서버의 DTO 중복과 메모리 부담을 교수님 피드백 수용해 포트 8000 통합</div>
+        <div class="adr-res">✅ 개발 생산성 3배 향상, 프리티어 EC2(RAM 1GB)에서 OOM 없이 24/7 가동</div>
+      </div>
+      <div class="card accent-g">
+        <div class="adr-id">ADR-0003</div>
+        <div class="adr-t">5단 멀티 LLM + 이중 폴백</div>
+        <div class="adr-why"><b>왜?</b> 외부 API 키 유출 위험, 과금 리스크, 발표장 네트워크 장애까지 한 번에 통제해야 함</div>
+        <div class="adr-res">✅ Bedrock IAM 무키 인증 + 지문 캐시 + 서버/클라이언트 이중 무중단 폴백 완성</div>
+      </div>
+      <div class="card accent-b">
+        <div class="adr-id">ADR-0005</div>
+        <div class="adr-t">정밀 근육 해부도 고도화</div>
+        <div class="adr-why"><b>왜?</b> 단순 원형 하이라이트는 해부학적 정확도가 낮아 초보자에게 타겟 자극을 직관 전달 불가</div>
+        <div class="adr-res">✅ 3D PNG 다중 레이어 거쳐 최종 89-Path SVG 듀얼 뷰(Front/Back) 실시간 점등 완성</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S9: 클라우드 아키텍처 (인라인 SVG — 오프라인 100% 선명) ── -->
+  <div class="sl" id="s9">
+    <div class="sl-head">
+      <div class="tag blue">08 · Cloud-Native Architecture</div>
+      <div class="sh">BFF 단일 백엔드 아키텍처 &amp; 모노레포 코드 구조</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.42fr 0.88fr;gap:14px;width:100%;align-items:stretch">
+      <div class="card" style="padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between">
+        <!-- 오프라인 100% 동작 커스텀 SVG 아키텍처 다이어그램 -->
+        <svg viewBox="0 0 700 320" style="width:100%;height:auto;display:block">
+          <defs>
+            <marker id="arr-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#FF7247"/>
+            </marker>
+            <marker id="arr-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#60A5FA"/>
+            </marker>
+            <marker id="arr-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#00E5A0"/>
+            </marker>
+          </defs>
+
+          <!-- AWS VPC Container -->
+          <rect x="232" y="10" width="458" height="300" rx="16" fill="rgba(96,165,250,0.04)" stroke="rgba(96,165,250,0.28)" stroke-dasharray="6 4"/>
+          <text x="248" y="32" fill="#60A5FA" font-size="11.5" font-weight="800" font-family="Pretendard,sans-serif">☁ AWS Cloud (ap-northeast-2 · Seoul)</text>
+
+          <!-- Client Node -->
+          <rect x="10" y="76" width="174" height="172" rx="14" fill="#1B1312" stroke="#FF4820" stroke-width="1.8"/>
+          <text x="97" y="106" text-anchor="middle" fill="#FF8B6B" font-size="11" font-weight="800">CLIENT LAYER</text>
+          <text x="97" y="128" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="800">📱 Flutter App</text>
+          <text x="97" y="150" text-anchor="middle" fill="#96A3B8" font-size="11.5">Android · Web · Win</text>
+          <line x1="28" y1="164" x2="166" y2="164" stroke="rgba(255,255,255,0.1)"/>
+          <text x="97" y="184" text-anchor="middle" fill="#CBD5E1" font-size="11">• 5대 핵심 탭 &amp; 차트</text>
+          <text x="97" y="203" text-anchor="middle" fill="#CBD5E1" font-size="11">• 89-Path SVG 해부도</text>
+          <text x="97" y="222" text-anchor="middle" fill="#CBD5E1" font-size="11">• 세션 자동복구·폴백</text>
+
+          <!-- FastAPI Node -->
+          <rect x="248" y="64" width="196" height="196" rx="14" fill="#101B2E" stroke="#60A5FA" stroke-width="1.8"/>
+          <text x="346" y="90" text-anchor="middle" fill="#60A5FA" font-size="11" font-weight="800">AWS EC2 · PORT 8000 (BFF)</text>
+          <text x="346" y="113" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="800">⚡ FastAPI 단일 서버</text>
+          <line x1="266" y1="126" x2="426" y2="126" stroke="rgba(255,255,255,0.1)"/>
+          <text x="346" y="147" text-anchor="middle" fill="#CBD5E1" font-size="11.2">• JWT Bearer 인증 미들웨어</text>
+          <text x="346" y="167" text-anchor="middle" fill="#CBD5E1" font-size="11.2">• 운동 CRUD &amp; 기간별 볼륨</text>
+          <text x="346" y="187" text-anchor="middle" fill="#CBD5E1" font-size="11.2">• CoachingCache &amp; RateLimit</text>
+          <text x="346" y="207" text-anchor="middle" fill="#CBD5E1" font-size="11.2">• Flutter Web SPA 정적 서빙</text>
+          <text x="346" y="227" text-anchor="middle" fill="#00E5A0" font-size="11" font-weight="700">• systemd 24/7 자동 복구</text>
+
+          <!-- AI Engine Node -->
+          <rect x="498" y="48" width="176" height="110" rx="14" fill="#0C211B" stroke="#00E5A0" stroke-width="1.8"/>
+          <text x="586" y="72" text-anchor="middle" fill="#00E5A0" font-size="10.5" font-weight="800">AI INFERENCE LAYER</text>
+          <text x="586" y="94" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="800">🧠 AWS Bedrock</text>
+          <text x="586" y="115" text-anchor="middle" fill="#CBD5E1" font-size="11">Claude 3.5 / Nova (IAM)</text>
+          <text x="586" y="135" text-anchor="middle" fill="#96A3B8" font-size="10.8">+ Groq · Gemini · 룰 엔진</text>
+
+          <!-- DB Node -->
+          <rect x="498" y="180" width="176" height="112" rx="14" fill="#23190D" stroke="#FBBF24" stroke-width="1.8"/>
+          <text x="586" y="204" text-anchor="middle" fill="#FBBF24" font-size="10.5" font-weight="800">DATABASE LAYER</text>
+          <text x="586" y="226" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="800">🗄️ AWS RDS</text>
+          <text x="586" y="247" text-anchor="middle" fill="#CBD5E1" font-size="11">PostgreSQL 16 (운영)</text>
+          <text x="586" y="267" text-anchor="middle" fill="#96A3B8" font-size="10.8">로컬 SQLite 자동 폴백</text>
+
+          <!-- Edges -->
+          <line x1="184" y1="162" x2="244" y2="162" stroke="#FF7247" stroke-width="2.2" marker-start="url(#arr-o)" marker-end="url(#arr-o)"/>
+          <text x="214" y="148" text-anchor="middle" fill="#FF977A" font-size="10.5" font-weight="700">REST</text>
+          <text x="214" y="180" text-anchor="middle" fill="#96A3B8" font-size="10">JWT</text>
+
+          <line x1="444" y1="120" x2="494" y2="104" stroke="#00E5A0" stroke-width="2" marker-end="url(#arr-g)"/>
+          <text x="469" y="96" text-anchor="middle" fill="#00E5A0" font-size="10" font-weight="700">IAM</text>
+
+          <line x1="444" y1="208" x2="494" y2="232" stroke="#60A5FA" stroke-width="2" marker-end="url(#arr-b)"/>
+          <text x="468" y="238" text-anchor="middle" fill="#60A5FA" font-size="10" font-weight="700">ORM</text>
+        </svg>
+
+        <div style="margin-top:8px;padding:9px 14px;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.26);border-radius:10px;font-size:12.5px;color:var(--g);font-weight:700">
+          🔒 BFF 보안 원칙: 클라이언트는 DB·LLM에 직접 접근 불가, 모든 요청은 FastAPI(8000) + IAM Role 무키 인증 경유
+        </div>
+      </div>
+
+      <div class="code-block" style="font-size:11.6px;line-height:1.54">coach-fit/  <span class="c3"># 계층 분리 모노레포</span>
+├── <span class="c1">mobile-app/lib/</span>   <span class="c3"># Flutter (85 Dart)</span>
+│   ├── config/api_constants.dart
+│   ├── models/       <span class="c3"># DTO &amp; CoachingResult</span>
+│   ├── screens/
+│   │   ├── tabs/     <span class="c3"># home,history,stats..</span>
+│   │   └── widgets/  <span class="c3"># muscle_map, svg_body</span>
+│   ├── services/     <span class="c3"># REST &amp; 자동세션복구</span>
+│   └── theme/        <span class="c3"># AMOLED 다크 토큰</span>
+└── <span class="c4">python-ai-backend/</span> <span class="c3"># FastAPI (Port 8000)</span>
+    ├── app/
+    │   ├── main.py       <span class="c3"># API + Web SPA</span>
+    │   ├── database.py   <span class="c3"># RDS / SQLite</span>
+    │   ├── models/       <span class="c3"># ORM &amp; Pydantic v2</span>
+    │   ├── services/     <span class="c3"># ai_coach, guard</span>
+    │   └── dependencies/ <span class="c3"># JWT 미들웨어</span>
+    └── <span class="c2">tests/</span>            <span class="c3"># pytest 39건</span></div>
+    </div>
+  </div>
+
+  <!-- ── S10: 개발 환경 & CI/CD 무중단 배포 (통합 최적화) ──── -->
+  <div class="sl" id="s10">
+    <div class="sl-head">
+      <div class="tag amber">09 · Dev Setup &amp; CI/CD Pipeline</div>
+      <div class="sh">5분 풀스택 온보딩 &amp; <em>GitHub Actions → AWS EC2</em> 자동 배포</div>
+    </div>
+
+    <div class="flow" style="margin-bottom:16px">
+      <div class="fnode"><div class="fi">🌿</div><div class="fl">Feature PR</div><div class="fs">main 직접 커밋 금지<br>브랜치 기반 개발</div></div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(96,165,250,.45)"><div class="fi">🧪</div><div class="fl">CI 자동 검증</div><div class="fs">pytest 39건 +<br>flutter analyze</div></div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(251,191,36,.45)"><div class="fi">🔀</div><div class="fl">main 병합</div><div class="fs">리뷰 완료 후<br>PR Merge</div></div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(0,229,160,.45)"><div class="fi">🚀</div><div class="fl">OpenSSH 배포</div><div class="fs">EC2 git pull &amp;<br>systemd 재기동</div></div>
+      <div class="farr">→</div>
+      <div class="fnode" style="border-color:rgba(255,72,32,.45)"><div class="fi">🩺</div><div class="fl">Health Check</div><div class="fs">/health 200 OK<br>API+Web 동시 서빙</div></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <h4>⚡ Zero-Config 5분 로컬 구동 &amp; Offline-First</h4>
+        <div class="code-block" style="margin-top:8px;margin-bottom:10px;font-size:11.6px"><span class="c3"># 1. 백엔드 (.env 없이 SQLite + 시드 자동 적재)</span>
+<span class="c1">cd</span> python-ai-backend &amp;&amp; uvicorn app.main:app --port 8000
+
+<span class="c3"># 2. 프론트엔드 (ApiConstants 토글로 EC2 ↔ 로컬 전환)</span>
+<span class="c1">cd</span> mobile-app &amp;&amp; flutter run -d chrome</div>
+        <p>발표장 인터넷이 완전히 끊겨도 로컬 FastAPI + SQLite 시드 + 룰 엔진으로 <b>100% 동일 시연</b> 가능</p>
+      </div>
+      <div class="card accent-g">
+        <h4>☁️ 단일 포트(8000) 통합 서빙 &amp; 24/7 운영</h4>
+        <div class="step-list" style="margin-top:10px">
+          <div class="step">
+            <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">1</div>
+            <div><div class="step-t">API + Flutter Web SPA 통합 서빙</div><div class="step-d"><code>flutter build web</code> 산출물을 FastAPI <code>static/</code>에 탑재해 CORS 이슈와 추가 서버 비용 제거</div></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">2</div>
+            <div><div class="step-t">AWS 서울 EC2 + Elastic IP + Systemd</div><div class="step-d">고정 IP(<code>43.200.179.25:8000</code>) · 프로세스 이상 시 <code>Restart=always</code> 3초 내 자동 복구</div></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="border-color:var(--g);color:var(--g);background:rgba(0,229,160,.12)">3</div>
+            <div><div class="step-t">Mobile APK &amp; Desktop 멀티 타겟 빌드</div><div class="step-d">Android APK · Windows Desktop · Web SPA 단일 코드 릴리즈 검증 완료</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S11: 구현 시행착오 & 극복 사례 ────────────────────── -->
+  <div class="sl" id="s11">
+    <div class="sl-head">
+      <div class="tag">10 · Engineering Challenges</div>
+      <div class="sh">개발 중 부딪힌 4대 핵심 시행착오 &amp; 공학적 해결</div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <h4>1️⃣ Java + Python 이중 서버 오버엔지니어링</h4>
+        <div class="ba-row">
+          <div class="ba-item ba-bad"><b>문제:</b> Spring Boot(8080)+FastAPI(8000) 분리로 DTO 중복 정의, 내부 HTTP 지연, 프리티어 RAM 1GB 압박</div>
+          <div class="ba-item ba-good"><b>해결:</b> FastAPI + PostgreSQL 단일 통합(ADR-0004) → <b>개발 생산성 3배 향상 &amp; OOM 제로 달성</b></div>
+        </div>
+      </div>
+      <div class="card">
+        <h4>2️⃣ 근육 해부도 시각적 정밀도 한계 극복</h4>
+        <div class="ba-row">
+          <div class="ba-item ba-bad"><b>문제:</b> 초기 <code>drawOval</code> 원형 블러는 근육 형태와 괴리가 크고, 단일 PNG는 해상도·인터랙션 확장에 한계</div>
+          <div class="ba-item ba-good"><b>해결:</b> 3D PNG 다중 레이어를 거쳐 <b>89개 정밀 해부학 SVG 패스(Front/Back)</b>로 진화 → 부위 터치 필터링 완성</div>
+        </div>
+      </div>
+      <div class="card">
+        <h4>3️⃣ LLM 비정형 응답 &amp; 재배포 후 세션 만료 오류</h4>
+        <div class="ba-row">
+          <div class="ba-item ba-bad"><b>문제:</b> LLM이 <code>sets/reps</code>에 문자열·null을 반환하거나 재배포 후 만료 토큰(401)으로 루틴 카드가 깨짐</div>
+          <div class="ba-item ba-good"><b>해결:</b> <code>_safe_routine_list</code> 안전 파서 + 데모 세션 자동 재발급 + 클라이언트 스마트 폴백으로 <b>에러율 0%</b></div>
+        </div>
+      </div>
+      <div class="card">
+        <h4>4️⃣ CI/CD 서드파티 SSH 504 장애 &amp; Flutter 버전 충돌</h4>
+        <div class="ba-row">
+          <div class="ba-item ba-bad"><b>문제:</b> <code>appleboy/drone-ssh</code> 다운로드 504 오류 및 CI 최신 Flutter(3.47+)의 deprecated lint 실패</div>
+          <div class="ba-item ba-good"><b>해결:</b> <b>Ubuntu 네이티브 OpenSSH 직접 배포</b> 전환 + CI Flutter SDK <code>3.35.7</code> 고정으로 배포 100% 안정화</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S12: 자동화 테스트 & 코드 품질 검증 (팩트 100% 교정) ── -->
+  <div class="sl" id="s12">
+    <div class="sl-head">
+      <div class="tag mint">11 · Verification &amp; Quality</div>
+      <div class="sh">자동화 테스트 <span class="mint">39 / 39 Pass</span> &amp; 정적 분석 경고 0건</div>
+      <div class="sub">AGENTS.md 품질 규칙(main 직접 커밋 금지 · PR 기반 CI 필수 통과)을 전 과정에 엄격 적용</div>
+    </div>
+
+    <div class="g4" style="margin-bottom:14px">
+      <div class="card tstat accent-g">
+        <div>
+          <h4 style="justify-content:center">인증 &amp; 보안</h4>
+          <div class="tstat-num" style="color:var(--g)">9 / 9</div>
+          <div class="tstat-file">test_auth.py</div>
+          <p>JWT 발급·디코딩, 만료/위변조 401 차단, 중복 이메일 방어</p>
+        </div>
+        <span class="tstat-pill">100% PASS</span>
+      </div>
+      <div class="card tstat accent-b">
+        <div>
+          <h4 style="justify-content:center">운동 CRUD · 볼륨</h4>
+          <div class="tstat-num" style="color:var(--bl)">7 / 7</div>
+          <div class="tstat-file">test_workouts.py</div>
+          <p>세트×횟수×무게 정합성, 요일별 집계, 타 유저 삭제 차단</p>
+        </div>
+        <span class="tstat-pill">100% PASS</span>
+      </div>
+      <div class="card tstat accent-y">
+        <div>
+          <h4 style="justify-content:center">AI 폴백 · 가드 · 벤치</h4>
+          <div class="tstat-num" style="color:var(--y)">23 / 23</div>
+          <div class="tstat-file">test_ai_* &amp; benchmark</div>
+          <p>폴백(5)·지문캐시/레이트리밋(10)·벤치마크 파이프라인(8)</p>
+        </div>
+        <span class="tstat-pill">100% PASS</span>
+      </div>
+      <div class="card tstat accent-v">
+        <div>
+          <h4 style="justify-content:center">Flutter 정적 분석</h4>
+          <div class="tstat-num" style="color:var(--pk)">0 Warn</div>
+          <div class="tstat-file">85 Dart files (lib/)</div>
+          <p><code>flutter analyze</code> 전 파일 경고·에러 0건 + 위젯/유닛 테스트</p>
+        </div>
+        <span class="tstat-pill" style="background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.38);color:var(--pk)">ZERO LINT</span>
+      </div>
+    </div>
+
+    <div class="g3">
+      <div class="card" style="padding:13px 16px">
+        <h4>🎨 AMOLED 렌더링 최적화</h4>
+        <p><code>#0E1116</code> 다크 토큰, GIF <code>gaplessPlayback</code> 깜빡임 제거, <code>WorkoutEvents</code> 부분 갱신</p>
+      </div>
+      <div class="card" style="padding:13px 16px">
+        <h4>🛡️ 이중 입력 유효성 검증</h4>
+        <p>음수·비정상 중량/세트/신체치수를 Flutter 입력 폼 + 백엔드 Pydantic v2에서 이중 차단</p>
+      </div>
+      <div class="card" style="padding:13px 16px">
+        <h4>📏 AGENTS.md 협업 거버넌스</h4>
+        <p>계층형 폴더 분담, Swagger(<code>/docs</code>) 단일 API 계약, PR 90건 전수 CI 게이트 통과</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S13: 실시간 라이브 시연 ────────────────────────────── -->
+  <div class="sl" id="s13">
+    <div class="sl-head" style="margin-bottom:12px">
+      <div class="tag">12 · Live Demo (1분 4초)</div>
+      <div class="sh">AWS EC2 실서버 라이브 시연 &amp; 백업 영상</div>
+    </div>
+
+    <div class="demo-bar">
+      <button class="demo-tab on" id="tab-live" onclick="switchDemo('live')">📱 실시간 인터랙티브 앱 (EC2 Live)</button>
+      <button class="demo-tab" id="tab-vid" onclick="switchDemo('vid', true)">🎬 시연 영상 바로 재생 [P]</button>
+      <a class="demo-tab" href="http://43.200.179.25:8000" target="_blank">↗ 새 탭 전체화면</a>
+      <span style="margin-left:auto;font-size:12px;color:var(--m)">※ [P] 영상 재생/정지 · 우측 항목 클릭 시 체크</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.28fr 0.92fr;gap:18px;width:100%;flex:1;min-height:0">
+      <div style="background:#06080C;border:1.5px solid var(--bd-hi);border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;height:445px">
+        <iframe id="demo-iframe" src="http://43.200.179.25:8000" style="width:100%;height:100%;border:none;display:block" title="CoachFit Live Demo"></iframe>
+        <div id="demo-video-wrap" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;padding:16px">
+          <video id="demo-video" controls preload="auto" playsinline style="width:100%;height:385px;object-fit:contain;background:#0E1116;border-radius:10px">
+            <source src="demo.mp4" type="video/mp4">
+          </video>
+          <div style="font-size:11.5px;color:var(--m);margin-top:8px">※ 시연 영상 (1분 4초 · 단계별 자막 포함) · [P] 키로 즉시 재생/정지 · 우측 항목 클릭 시 해당 구간 점프</div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:8px;height:445px">
+        <div style="font-size:11.5px;font-weight:800;color:#FF8B6B;letter-spacing:.1em;margin-bottom:2px">DEMO SCENARIO CHECKLIST (01:04 · 자막 연동)</div>
+        <div class="step demo-check" data-seek="0" onclick="seekDemoStep(this, 0)">
+          <div class="step-num">1</div>
+          <div><div class="step-t">데모 계정 원터치 로그인 (0:00~0:09)</div><div class="step-d">JWT 자동 발급 → 홈 대시보드 진입</div></div>
+        </div>
+        <div class="step demo-check" data-seek="10" onclick="seekDemoStep(this, 10)">
+          <div class="step-num">2</div>
+          <div><div class="step-t">컨디션 체크 · AI 추천 루틴 · 근육 해부도 (0:10~0:22)</div><div class="step-d">컨디션 체크인 → 후면 추천 루틴 &amp; 앞·뒷면 SVG 해부도 점등</div></div>
+        </div>
+        <div class="step demo-check" data-seek="23" onclick="seekDemoStep(this, 23)">
+          <div class="step-num">3</div>
+          <div><div class="step-t">추천 루틴 시작 &amp; 세트 체크 · 휴식 타이머 (0:23~0:36)</div><div class="step-d">오늘 기록에 종목 일괄 추가 → 세트 체크 시 자동 휴식 타이머</div></div>
+        </div>
+        <div class="step demo-check" data-seek="37" onclick="seekDemoStep(this, 37)">
+          <div class="step-num">4</div>
+          <div><div class="step-t">통계 탭 볼륨 차트 &amp; 인바디 변화 그래프 (0:37~0:54)</div><div class="step-d">주간·월간·3개월 볼륨·부위별 균형 및 신체 변화 그래프 확인</div></div>
+        </div>
+        <div class="step demo-check" data-seek="55" onclick="seekDemoStep(this, 55)">
+          <div class="step-num">5</div>
+          <div><div class="step-t">AI 1:1 코치 채팅 · 기록 기반 맞춤 피드백 (0:55~1:04)</div><div class="step-d">AWS Bedrock 기반 개인화 운동 루틴·휴식 팁 실시간 상담</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S14: 성과 요약 & 향후 로드맵 ──────────────────────── -->
+  <div class="sl" id="s14">
+    <div class="sl-head c">
+      <div class="tag mint">13 · Impact &amp; Future Roadmap</div>
+      <div class="sh">프로젝트 핵심 성과 &amp; 향후 발전 방향</div>
+    </div>
+
+    <div class="g4" style="margin-bottom:18px">
+      <div class="card accent-g" style="text-align:center">
+        <div style="font-size:32px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--g)">100%</div>
+        <div style="font-size:14px;font-weight:800;margin-top:4px">기획 → AWS 배포 완주</div>
+        <p style="margin-top:4px">7대 마일스톤 · PR 90건 · CI/CD 자동화</p>
+      </div>
+      <div class="card accent-v" style="text-align:center">
+        <div style="font-size:32px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--v2)">39 / 0</div>
+        <div style="font-size:14px;font-weight:800;margin-top:4px">테스트 통과 / 린트 경고</div>
+        <p style="margin-top:4px">pytest 39건 + 85 Dart 파일 0 Warnings</p>
+      </div>
+      <div class="card accent-b" style="text-align:center">
+        <div style="font-size:32px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--bl)">89 Path</div>
+        <div style="font-size:14px;font-weight:800;margin-top:4px">정밀 근육 해부도</div>
+        <p style="margin-top:4px">Front/Back 실시간 동적 점등 구현</p>
+      </div>
+      <div class="card accent-y" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--y);padding-top:4px">KAICTS</div>
+        <div style="font-size:14px;font-weight:800;margin-top:5px">2026 학술대회 논문 투고</div>
+        <p style="margin-top:4px">공학 설계·검증 결과를 학술 성과로 연결</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:18px 22px">
+      <div style="font-size:12px;font-weight:800;color:var(--g);letter-spacing:.1em;margin-bottom:12px">FUTURE ROADMAP — NEXT PHASES</div>
+      <div class="g4">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--v2);margin-bottom:4px">PHASE 1 · 출시</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:4px">🔒 HTTPS &amp; 스토어 배포</div>
+          <p style="font-size:12.5px">커스텀 도메인 SSL 적용 및 Google Play · App Store 정식 출시</p>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--g);margin-bottom:4px">PHASE 2 · 웨어러블</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:4px">⌚ 스마트워치 연동</div>
+          <p style="font-size:12.5px">Apple/Galaxy Watch 실시간 심박수·칼로리 및 세트 자동 카운팅</p>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--bl);margin-bottom:4px">PHASE 3 · 멀티모달 AI</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:4px">📷 자세 분석 &amp; 식단</div>
+          <p style="font-size:12.5px">온디바이스 경량 Pose Estimation 자세 교정 및 식단 사진 매크로 코칭</p>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--y);margin-bottom:4px">PHASE 4 · B2B 확장</div>
+          <div style="font-size:14px;font-weight:800;margin-bottom:4px">🤝 트레이너 대시보드</div>
+          <p style="font-size:12.5px">헬스장 트레이너-회원 매칭 및 비대면 피드백 B2B SaaS 확장</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── S15: Thank You & Q&A ─────────────────────────────── -->
+  <div class="sl center" id="s15">
+    <div class="tag">Q &amp; A · Thank You</div>
+    <div style="font-size:108px;font-weight:900;letter-spacing:-3px;line-height:1.02;
+                background:linear-gradient(135deg,#FFFFFF 0%,#FFDAD0 40%,var(--v) 75%,#FF2A00 100%);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+                text-align:center;margin-bottom:16px">Thank You</div>
+    <div style="font-size:20px;font-weight:600;color:var(--m);text-align:center;margin-bottom:28px;line-height:1.6">
+      혼자 운동하는 모든 순간에 가장 똑똑한 러닝메이트 — <strong style="color:var(--t)">CoachFit</strong><br>
+      경청해 주셔서 감사합니다. 편하게 질문해 주세요.
+    </div>
+    <div class="pill-row" style="justify-content:center;gap:12px">
+      <span class="pill v" style="padding:9px 18px;font-size:13.5px">🏋️ CoachFit (팀 코치핏)</span>
+      <a class="pill g" href="http://43.200.179.25:8000" target="_blank" style="text-decoration:none;padding:9px 18px;font-size:13.5px">🌐 Live: http://43.200.179.25:8000</a>
+      <a class="pill" href="https://github.com/kang3019/coach-fit" target="_blank" style="text-decoration:none;padding:9px 18px;font-size:13.5px;color:var(--t)">💻 github.com/kang3019/coach-fit</a>
+    </div>
+    <div style="margin-top:26px;font-size:12px;color:var(--dim)">
+      발표 단축키: <code>← / →</code> 이동 · <code>T</code> 타이머 · <code>N</code> 대본 힌트 · <code>G</code> 전체 슬라이드 점프 (Q&amp;A용) · <code>P</code> 시연 영상 재생 · <code>F</code> 전체화면
+    </div>
+  </div>
+
+  </div><!-- /deck -->
+
+  <!-- ── PRESENTER NOTES DRAWER (N 키) ────────────────────── -->
+  <div id="notes-drawer">
+    <div class="notes-top">
+      <span id="notes-title">Slide 1 · 권장 0:15 (누적 0:15)</span>
+      <span style="cursor:pointer;color:var(--m)" onclick="toggleNotes()">닫기 [N]</span>
+    </div>
+    <div class="notes-body" id="notes-body"></div>
+    <div class="notes-cue" id="notes-cue"></div>
+  </div>
+
+  <!-- ── SLIDE OVERVIEW GRID (G 키) ───────────────────────── -->
+  <div id="grid-modal">
+    <div class="gm-head">
+      <div>
+        <span style="font-size:18px;font-weight:900;color:var(--t)">전체 슬라이드 목차 (15장 · 목표 7:30)</span>
+        <span style="font-size:12.5px;color:var(--m);margin-left:12px">클릭하여 즉시 이동 — Q&amp;A 질문 대응에 유용</span>
+      </div>
+      <button class="hud-btn" onclick="toggleGrid()" style="padding:6px 14px;font-size:12.5px">닫기 [G / Esc]</button>
+    </div>
+    <div class="gm-grid" id="gm-grid"></div>
+  </div>
+
+  <!-- ── BOTTOM HUD ───────────────────────────────────────── -->
+  <div id="hud">
+    <div class="hud-left">
+      <button id="timer-btn" onclick="toggleTimer()" title="클릭 또는 T 키로 7:30 발표 타이머 시작/정지 (Shift+T 초기화)">⏱ 00:00 / 07:30</button>
+      <span id="pace-hint">목표 누적 0:15</span>
+    </div>
+    <div id="dots"></div>
+    <div class="hud-right">
+      <button class="hud-btn" id="btn-notes" onclick="toggleNotes()" title="발표자 대본 힌트 (N)">대본 [N]</button>
+      <button class="hud-btn" id="btn-grid" onclick="toggleGrid()" title="전체 슬라이드 목차 (G)">목차 [G]</button>
+      <button class="hud-btn" onclick="toggleFull()" title="전체화면 (F)">전체 [F]</button>
+      <div id="slide-num">1 / 15</div>
+    </div>
+  </div>
+
+</div><!-- /stage -->
+</div><!-- /viewport -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   1. RESPONSIVE 16:9 STAGE SCALER (절대 안 잘림)
+   ═══════════════════════════════════════════════════════════ */
+const stageEl = document.getElementById('stage');
+function fitStage(){
+  const sw = window.innerWidth, sh = window.innerHeight;
+  const scale = Math.min(sw / 1280, sh / 720);
+  stageEl.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+
+/* ═══════════════════════════════════════════════════════════
+   2. SLIDE METADATA (7분 30초 목표 페이스 + 발표자 대본)
+   ═══════════════════════════════════════════════════════════ */
+const META = [
+  { title:'표지 · CoachFit', dur:'0:15', cum:'0:15',
+    cue:'"발표하겠습니다"',
+    note:'안녕하세요. 혼자 운동하는 헬스 초·중급자를 위한 AI 피트니스 코칭 및 인터랙티브 근육 해부도 플랫폼, CoachFit 발표를 맡은 강민권입니다. 기획부터 AWS 실서버 배포, 학회 논문 투고까지의 결과를 발표하겠습니다.' },
+  { title:'문제 정의 (Why?)', dur:'0:35', cum:'0:50',
+    cue:'"해결했습니다"',
+    note:'혼자 헬스장에 간 초보자가 매일 겪는 장벽은 "어제 가슴 운동을 했는데, 오늘 어느 부위를 몇 kg로 몇 세트 하지?"라는 막막함입니다. 회당 5~8만 원 PT는 부담스럽고, 기존 기록 앱은 수첩 기능은 좋지만 누적 데이터를 분석해 오늘 할 루틴을 먼저 제안해주지 못합니다. 또 생소한 종목명만 나열돼 어느 근육에 자극이 가는지 알기 어렵습니다. 저희는 3초 세트 기록, 정밀 근육 해부도, DB 기록과 직결된 AI 맞춤 루틴을 결합해 이 세 가지 문제를 해결했습니다.' },
+  { title:'비전 & 차별점', dur:'0:25', cum:'1:15',
+    cue:'"무중단 동작합니다"',
+    note:'CoachFit의 비전은 "기록할수록 똑똑해지는 주머니 속 AI 트레이너"입니다. 표에서 보시듯 기존 앱과 네 가지가 다릅니다. 최근 운동 기록 10건과 인바디를 분석해 오늘 루틴을 제안하고, 원터치로 기록과 자동 휴식 타이머까지 바로 이어집니다. 여기에 89개 해부학 SVG 근육 맵에 타겟 근육을 실시간으로 점등하고, 외부 AI 장애에도 5단 폴백으로 무중단 동작합니다.' },
+  { title:'프로젝트 계획 & WBS', dur:'0:25', cum:'1:40',
+    cue:'"100%를 달성했습니다"',
+    note:'2인 팀 일정 리스크를 막기 위해 MoSCoW 기법으로 범위를 통제했습니다. 운동 CRUD, 볼륨 차트, AI 루틴, 스마트 폴백을 Must 핵심 기능으로 집중하고, 지연 위험이 큰 카메라 자세 교정과 웨어러블은 Won\'t로 과감히 분리했습니다. 20%의 일정 버퍼를 두고 10주차부터 16주차까지 7개 마일스톤, 90개 PR 병합으로 WBS 100%를 달성했습니다.' },
+  { title:'사용자 시나리오', dur:'0:35', cum:'2:15',
+    cue:'"상담합니다"',
+    note:'실제 사용 흐름을 세 명의 페르소나로 살펴보겠습니다. 헬린이 민수 씨가 컨디션을 체크하면 AI가 어제 가슴 운동 기록을 보고 오늘은 등·후면 사슬 루틴을 추천하며 해부도에 타겟 부위를 점등해 줍니다. 직장인 지수 씨는 원터치로 루틴을 담아 세트를 체크하고 자동 휴식 타이머와 운동 GIF 가이드로 현장에서 자세를 확인합니다. 중급자 현우 씨는 주간·월간·3개월 볼륨과 인바디 추이를 점검하고 AI 1:1 전담 코치 채팅으로 부족한 부위를 상담합니다.' },
+  { title:'핵심 구현 ① AI·해부도', dur:'0:45', cum:'3:00',
+    cue:'"즉시 반응합니다" (우측 버튼 1~2회 클릭!)',
+    note:'핵심 구현 흐름입니다. 홈에서 코칭을 요청하면 FastAPI가 DB에서 최근 운동 기록 10건과 인바디, 목표를 조회해 SHA-256 지문 캐시와 대조하고, 기록 변화가 없으면 LLM 호출 없이 0.01초 만에 응답을 반환합니다. 프론트엔드는 반환된 종목명에서 타겟 근육을 파싱해 89개 해부학 SVG 패스에 앞·뒷면 네온 글로우를 실시간으로 점등합니다. (★ 우측 가슴·하체 버튼 클릭!)' },
+  { title:'핵심 구현 ② 5단 폴백', dur:'0:30', cum:'3:30',
+    cue:'"설계했습니다"',
+    note:'장애 대응과 비용 통제 설계입니다. 주 엔진은 IAM 무키 인증 기반 AWS Bedrock이며, 환경변수 하나로 Groq·Gemini·Claude·OpenAI 엔진을 자유롭게 전환합니다. 외부 API가 모두 실패해도 0.1초 스마트 룰 엔진과 클라이언트 폴백이 이어받아 절대 멈추지 않습니다. 또 지문 캐시와 분당 10회·일 100회 레이트 리미터로 과금 폭탄을 차단하고, 폴백 응답은 캐시에서 제외해 장애 복구 시 즉시 정상 AI로 돌아오도록 설계했습니다.' },
+  { title:'아키텍처 결정 (ADR)', dur:'0:25', cum:'3:55',
+    cue:'"검증했습니다"',
+    note:'주요 기술 선택은 4가지 ADR로 문서화했습니다. 첫째, 모바일과 웹을 단일 코드로 배포하기 위해 Flutter를 택했고, 둘째, Java+Python 이중 서버의 오버엔지니어링을 해소하기 위해 교수님 피드백에 따라 FastAPI와 PostgreSQL 단일 백엔드로 통합했습니다. 셋째로 무키 인증 5단 폴백, 넷째로 89-Path SVG 해부도까지 근거와 결과를 검증했습니다.' },
+  { title:'클라우드 아키텍처', dur:'0:25', cum:'4:20',
+    cue:'"통신합니다"',
+    note:'전체 아키텍처와 모노레포 구조입니다. 클라이언트는 DB나 LLM에 직접 접근하지 않고 AWS 서울 EC2 8000번 포트의 FastAPI 단일 서버를 경유하는 BFF 패턴을 준수합니다. DB는 SQLAlchemy ORM으로 RDS PostgreSQL과 로컬 SQLite를 추상화했고, Bedrock과는 비밀키 저장이 전혀 필요 없는 IAM Role로 안전하게 통신합니다.' },
+  { title:'개발환경 & CI/CD 배포', dur:'0:25', cum:'4:45',
+    cue:'"동시 서빙합니다"',
+    note:'개발 환경은 .env 없이도 클론 후 5분 만에 SQLite 시드 데이터로 풀스택 환경이 구동되며, 토글 하나로 EC2와 로컬 오프라인 모드를 전환합니다. PR을 올리면 GitHub Actions가 pytest 39건과 flutter analyze를 검증하고, main 병합 시 OpenSSH로 EC2 자동 배포와 systemd 재기동, 헬스체크까지 완료하며 8000번 포트에서 API와 Flutter 웹을 동시 서빙합니다.' },
+  { title:'구현 시행착오 4선', dur:'0:45', cum:'5:30',
+    cue:'"안정화했습니다"',
+    note:'개발 중 해결한 네 가지 핵심 시행착오입니다. 첫째, 이중 서버의 DTO 중복과 RAM 1GB 메모리 압박을 FastAPI 단일화로 풀어 생산성을 3배 높였습니다. 둘째, 초기 drawOval 원형 블러의 한계를 극복하기 위해 3D PNG 레이어를 거쳐 89-Path SVG 듀얼 뷰로 완성했습니다. 셋째, LLM의 null 반환과 재배포 후 401 토큰 만료 오류는 안전 파서와 데모 세션 자동 복구로 해결해 에러율 0%를 달성했습니다. 넷째, CI SSH 504 장애와 Flutter 버전 충돌을 네이티브 OpenSSH와 SDK 3.35.7 고정으로 안정화했습니다.' },
+  { title:'테스트 & 품질 검증', dur:'0:25', cum:'5:55',
+    cue:'"지켰습니다"',
+    note:'검증 결과입니다. JWT 인증 보안 9건, 운동 CRUD·볼륨 정합성 7건, AI 폴백·지문 캐시·레이트 리밋·벤치마크 23건까지 총 39건의 백엔드 pytest 자동화 테스트를 100% 통과했습니다. 프론트엔드도 전체 85개 Dart 파일에서 flutter analyze 경고 0건을 달성했고, AGENTS.md 규칙으로 main 직접 커밋 금지와 PR 전수 CI 검증을 지켰습니다.' },
+  { title:'실시간 라이브 시연', dur:'1:04', cum:'6:59',
+    cue:'"확인합니다" (자막 5단계 맞춰 설명)',
+    note:'AWS EC2 실서버에서 구동 중인 실제 CoachFit 앱을 1분간 시연하겠습니다. ①[0:00] 데모 계정 원터치 로그인으로 홈 대시보드 진입 → ②[0:10] 컨디션 체크와 AI 추천 루틴·앞뒷면 SVG 근육 해부도 점등 확인 → ③[0:23] 추천 루틴 시작하기로 오늘 기록에 종목 일괄 추가 후 세트 체크 시 자동 휴식 타이머 확인 → ④[0:37] 통계 탭 주간·월간·3개월 볼륨 차트와 부위별 균형, 인바디 신체 변화 그래프 확인 → ⑤[0:55] 마지막으로 AI 1:1 코치 채팅에서 기록 기반 맞춤 피드백을 확인합니다.' },
+  { title:'성과 요약 & 로드맵', dur:'0:25', cum:'7:20',
+    cue:'"확장해 나가겠습니다"',
+    note:'정리하겠습니다. 저희는 기획부터 AWS 풀스택 배포, 테스트 39건 통과와 린트 0건, 그리고 KAICTS 2026 학술대회 논문 투고까지 전 과정을 완주했습니다. 향후 HTTPS 도메인 적용과 스토어 출시를 시작으로, 스마트워치 심박수 연동, 온디바이스 자세 분석·식단 코칭, 헬스장 트레이너 B2B 대시보드로 확장해 나가겠습니다.' },
+  { title:'Thank You & Q&A', dur:'0:10', cum:'7:30',
+    cue:'"질문해 주세요"',
+    note:'이상으로 혼자 운동하는 모든 순간의 AI 러닝메이트, CoachFit 발표를 마치겠습니다. 경청해 주셔서 감사합니다. 편하게 질문해 주세요.' }
+];
+
+/* ═══════════════════════════════════════════════════════════
+   3. REAL 89-PATH ANATOMICAL SVG DATA (from svg_body_data.dart)
+   ═══════════════════════════════════════════════════════════ */
+const FRONT_PATHS = [
+  {g:null,d:"m 11.671635,6.3585449 -0.0482,-2.59085 4.20648,-2.46806 4.42769,2.95361 -0.0405,1.94408 0.24197,-3.34467 -2.03129,-2.31103004 -2.84508,-0.51629 -2.20423,0.52915 -1.9363,2.63077004 z"},
+  {g:null,d:"m 19.748825,6.7034949 0.0203,-2.20747 -3.96689,-2.7637 -3.74099,2.23559 -0.006,2.63528 -0.60741,0.0403 0.27408,1.82447 0.97635,0.33932 0.44244,2.1802901 1.82222,2.06556 2.03518,-0.0607 1.79223,-1.94408 0.35957,-2.2406601 0.97616,-0.33932 0.25159,-1.78416 z"},
+  {g:null,d:"m 13.304665,11.910505 1.64975,2.35202 0.74426,2.62159 -1.73486,-1.38354 -0.86649,-2.97104 z"},
+  {g:null,d:"m 18.385135,11.910505 -1.64975,2.35202 -0.74538,2.62234 1.73486,-1.38354 0.86649,-2.97104 z"},
+  {g:"shoulders",d:"m 19.047795,13.248365 3.55748,1.97916 0.72653,-0.35074 z m -0.107,0.43288 -0.37119,1.73073 2.1846,0.53561 1.40116,-0.49436 z"},
+  {g:"shoulders",d:"m 22.922305,15.657195 0.75814,-0.41 2.40806,1.66799 1.17364,1.50707 0.62662,1.5626 -0.0464,3.70194 -1.3284,-1.72153 0.0407,-2.59376 -0.48842,-0.50049 c 0,0 -3.09778,-3.19058 -3.14371,-3.21401 z m -0.2409,0.10873 c -0.001,0.0525 3.32987,3.54733 3.32987,3.54733 l 0.10067,3.10396 -1.15426,-1.97782 -2.22547,-0.94804 -1.56576,-2.88481 z"},
+  {g:"shoulders",d:"m 12.624785,13.248365 -3.5574599,1.97916 -0.72653,-0.35074 z m 0.107,0.43288 0.37119,1.73073 -2.18459,0.53561 -1.4011499,-0.49436 z"},
+  {g:"shoulders",d:"m 8.7502951,15.657195 -0.75814,-0.41 -2.40806,1.66799 -1.17364,1.50707 -0.62662,1.56259 0.0464,3.70195 1.3284,-1.72153 -0.0407,-2.59376 0.48843,-0.5005 c 0,0 3.09777,-3.19057 3.1437,-3.214 z m 0.2409,0.10873 c 0.002,0.0525 -3.32987,3.54733 -3.32987,3.54733 l -0.10067,3.10396 1.15426,-1.97782 2.22547,-0.94804 1.5657499,-2.88481 z"},
+  {g:"biceps",d:"m 27.621665,30.814715 -0.33838,1.70499 -1.81932,-2.54418 -0.6629,-1.26895 z m -2.85271,-2.6096 c -0.0259,-0.0144 -0.0536,-0.0254 -0.0824,-0.0324 l -1.48333,-4.95503 1.00456,-2.08428 1.65511,1.74532 2.23034,6.67667 0.0415,0.93739 c -1.06528,-0.84215 -2.18962,-1.60679 -3.36434,-2.28803 z m 1.6945,-5.75654 1.64893,6.43421 -0.36469,-4.92266 z"},
+  {g:null,d:"m 26.955425,32.969125 1.30083,10.28927 -1.10778,0.01 -1.89387,-7.99609 0.19174,-4.53719 z m 1.21978,-1.94971 -0.58729,2.58635 1.11876,9.15614 0.55849,-0.21663 0.2304,-6.77018 z"},
+  {g:"biceps",d:"m 4.0746451,30.814715 0.33838,1.70499 1.81931,-2.54418 0.66289,-1.26895 z m 2.8527,-2.6096 c 0.0259,-0.0144 0.0536,-0.0254 0.0824,-0.0324 l 1.48332,-4.95503 -1.00455,-2.08428 -1.65509,1.74532 -2.23034,6.67667 -0.0415,0.93739 c 1.06528,-0.84215 2.18961,-1.60679 3.36433,-2.28803 z m -1.6945,-5.75654 -1.64891,6.43421 0.36468,-4.92266 z"},
+  {g:null,d:"m 4.5752651,32.969125 -1.30083,10.28927 1.10778,0.01 1.89387,-7.99609 -0.19174,-4.53719 z m -1.21978,-1.94971 0.58728,2.58635 -1.11875,9.15614 -0.55849,-0.21663 -0.2304,-6.77018 z"},
+  {g:"chest",d:"m 20.337455,17.085495 1.72942,3.09103 1.890,0.94 -0.5,0.3 -6.8, -2.1 z"},
+  {g:"chest",d:"m 16.66,19.72 6.8,2.1 -0.65,0.5 -0.90604,2.63773 -2.09968,0.86537 -3.34524,-1.655 0.2,-3.8 z"},
+  {g:"chest",d:"m 11.351215,17.085495 -1.7294199,3.09103 -1.890,0.94 0.5,0.3 6.8,-2.1 z"},
+  {g:"chest",d:"m 15.03,19.72 -6.8,2.1 0.65,0.5 0.90586,2.63773 2.0996699,0.86537 3.34636,-1.655 -0.2,-3.8 z"},
+  {g:"abs",d:"m 19.641935,34.707615 1.81341,-1.36479 0.15748,1.83347 1.28642,2.37338 -1.98044,2.73652 -1.03109,0.16554 -0.37026,-3.88816 z"},
+  {g:"abs",d:"M 19.289,26.152 l -3.11202 -1.40604 0.0937 2.27965 2.80119 1.43603 z M 21.224,27.820 l -1.29355 0.7212 0.14997 -1.70898 z M 20.171,26.183 l 2.47968 -1.03241 -0.9336 2.52093 z M 21.702,27.921 l -1.69005 1.03372 -0.28871 2.0678 1.64975 -1.07533 z"},
+  {g:"abs",d:"M 18.791,29.025 l -0.0622 1.62387 -2.30308 -0.49961 -0.12448 -2.21722 z M 18.635,31.429 l 0.0311 1.99844 -2.20953 0.59391 -0.0311 -3.1227 z M 21.290,30.444 l -1.48383 1.03372 -0.20622 2.10905 1.64862 -1.32355 z"},
+  {g:"abs",d:"m 12.045985,34.707615 -1.81341,-1.36479 -0.15748,1.83347 -1.2856799,2.37432 1.9804499,2.73595 1.03109,0.16554 0.37119,-3.88721 z"},
+  {g:"abs",d:"m 15.636055,44.919735 -0.60647,-5.91209 -0.015,-3.84879 -2.18479,-1.07533 -0.24746,7.03017 z"},
+  {g:"abs",d:"m 16.051865,44.919165 0.60628,-5.91209 0.0154,-3.84915 2.18404,-1.07515 0.24746,7.03017 z"},
+  {g:"abs",d:"m 12.399365,26.152365 3.11202,-1.40603 -0.0937,2.27965 -2.80138,1.4364 z m -1.93508,1.6685 1.29355,0.72139 -0.14997,-1.70899 z m 1.05303,-1.637 -2.4793099,-1.03259 0.93361,2.52148 z m -1.5316399,1.73729 1.6900499,1.03372 0.28871,2.06743 -1.64881,-1.07515 z"},
+  {g:"abs",d:"M 12.897,29.025 l 0.0623 1.62387 2.30327 -0.49961 0.12448 -2.21703 z M 13.053,31.430 l -0.0309 1.99844 2.20973 0.59353 0.0311 -3.1227 z M 10.398,30.445 l 1.48384 1.0339 0.20622 2.10905 -1.64975 -1.32355 z"},
+  {g:"quads",d:"m 14.404465,45.040075 0.0221,-0.0277 -0.14866,-0.37945 -3.10172,-3.40449 -0.23283,-0.0825 2.05918,5.32009 z m -1.17263,2.01833 1.27705,3.29948 0.42631,-4.04862 -0.25196,-0.64303 z"},
+  {g:"quads",d:"m 17.284025,45.040455 -0.0221,-0.0281 0.14867,-0.37926 3.10171,-3.40449 0.23246,-0.0825 -2.05843,5.3199 z m 1.17263,2.01795 -1.27706,3.29948 -0.42631,-4.04843 0.25197,-0.64303 z"},
+  {g:"quads",d:"m 23.419015,50.399125 -0.15504,4.75091 -2.40263,6.60949 0.7362,1.90021 2.36401,-8.34435 z m -0.58154,-11.60825 -0.15485,4.00722 1.31793,7.93154 0.61977,-6.40308 z m -0.38731,5.12268 -2.75152,6.07258 -0.62015,4.87425 1.16232,6.85771 2.51886,-6.98144 0.15504,-7.18764 z"},
+  {g:"quads",d:"m 22.063225,39.369605 v 4.21363 l -2.94574,5.82511 -1.86027,5.78349 0.19365,-4.0072 z m -3.24944,13.42596 -0.0649,0.15467 -1.21294,2.90207 0.78325,7.18803 1.23619,-0.66122 -1.0714,-6.69272 z"},
+  {g:null,d:"m 17.255895,87.868445 0.1243,3.45228 0.28983,1.20638 h 0.87136 l 0.24897,-0.83181 0.29058,-0.0416 -0.0624,0.83181 1.09914,-0.33332 0.29058,-0.16629 1.24444,-0.27033 0.0416,-0.97748 -1.20319,-2.03743 -0.82974,-1.0399 -2.03294,-0.83181 z"},
+  {g:"calves",d:"m 18.251375,70.441125 0.29058,0.91486 0.6224,3.8681 0.0829,5.15733 -0.87136,5.03304 0.0412,-6.44714 -0.91242,-2.57848 -0.12561,-2.82837 z m 1.9915,2.32915 -0.20753,7.73637 -1.65949,6.23904 1.80478,-0.853 3.00816,-10.83583 -1.03727,-6.82095 z"},
+  {g:null,d:"m 21.404635,64.784375 0.1243,1.12295 -0.87118,1.08171 -0.29058,1.70599 -0.58116,0.24933 -0.49774,-2.57866 -0.33182,-0.91486 0.29058,-0.58247 z m -3.85853,0.0832 0.6224,1.74685 1.3273,2.57867 -0.33182,2.37095 -0.95423,-2.66209 -0.78738,-1.49734 z m 4.97811,-2.37039 -0.95423,5.11609 0.62241,-0.33295 0.49773,1.66381 z"},
+  {g:"quads",d:"m 8.2694651,50.399125 0.15504,4.75053 2.4026299,6.60968 -0.73638,1.90021 -2.3640099,-8.34435 z m 0.58117,-11.60768 0.15503,4.00684 -1.31754,7.93154 -0.61978,-6.40308 z m 0.38769,5.1223 2.7515099,6.07239 0.61997,4.87425 -1.16232,6.85771 -2.5190499,-6.98163 -0.15504,-7.18801 z"},
+  {g:"quads",d:"m 9.6258251,39.369415 v 4.21363 l 2.9451699,5.8253 1.86028,5.78349 -0.19366,-4.0072 z m 3.2488699,13.42559 0.0647,0.15485 1.21294,2.90207 -0.78307,7.18803 -1.23618,-0.66102 1.0714,-6.69273 z"},
+  {g:null,d:"m 14.433335,87.868265 -0.12448,3.45228 -0.29058,1.20637 h -0.87118 l -0.24877,-0.83181 -0.29059,-0.0416 0.0623,0.83181 -1.09934,-0.33333 -0.29058,-0.16629 -1.2448,-0.27033 -0.0412,-0.97747 1.2031899,-2.03781 0.82975,-1.04009 2.03294,-0.83181 z"},
+  {g:"calves",d:"m 13.437675,70.440945 -0.29058,0.91486 -0.62241,3.86828 -0.0829,5.15733 0.87174,5.03304 -0.0418,-6.44714 0.91298,-2.57848 0.1243,-2.82837 z m -1.99151,2.32914 0.20735,7.73637 1.65968,6.23904 -1.80497,-0.85299 -3.0079799,-10.83584 1.03728,-6.82095 z"},
+  {g:null,d:"m 10.284405,64.784375 -0.12448,1.12295 0.87118,1.08171 0.29058,1.70599 0.58116,0.24933 0.49774,-2.57866 0.33182,-0.91486 -0.29058,-0.58247 z m 3.85854,0.0832 -0.62241,1.74685 -1.32767,2.57867 0.33182,2.37095 0.95423,-2.66209 0.78832,-1.4964 z m -4.9786799,-2.37058 0.9542299,5.11609 -0.6223999,-0.33313 -0.49793,1.6638 z"},
+  {g:null,d:"m 3.2054751,27.370125 0.005,3.09419 -0.57959,1.91184 -0.54539,-2.41185 z"},
+  {g:null,d:"m 4.3904451,43.563145 -1.5198,0.0506 -0.76631,-0.67112 -1.21261996,2.15767 -0.86245,3.32873 0.49386,0.22113 0.59814996,-2.20238 0.50016,0.25356 -0.35639,2.49422 0.62382,0.24345 0.41402,-2.49194 0.55839,0.17851 -0.2262,2.76603 0.76938,0.32268 0.25788,-2.86764 0.4578,-0.0181 0.16611,2.65239 0.65997,0.2633 0.0712,-4.56643 0.34158,-0.19428 1.35316,1.68367 0.32832,-0.34354 -0.72644,-2.0551 z"},
+  {g:null,d:"m 28.325215,27.370125 -0.005,3.09419 0.57959,1.91184 0.54538,-2.41185 z"},
+  {g:null,d:"m 27.140245,43.563145 1.5198,0.0506 0.76631,-0.67111 1.21262,2.15766 0.86245,3.32873 -0.49386,0.22113 -0.59815,-2.20238 -0.50016,0.25356 0.35639,2.49422 -0.62382,0.24345 -0.41402,-2.49194 -0.55839,0.17851 0.2262,2.76603 -0.76938,0.32268 -0.25788,-2.86764 -0.4578,-0.0181 -0.16611,2.6524 -0.65997,0.26329 -0.0712,-4.56643 -0.34158,-0.19428 -1.35316,1.68368 -0.32832,-0.34355 0.72644,-2.0551 z"}
+];
+
+const BACK_PATHS = [
+  {g:null,d:"m 48.157455,6.3585449 0.44208,-0.14964 0.16111,0.16427 1.48163,4.0475101 2.32401,1.45118 2.39971,-1.52387 0.97577,-3.6896901 0.52752,-0.55908 0.23367,0.0981 0.24198,-3.34467 -2.03129,-2.31103004 -2.84509,-0.51629 -2.20422,0.52915 -1.93631,2.63077004 z"},
+  {g:null,d:"m 52.369695,12.105075 -2.35767,-1.55045 -1.47119,-3.9514301 -0.60741,0.0403 0.27409,1.82447 0.97635,0.33932 0.7613,2.2157201 0.33017,1.06849 0.0895,2.14894 1.16448,0.008 0.10563,-0.70833 0.54716,-0.0606 z m 1.01793,1.47595 0.23768,0.64982 1.38107,-0.004 0.01,-2.38784 0.25971,-0.79061 0.57215,-2.1698001 0.76359,-0.41018 0.25158,-1.78416 -0.62859,0.0193 -1.08488,3.8998101 -2.39725,1.46684 0.2768,1.48507 z"},
+  {g:"back",d:"M 49.625,14.629 L 49.688,12.005 L 48.974,13.157 L 44.594,14.654 L 45.945,16.925 L 51.222,16.925 L 51.183,14.550 Z"},
+  {g:"back",d:"M 46.034,17.075 L 48.920,21.925 L 51.303,21.925 L 51.224,17.075 Z"},
+  {g:"back",d:"M 49.009,22.075 L 49.572,23.022 L 51.403,28.104 L 51.305,22.075 Z"},
+  {g:"back",d:"M 55.439,14.729 L 55.376,12.104 L 56.090,13.256 L 60.470,14.754 L 59.179,16.925 L 53.844,16.925 L 53.881,14.649 Z"},
+  {g:"back",d:"M 59.089,17.075 L 56.204,21.925 L 53.763,21.925 L 53.842,17.075 Z"},
+  {g:"back",d:"M 56.114,22.075 L 55.492,23.121 L 53.661,28.203 L 53.761,22.075 Z"},
+  {g:"back",d:"M 44.144,15.285 L 39.888,20.286 L 39.426,22.749 L 41.263,21.510 L 44.025,20.355 L 45.663,23.400 L 49.103,23.400 Z"},
+  {g:"shoulders",d:"M 42.201,16.586 L 40.626,18.152 L 39.736,20.156 L 43.992,15.155 Z"},
+  {g:"back",d:"M 45.771,23.600 L 45.872,23.789 L 47.009,29.286 L 47.023,30.400 L 51.080,30.400 L 51.053,28.314 L 49.185,23.600 Z"},
+  {g:"back",d:"M 47.026,30.600 L 47.086,35.145 L 51.156,36.255 L 51.082,30.600 Z"},
+  {g:"shoulders",d:"M 62.863,16.686 L 64.438,18.251 L 65.328,20.255 L 61.073,15.254 Z"},
+  {g:"back",d:"M 60.921,15.384 L 65.176,20.385 L 65.290,22.849 L 63.801,21.609 L 61.039,20.454 L 59.455,23.400 L 56.022,23.400 Z"},
+  {g:"back",d:"M 59.347,23.600 L 59.192,23.888 L 58.055,29.385 L 58.042,30.400 L 53.986,30.400 L 54.012,28.413 L 55.918,23.600 Z"},
+  {g:"back",d:"M 58.039,30.600 L 57.979,35.245 L 53.908,36.354 L 53.983,30.600 Z"},
+  {g:"triceps",d:"M 43.593,21.039 L 44.920,23.967 L 43.615,25.653 L 43.186,27.069 L 39.209,29.802 Z"},
+  {g:"triceps",d:"M 43.459,20.972 L 39.075,29.735 L 38.871,25.461 L 39.407,23.674 L 41.242,21.927 Z"},
+  {g:null,d:"M 40.716955,42.424835 l -1.5182,0.0863 -0.78184,-0.65295 -1.16168,2.1855 -0.78414,3.34805 0.49892,0.20949 0.54632,-2.2158 0.50597,0.24175 -0.29779,2.5019 0.62936,0.22875 0.35546,-2.50096 0.56242,0.16536 -0.16126,2.77057 0.77674,0.30455 0.19056,-2.87291 0.45724,-0.0289 0.22827,2.64778 0.66597,0.24774 -0.0359,-4.56685 0.33693,-0.20224 1.39227,1.65147 0.32017,-0.35115 -0.77444,-2.03749 z"},
+  {g:null,d:"M 40.775,29.006 L 42.870,27.644 L 42.187,29.635 L 42.603,34.383 L 40.799,42.081 L 39.814,42.253 Z"},
+  {g:null,d:"M 39.665,42.242 L 38.305,41.501 L 37.998,34.491 L 38.635,31.429 L 39.245,30.209 L 40.625,28.994 Z"},
+  {g:"triceps",d:"M 61.376,21.213 L 60.056,24.145 L 61.330,26.199 L 61.657,27.251 L 65.780,29.966 Z"},
+  {g:"triceps",d:"M 61.510,21.146 L 65.914,29.899 L 66.108,25.624 L 65.568,23.839 L 63.729,22.096 Z"},
+  {g:null,d:"M 64.301385,42.592325 l 1.51839,0.0828 0.78033,-0.65476 1.16673,2.18281 0.79187,3.34623 -0.49843,0.21064 -0.55144,-2.21453 -0.50541,0.24292 0.30356,2.5012 -0.62882,0.23021 -0.36124,-2.50014 -0.56203,0.16666 0.16765,2.77019 -0.77603,0.30634 -0.19719,-2.87245 -0.45732,-0.0278 -0.22215,2.64829 -0.66539,0.24928 0.0254,-4.56692 -0.3374,-0.20146 -1.38845,1.65469 -0.32098,-0.35041 0.76973,-2.03928 z"},
+  {g:null,d:"M 65.204,42.420 L 63.925,29.007 L 61.764,27.798 L 62.786,29.733 L 62.397,34.555 L 64.219,42.248 Z"},
+  {g:null,d:"M 64.075,28.993 L 65.353,42.405 L 66.712,41.663 L 67.002,34.653 L 66.358,31.591 L 65.745,30.373 Z"},
+  {g:"back",d:"m 51.733705,14.788555 0.53876,25.33066 0.48967,-0.0297 0.65658,-25.3387 -0.28147,-0.84188 -1.25059,-4.9e-4 z"},
+  {g:"back",d:"M 52.100,37.310 L 49.537,36.465 L 50.244,40.788 L 52.200,42.030 L 52.200,40.270 L 52.150,40.280 Z"},
+  {g:"back",d:"M 49.389,36.490 L 46.240,35.460 L 44.720,39.420 L 50.096,40.812 Z"},
+  {g:"back",d:"M 52.800,42.030 L 52.800,40.270 L 52.850,40.260 L 52.900,37.290 L 55.289,36.625 L 54.805,40.801 Z"},
+  {g:"back",d:"M 55.439,36.643 L 55.980,36.470 L 58.320,35.720 L 59.660,39.450 L 54.955,40.819 Z"},
+  {g:"glutes",d:"M 50.191,41.481 L 44.740,39.690 L 43.830,41.580 L 43.431,44.301 Z"},
+  {g:"glutes",d:"M 50.249,41.619 L 43.489,44.439 L 44.410,50.520 L 47.180,51.030 L 51.620,49.090 L 52.200,49.480 L 52.200,42.880 Z"},
+  {g:"glutes",d:"M 55.274,41.079 L 61.354,45.519 L 60.640,42.150 L 59.740,39.860 Z"},
+  {g:"glutes",d:"M 55.186,41.201 L 52.800,42.880 L 52.800,49.480 L 53.570,49.090 L 57.680,50.760 L 60.500,50.600 L 61.266,45.641 Z"},
+  {g:null,d:"m 51.176145,64.073985 -1.20605,3.01461 0.70738,0.26558 0.89754,3.51771 -0.55801,-4.01191 z m -5.08496,-3.15003 0.63355,1.8609 0.16813,2.03261 0.61314,1.93117 -0.90585,-0.0851 -0.28534,2.15982 z"},
+  {g:null,d:"m 54.019305,64.073985 1.20605,3.01461 -0.70737,0.26558 -0.89755,3.51771 0.55802,-4.01191 z m 5.08496,-3.15003 -0.63355,1.8609 -0.16813,2.03261 -0.61313,1.93117 0.90584,-0.0851 0.28534,2.15982 z"},
+  {g:"calves",d:"M 50.568,67.512 L 51.669,72.509 L 51.379,75.532 L 51.292,76.825 L 48.983,76.825 Z"},
+  {g:"calves",d:"M 50.218,67.512 L 48.633,76.825 L 46.283,76.825 L 45.533,74.263 L 46.783,67.088 Z"},
+  {g:"calves",d:"M 46.386,77.175 L 51.269,77.175 L 50.701,85.598 L 49.037,86.233 Z"},
+  {g:"calves",d:"M 54.628,67.512 L 53.526,72.509 L 53.816,75.532 L 53.903,76.825 L 56.213,76.825 Z"},
+  {g:"calves",d:"M 54.978,67.512 L 56.563,76.825 L 58.912,76.825 L 59.662,74.263 L 58.412,67.088 Z"},
+  {g:"calves",d:"M 53.927,77.175 L 58.810,77.175 L 56.158,86.233 L 54.495,85.598 Z"},
+  {g:null,d:"M 50.933115,88.340995 l 0.85194,1.3581 0.37189,0.79238 -0.15588,1.21774 -0.76984,0.74446 -1.51185,0.12543 -1.1299,-0.29192 -0.24225,-0.95894 0.80765,-1.30405 -0.22562,-0.85987 0.29679,-0.84153 -0.0194,-1.81524 1.53568,-0.54817 z m -1.19598,0.4675 0.15943,1.25776 -0.6023,0.97431 m -0.54436,0.29544 1.06474,0.40084 1.55326,-0.65137 z"},
+  {g:"hamstrings",d:"M 49.550,50.504 L 51.751,49.461 L 52.389,49.692 L 52.424,51.499 L 52.499,56.145 L 50.521,62.188 L 50.997,63.602 L 49.569,66.897 L 48.755,66.754 Z"},
+  {g:"hamstrings",d:"M 49.400,50.496 L 48.605,66.746 L 47.803,66.596 L 47.302,64.480 L 47.133,62.723 L 44.712,54.565 L 44.369,50.918 L 47.200,51.500 Z"},
+  {g:null,d:"M 54.262335,88.340995 l -0.85194,1.3581 -0.37189,0.79238 0.15589,1.21774 0.76983,0.74446 1.51186,0.12543 1.12989,-0.29192 0.24225,-0.95894 -0.80765,-1.30405 0.22563,-0.85987 -0.29679,-0.84153 0.0194,-1.81524 -1.53568,-0.54817 z m 1.19598,0.4675 -0.15943,1.25776 0.6023,0.97431 m 0.54436,0.29544 -1.06474,0.40084 -1.55326,-0.65137 z"},
+  {g:"hamstrings",d:"M 57.425,51.196 L 56.565,66.806 L 55.759,66.965 L 54.331,63.670 L 54.807,62.256 L 52.829,56.213 L 52.904,51.567 L 52.956,49.769 L 53.520,49.498 Z"},
+  {g:"hamstrings",d:"M 57.575,51.204 L 60.625,50.950 L 60.616,54.633 L 58.195,62.791 L 58.026,64.547 L 57.525,66.663 L 56.715,66.814 Z"}
+];
+
+const KR_NAME = {
+  chest:'가슴', back:'등', shoulders:'어깨', biceps:'이두', triceps:'삼두',
+  abs:'복근', quads:'대퇴사두', hamstrings:'햄스트링', glutes:'둔근', calves:'종아리'
+};
+const PRESETS = {
+  back:      { label:'● 등 · 후면 사슬 추천 중', muscles:['back','glutes','hamstrings','biceps'] },
+  chest:     { label:'● 가슴 · 삼두 푸시 루틴',   muscles:['chest','triceps','shoulders'] },
+  legs:      { label:'● 하체 · 둔근 볼륨 루틴',   muscles:['quads','glutes','hamstrings','calves'] },
+  shoulders: { label:'● 어깨 · 팔 · 코어 집중',   muscles:['shoulders','biceps','abs'] }
+};
+
+function renderMuscleSvg(svgEl, paths, activeSet, filterId){
+  let html = `<defs><filter id="${filterId}" x="-25%" y="-25%" width="150%" height="150%">
+    <feGaussianBlur stdDeviation="0.55" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter></defs>`;
+  html += `<g opacity="0.1" fill="#94A3B8">`;
+  for(const p of paths) html += `<path d="${p.d}"/>`;
+  html += `</g>`;
+  for(const p of paths){
+    const on = p.g && activeSet.has(p.g);
+    const fill = on ? '#FF4820' : (p.g ? '#1E2738' : '#141B26');
+    const stroke = on ? '#FF8B6B' : (p.g ? '#2C384E' : '#1F2838');
+    const sw = on ? '0.32' : '0.18';
+    const flt = on ? `filter="url(#${filterId})"` : '';
+    html += `<path d="${p.d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" ${flt}/>`;
+  }
+  svgEl.innerHTML = html;
+}
+
+function renderMusclePair(frontId, backId, tagsId, muscles, suffix){
+  const set = new Set(muscles);
+  renderMuscleSvg(document.getElementById(frontId), FRONT_PATHS, set, 'glow-f-' + suffix);
+  renderMuscleSvg(document.getElementById(backId), BACK_PATHS, set, 'glow-b-' + suffix);
+  document.getElementById(tagsId).innerHTML = muscles.map(m => `<span class="mm-tag">● ${KR_NAME[m]}</span>`).join('');
+}
+
+function setDemoPreset(key, btn){
+  if(btn){
+    document.querySelectorAll('#s6-presets .mm-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+  renderMusclePair('demo-front','demo-back','demo-tags', PRESETS[key].muscles, 'demo');
+}
+
+// 표지 자동 로테이션 (3.2초마다 루틴 타겟 근육 전환)
+const heroKeys = ['back','chest','legs','shoulders'];
+let heroIdx = 0;
+function updateHeroMuscle(){
+  const p = PRESETS[heroKeys[heroIdx]];
+  document.getElementById('hero-routine-label').textContent = p.label;
+  renderMusclePair('hero-front','hero-back','hero-tags', p.muscles, 'hero');
+  heroIdx = (heroIdx + 1) % heroKeys.length;
+}
+updateHeroMuscle();
+setDemoPreset('back');
+setInterval(()=>{ if(cur===0) updateHeroMuscle(); }, 3200);
+
+/* ═══════════════════════════════════════════════════════════
+   4. SLIDE NAVIGATION, HUD, NOTES, OVERVIEW GRID
+   ═══════════════════════════════════════════════════════════ */
+const sls = Array.from(document.querySelectorAll('.sl'));
+const dotsEl = document.getElementById('dots');
+const numEl = document.getElementById('slide-num');
+const progEl = document.getElementById('top-progress');
+const paceEl = document.getElementById('pace-hint');
+const gmGrid = document.getElementById('gm-grid');
+let cur = 0;
+
+sls.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.title = `Slide ${i+1}: ${META[i].title}`;
+  d.onclick = () => go(i);
+  dotsEl.appendChild(d);
+
+  const gc = document.createElement('div');
+  gc.className = 'gm-card' + (i === 0 ? ' cur' : '');
+  gc.innerHTML = `<div class="gm-num">SLIDE ${String(i+1).padStart(2,'0')}</div>
+                  <div class="gm-title">${META[i].title}</div>
+                  <div class="gm-time">권장 ${META[i].dur} · 누적 ${META[i].cum}</div>`;
+  gc.onclick = () => { go(i); toggleGrid(false); };
+  gmGrid.appendChild(gc);
+});
+const dots = Array.from(document.querySelectorAll('.dot'));
+const gmCards = Array.from(document.querySelectorAll('.gm-card'));
+
+function go(idx){
+  if(idx < 0 || idx >= sls.length) return;
+  if(idx !== cur){
+    if(cur === 12){
+      const vid = document.getElementById('demo-video');
+      if(vid && !vid.paused) vid.pause();
+    }
+    sls[cur].classList.remove('active');
+    sls[cur].classList.add('out-l');
+    const prev = cur;
+    setTimeout(() => sls[prev].classList.remove('out-l'), 280);
+  }
+  cur = idx;
+  sls[cur].classList.add('active');
+  dots.forEach((d,i)=>d.classList.toggle('on', i===cur));
+  gmCards.forEach((c,i)=>c.classList.toggle('cur', i===cur));
+  numEl.textContent = `${cur+1} / ${sls.length}`;
+  progEl.style.width = `${((cur+1)/sls.length)*100}%`;
+  document.getElementById('na-p').style.opacity = cur === 0 ? '0.15' : '1';
+  document.getElementById('na-n').style.opacity = cur === sls.length - 1 ? '0.15' : '1';
+
+  const m = META[cur];
+  paceEl.textContent = `권장 ${m.dur} · 누적 ${m.cum}`;
+  document.getElementById('notes-title').textContent = `Slide ${cur+1} — ${m.title} (권장 ${m.dur} / 누적 ${m.cum})`;
+  document.getElementById('notes-body').textContent = m.note;
+  document.getElementById('notes-cue').textContent = `→ 다음 슬라이드 전환 키워드: ${m.cue}`;
+}
+go(0);
+
+/* ── TIMER (7:30 TARGET) ── */
+let sec = 0, timerId = null;
+const timerBtn = document.getElementById('timer-btn');
+function fmt(s){
+  const m = Math.floor(s/60), r = s%60;
+  return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+}
+function renderTimer(){
+  timerBtn.textContent = `⏱ ${fmt(sec)} / 07:30`;
+  timerBtn.classList.remove('running','warn','over');
+  if(sec >= 540) timerBtn.classList.add('over');      // 9:00+ 빨강
+  else if(sec >= 420) timerBtn.classList.add('warn'); // 7:00+ 노랑
+  else if(timerId) timerBtn.classList.add('running');
+}
+function toggleTimer(){
+  if(timerId){ clearInterval(timerId); timerId = null; }
+  else { timerId = setInterval(()=>{ sec++; renderTimer(); }, 1000); }
+  renderTimer();
+}
+function resetTimer(){
+  clearInterval(timerId); timerId = null; sec = 0; renderTimer();
+}
+
+/* ── DRAWERS & FULLSCREEN ── */
+function toggleNotes(force){
+  const el = document.getElementById('notes-drawer');
+  const open = typeof force === 'boolean' ? force : !el.classList.contains('open');
+  el.classList.toggle('open', open);
+  document.getElementById('btn-notes').classList.toggle('on', open);
+}
+function toggleGrid(force){
+  const el = document.getElementById('grid-modal');
+  const open = typeof force === 'boolean' ? force : !el.classList.contains('open');
+  el.classList.toggle('open', open);
+  document.getElementById('btn-grid').classList.toggle('on', open);
+}
+function toggleFull(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+/* ── DEMO TAB SWITCHER ── */
+function switchDemo(mode, autoPlay){
+  const iframe = document.getElementById('demo-iframe');
+  const vwrap = document.getElementById('demo-video-wrap');
+  const tLive = document.getElementById('tab-live');
+  const tVid = document.getElementById('tab-vid');
+  const vid = document.getElementById('demo-video');
+  if(mode === 'live'){
+    if(vid) vid.pause();
+    iframe.style.display='block'; vwrap.style.display='none';
+    tLive.classList.add('on'); tVid.classList.remove('on');
+  } else {
+    iframe.style.display='none'; vwrap.style.display='flex';
+    tLive.classList.remove('on'); tVid.classList.add('on');
+    if(autoPlay && vid){ vid.play().catch(()=>{}); }
+  }
+}
+function toggleDemoVideo(){
+  const vwrap = document.getElementById('demo-video-wrap');
+  const vid = document.getElementById('demo-video');
+  if(!vid) return;
+  if(vwrap.style.display === 'none'){
+    switchDemo('vid', true);
+  } else if(vid.paused){
+    vid.play().catch(()=>{});
+  } else {
+    vid.pause();
+  }
+}
+function seekDemoStep(el, sec){
+  const vwrap = document.getElementById('demo-video-wrap');
+  const vid = document.getElementById('demo-video');
+  if(vwrap && vwrap.style.display !== 'none' && vid){
+    vid.currentTime = sec;
+    vid.play().catch(()=>{});
+  } else {
+    el.classList.toggle('done');
+  }
+}
+(function bindDemoVideoSync(){
+  const vid = document.getElementById('demo-video');
+  const steps = Array.from(document.querySelectorAll('#s13 .demo-check'));
+  if(!vid || !steps.length) return;
+  const starts = steps.map(s => Number(s.dataset.seek || 0));
+  vid.addEventListener('timeupdate', () => {
+    const t = vid.currentTime;
+    let activeIdx = 0;
+    for(let i = 0; i < starts.length; i++){
+      if(t >= starts[i]) activeIdx = i;
+    }
+    steps.forEach((s, i) => {
+      s.classList.toggle('playing', i === activeIdx);
+      s.classList.toggle('done', i < activeIdx);
+    });
+  });
+})();
+// GitHub Pages 등 HTTPS 환경에서는 HTTP iframe이 Mixed Content로 차단되므로 시연 영상을 기본 탭으로 표시
+if(location.protocol === 'https:'){
+  switchDemo('vid', false);
+}
+
+/* ── KEYBOARD & TOUCH ── */
+document.addEventListener('keydown', e => {
+  if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA')) return;
+  if(e.target && e.target.tagName==='VIDEO' && e.key===' ') return;
+  if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); go(cur+1); }
+  else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); go(cur-1); }
+  else if(e.key==='Home'){ go(0); }
+  else if(e.key==='End'){ go(sls.length-1); }
+  else if(e.key==='n' || e.key==='N'){ toggleNotes(); }
+  else if(e.key==='g' || e.key==='G'){ toggleGrid(); }
+  else if(e.key==='f' || e.key==='F'){ toggleFull(); }
+  else if((e.key==='p' || e.key==='P') && cur === 12){ e.preventDefault(); toggleDemoVideo(); }
+  else if(e.key==='t' && e.shiftKey || e.key==='T' && e.shiftKey){ resetTimer(); }
+  else if(e.key==='t' || e.key==='T'){ toggleTimer(); }
+  else if(e.key==='Escape'){ toggleGrid(false); toggleNotes(false); }
+});
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const d = e.changedTouches[0].clientX - tx;
+  if(Math.abs(d) > 50) go(d < 0 ? cur+1 : cur-1);
+});
+</script>
+</body>
+</html>
